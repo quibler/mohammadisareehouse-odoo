@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="pos_config_view_form_inherit_sales_associate" model="ir.ui.view">
+        <field name="name">pos.config.form.inherit.sales.associate</field>
+        <field name="model">pos.config</field>
+        <field name="inherit_id" ref="pos_hr.pos_config_view_form_inherit_pos_hr"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@id='employee_group']" position="inside">
+                <div class="row mt16">
+                    <label for="require_employee" class="col-lg-3 o_light_label"/>
+                    <field name="require_employee"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

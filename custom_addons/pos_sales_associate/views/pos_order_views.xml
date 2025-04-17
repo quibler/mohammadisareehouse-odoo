@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Form View Inheritance -->
+    <record id="view_pos_order_form_inherit_sales_associate" model="ir.ui.view">
+        <field name="name">pos.order.form.inherit.sales.associate</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='order_fields']//field[@name='session_id']" position="after">
+                <field name="employee_id" string="Sales Associate"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Tree View Inheritance -->
+    <record id="view_pos_order_tree_inherit_sales_associate" model="ir.ui.view">
+        <field name="name">pos.order.tree.inherit.sales.associate</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_order_tree"/>
+        <field name="arch" type="xml">
+            <!-- Position right after user_id which is clearly shown in the view structure -->
+            <xpath expr="//field[@name='user_id']" position="after">
+                <field name="employee_id" string="Sales Associate" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Filter/Search View Inheritance -->
+    <record id="view_pos_order_filter_inherit_sales_associate" model="ir.ui.view">
+        <field name="name">pos.order.search.inherit.sales.associate</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_order_filter"/>
+        <field name="arch" type="xml">
+            <!-- Add the field to the search view -->
+            <xpath expr="//search" position="inside">
+                <field name="employee_id" string="Sales Associate"/>
+                <filter string="Sales Associate" name="employee_id" context="{'group_by': 'employee_id'}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
