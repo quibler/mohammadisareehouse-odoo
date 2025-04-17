@@ -1,0 +1,177 @@
+// This is the JavaScript part to add/update in your index.html
+
+// Original variables remain
+const API_ENDPOINT = 'https://ohnutuxgbbxlfidgu4ff2xg3em0mncxp.lambda-url.me-south-1.on.aws/';
+let APP_PORT = '8069';
+
+// DOM elements already defined
+const statusDot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+const ipContainer = document.getElementById('ip-container');
+const ipAddress = document.getElementById('ip-address');
+const appLink = document.getElementById('app-link');
+const startBtn = document.getElementById('start-btn');
+const stopBtn = document.getElementById('stop-btn');
+const refreshBtn = document.getElementById('refresh-btn');
+const messageContainer = document.getElementById('message-container');
+const countdownTimer = document.getElementById('countdown-timer');
+const progressContainer = document.getElementById('progress-container');
+const progressBar = document.getElementById('progress-bar');
+
+// Timer variables
+let countdownInterval = null;
+let remainingTime = 0;
+let inactivityThreshold = 30; // Default, will be updated from Lambda
+
+// Get instance status from API
+async function getInstanceStatus() {
+    setLoading(true);
+    clearMessages();
+    
+    try {
+        // Simple fetch without headers for GET request
+        const response = await fetch(API_ENDPOINT);
+        
+        if (!response.ok) {
+            throw new Error(`API error (${response.status})`);
+        }
+        
+        const data = await response.json();
+        
+        // Update app port if provided
+        if (data.appPort) {
+            APP_PORT = data.appPort;
+        }
+        
+        // Update inactivity threshold if provided
+        if (data.inactivityThreshold) {
+            inactivityThreshold = data.inactivityThreshold;
+        }
+        
+        // Update countdown timer if provided
+        if (data.status === 'running' && data.remainingMinutes !== null && data.remainingMinutes !== undefined) {
+            startCountdown(data.remainingMinutes);
+            
+            // Show warning if shutdown is imminent
+            if (data.remainingMinutes < 5 && data.remainingMinutes > 0) {
+                showMessage(`Instance will shutdown in ${Math.round(data.remainingMinutes)} minutes due to inactivity.`, 'warning');
+            }
+            
+            // Show warning if shutdown is in progress
+            if (data.shuttingDown) {
+                showMessage('Instance is shutting down due to inactivity.', 'warning');
+            }
+        } else {
+            stopCountdown();
+        }
+        
+        updateUI(data);
+        
+        if (data.message) {
+            showMessage(data.message, 'info');
+        }
+    } catch (error) {
+        showMessage('Error getting instance status: ' + error.message, 'error');
+        resetStatus();
+    } finally {
+        setLoading(false);
+    }
+}
+
+// Update UI based on instance data
+function updateUI(data) {
+    statusDot.className = 'status-dot';
+    
+    switch (data.status) {
+        case 'running':
+            statusDot.classList.add('running');
+            statusText.textContent = 'Running';
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            
+            if (data.publicIp) {
+                ipAddress.textContent = data.publicIp;
+                appLink.href = `http://${data.publicIp}:${APP_PORT}`;
+                ipContainer.style.display = 'block';
+            } else {
+                ipContainer.style.display = 'none';
+            }
+            break;
+            
+        case 'pending':
+        case 'starting':
+            statusDot.classList.add('pending');
+            statusText.textContent = 'Starting...';
+            startBtn.disabled = true;
+            stopBtn.disabled = true;
+            ipContainer.style.display = 'none';
+            break;
+            
+        case 'stopping':
+            statusDot.classList.add('pending');
+            statusText.textContent = 'Stopping...';
+            startBtn.disabled = true;
+            stopBtn.disabled = true;
+            ipContainer.style.display = 'none';
+            break;
+            
+        case 'stopped':
+            statusDot.classList.add('stopped');
+            statusText.textContent = 'Stopped';
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            ipContainer.style.display = 'none';
+            break;
+            
+        default:
+            resetStatus();
+    }
+}
+
+// Start countdown timer for auto-shutdown
+function startCountdown(minutes) {
+    // Clear any existing timer
+    stopCountdown();
+    
+    if (minutes === undefined || minutes === null) return;
+    
+    remainingTime = Math.floor(minutes * 60); // Convert to seconds
+    
+    updateCountdownDisplay();
+    
+    countdownInterval = setInterval(() => {
+        remainingTime--;
+        
+        if (remainingTime <= 0) {
+            stopCountdown();
+            countdownTimer.textContent = "Shutting down soon...";
+            countdownTimer.className = "countdown";
+        } else {
+            updateCountdownDisplay();
+        }
+    }, 1000);
+}
+
+// Update countdown display
+function updateCountdownDisplay() {
+    const hours = Math.floor(remainingTime / 3600);
+    const minutes = Math.floor((remainingTime % 3600) / 60);
+    const seconds = remainingTime % 60;
+    
+    let timeString = '';
+    
+    if (hours > 0) {
+        timeString += `${hours}h `;
+    }
+    
+    timeString += `${minutes}m ${seconds}s`;
+    
+    countdownTimer.textContent = timeString;
+    
+    // Apply warning class if less than 5 minutes remaining
+    if (remainingTime < 300) {
+        countdownTimer.className = "countdown";
+    } else {
+        countdownTimer.className = "";
+    }
+}

@@ -1,0 +1,39 @@
+services:
+  web:
+    image: odoo:18.0
+    depends_on:
+      - db
+    ports:
+      - "8069:8069"
+    environment:
+      - HOST=db
+      - USER=odoo
+      - PASSWORD=odoo
+    volumes:
+      - ./custom_addons:/mnt/extra-addons
+      - ./odoo.conf:/etc/odoo/odoo.conf
+      - odoo_filestore:/var/lib/odoo/.local/share/Odoo/filestore
+      - odoo_sessions:/var/lib/odoo/.local/share/Odoo/sessions
+    user: root
+    command: >
+      bash -c "
+        mkdir -p /var/lib/odoo/.local/share/Odoo/sessions /var/lib/odoo/.local/share/Odoo/filestore &&
+        chown -R odoo:odoo /var/lib/odoo &&
+        chmod -R 777 /var/lib/odoo &&
+        exec /entrypoint.sh odoo"
+    restart: unless-stopped
+    
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_USER=odoo
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  odoo_filestore:
+  odoo_sessions:
