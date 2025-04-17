@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!-- Add salesperson to receipt -->
+    <t t-name="pos_salesperson_tracking.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('pos-receipt-order-data')]" position="inside">
+            <t t-if="receipt.salesperson">
+                <div class="pos-receipt-right-align">Salesperson: <t t-esc="receipt.salesperson"/></div>
+            </t>
+        </xpath>
+    </t>
+
+    <!-- Define the new Salesperson button template -->
+    <t t-name="pos_salesperson_tracking.SalespersonButton">
+        <div class="control-button" t-on-click="onClick">
+            <i class="fa fa-user"></i>
+            <span t-if="state.currentSalesperson">
+                <t t-esc="state.currentSalesperson"/>
+            </span>
+            <span t-else="">
+                Select Salesperson
+            </span>
+        </div>
+    </t>
+</templates>
