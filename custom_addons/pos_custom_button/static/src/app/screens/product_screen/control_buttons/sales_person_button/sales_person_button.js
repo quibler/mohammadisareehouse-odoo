@@ -14,20 +14,17 @@ export class SalesPersonButton extends Component {
     setup() {
         this.pos = usePos();
         this.dialog = useService("dialog");
-        console.log("SalesPersonButton setup called");
     }
 
     _prepareEmployeeList(currentSalesPerson) {
         // Get all employees using the getAll() method
         const allEmployees = this.pos.models["hr.employee"].getAll();
-        console.log("All employees:", allEmployees);
 
         // Get the allowed employee IDs
         let allowedEmployeeIds = [];
         if (this.pos.config.sales_person_ids && Array.isArray(this.pos.config.sales_person_ids)) {
             // Extract IDs from the Proxy objects
             allowedEmployeeIds = Array.from(this.pos.config.sales_person_ids).map(emp => emp.id);
-            console.log("Allowed employee IDs:", allowedEmployeeIds);
         }
 
         // Filter employees that are in the allowed list
@@ -37,7 +34,6 @@ export class SalesPersonButton extends Component {
                 (employee) => allowedEmployeeIds.includes(employee.id)
             );
         }
-        console.log("Filtered employees:", employeesToShow);
 
         const res = employeesToShow.map((employee) => {
             return {
@@ -61,7 +57,6 @@ export class SalesPersonButton extends Component {
     }
 
     async onClick() {
-        console.log("SalesPersonButton onClick called");
         const order = this.pos.get_order();
 
         if (!order) {
@@ -69,7 +64,6 @@ export class SalesPersonButton extends Component {
         }
 
         const employeesList = this._prepareEmployeeList(order.getSalesPerson()?.id);
-        console.log("Employee list length:", employeesList.length);
 
         if (!employeesList.length) {
             await ask(this.dialog, {
