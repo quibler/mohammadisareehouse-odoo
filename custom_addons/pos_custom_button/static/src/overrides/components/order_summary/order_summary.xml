@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<!-- OrderSummary Template -->
-<templates id="template" xml:space="preserve">
-    <t t-inherit="point_of_sale.OrderSummary" t-inherit-mode="extension">
-        <xpath expr="//OrderWidget" position="attributes">
-            <attribute name="sales_person">currentOrder.sales_person_id?.name</attribute>
-        </xpath>
-    </t>
-</templates>

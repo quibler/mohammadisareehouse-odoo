@@ -7,8 +7,8 @@ class PosConfig(models.Model):
     sales_person_ids = fields.Many2many(
         'hr.employee',
         'config_allowed_salesperson_rel',
-        'employee_id',
-        'pos_config_id',
+        'pos_config_id',  # This is the column in the relation table for this model
+        'employee_id',  # This is the column in the relation table for the related model
         string="Allowed sales persons",
     )
 
@@ -25,6 +25,12 @@ class PosConfig(models.Model):
         else:
             domain = [('id', 'in', self.sales_person_ids.ids)]
         return domain
+
+    def _get_pos_ui_pos_config(self, params):
+        """Add sales_person_ids to the POS config data sent to the frontend"""
+        config_data = super()._get_pos_ui_pos_config(params)
+        config_data['sales_person_ids'] = self.sales_person_ids.ids
+        return config_data
 
 class ResConfigSettings(models.TransientModel):
     _inherit = 'res.config.settings'

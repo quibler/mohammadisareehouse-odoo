@@ -1,8 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- TicketScreen Template -->
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.TicketScreen" t-inherit-mode="extension">
         <xpath expr="//OrderWidget" position="attributes">
-            <attribute name="sales_person" t-if="_selectedSyncedOrder?.sales_person_id?.name" t-value="_selectedSyncedOrder.sales_person_id.name"/>
+            <attribute name="sales_person">_selectedSyncedOrder?.sales_person_id?.name</attribute>
         </xpath>
     </t>
 </templates>
