@@ -14,20 +14,37 @@ export class SalesPersonButton extends Component {
     setup() {
         this.pos = usePos();
         this.dialog = useService("dialog");
-         console.log("SalesPersonButton setup called");
+        console.log("SalesPersonButton setup called");
     }
 
     _prepareEmployeeList(currentSalesPerson) {
-        const allEmployees = this.pos.models["hr.employee"].filter(
-            (employee) => employee.id !== currentSalesPerson
-        );
+        // Get all employees using the getAll() method
+        const allEmployees = this.pos.models["hr.employee"].getAll();
+        console.log("All employees:", allEmployees);
 
-        const res = allEmployees.map((employee) => {
+        // Get the allowed employee IDs
+        let allowedEmployeeIds = [];
+        if (this.pos.config.sales_person_ids && Array.isArray(this.pos.config.sales_person_ids)) {
+            // Extract IDs from the Proxy objects
+            allowedEmployeeIds = Array.from(this.pos.config.sales_person_ids).map(emp => emp.id);
+            console.log("Allowed employee IDs:", allowedEmployeeIds);
+        }
+
+        // Filter employees that are in the allowed list
+        let employeesToShow = allEmployees;
+        if (allowedEmployeeIds.length > 0) {
+            employeesToShow = allEmployees.filter(
+                (employee) => allowedEmployeeIds.includes(employee.id)
+            );
+        }
+        console.log("Filtered employees:", employeesToShow);
+
+        const res = employeesToShow.map((employee) => {
             return {
                 id: employee.id,
                 item: employee,
                 label: employee.name,
-                isSelected: false,
+                isSelected: employee.id === currentSalesPerson,
             };
         });
 
@@ -48,22 +65,16 @@ export class SalesPersonButton extends Component {
         const order = this.pos.get_order();
 
         if (!order) {
-            console.log("No current order");
-            return;
-        }
-
-        if (order.lines.length <= 0) {
-            console.log("Order has no lines");
             return;
         }
 
         const employeesList = this._prepareEmployeeList(order.getSalesPerson()?.id);
-        console.log("Employee list:", employeesList);
+        console.log("Employee list length:", employeesList.length);
 
         if (!employeesList.length) {
             await ask(this.dialog, {
                 title: _t("No Sales Person"),
-                body: _t("There is no sales person available."),
+                body: _t("There are no sales persons available for this POS. Please configure allowed sales persons in the POS settings."),
             });
             return;
         }
