@@ -17,8 +17,7 @@
     ],
     'assets': {
         'point_of_sale._assets_pos': [
-            'pos_sales_person/static/src/app/**/*',
-            'pos_sales_person/static/src/overrides/**/*',
+            'pos_sales_person/static/src/**/*',
         ],
     },
     'license': 'Other proprietary',

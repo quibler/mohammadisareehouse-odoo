@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# File: custom_addons/pos_custom_button/report/pos_report.py
 
 from odoo import fields, models
 
