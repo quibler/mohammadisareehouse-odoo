@@ -14,6 +14,7 @@
         'views/pos_order_views.xml',
         'views/res_config_settings_views.xml',
         'report/pos_report_views.xml',
+        'report/top_sales_person_views.xml',  # Add this line
     ],
     'assets': {
         'point_of_sale._assets_pos': [

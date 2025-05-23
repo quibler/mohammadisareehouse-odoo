@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- 1. Search View Extension for Sales Person -->
+    <record id="view_report_pos_order_search_sales_person" model="ir.ui.view">
+        <field name="name">report.pos.order.search.sales_person</field>
+        <field name="model">report.pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_report_pos_order_search"/>
+        <field name="arch" type="xml">
+            <filter name="User" position="after">
+                <filter string="Sales Person" name="sales_person" context="{'group_by':'sales_person_id'}"/>
+            </filter>
+        </field>
+    </record>
+
+    <!-- 2. Create Top Sales Persons List View - Using only fields that exist in the model -->
+    <record id="view_top_sales_person_list" model="ir.ui.view">
+        <field name="name">top.sales.person.list</field>
+        <field name="model">report.pos.order</field>
+        <field name="arch" type="xml">
+            <list string="Top Sales Persons" create="false" edit="false" delete="false" sample="1" default_order="price_total desc">
+                <field name="sales_person_id"/>
+                <field name="order_id" string="Orders"/>
+                <field name="product_qty" string="Products Sold"/>
+                <field name="price_total" string="Total Revenue" sum="Total"/>
+                <field name="margin" string="Profit Margin" sum="Total"/>
+                <field name="total_discount" string="Total Discounts" sum="Total"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- 3. Create Top Sales Persons Action - Flat aggregation without hierarchy -->
+    <record id="action_top_sales_person" model="ir.actions.act_window">
+        <field name="name">Top Sales Persons</field>
+        <field name="res_model">report.pos.order</field>
+        <field name="view_mode">list,graph,pivot</field>
+        <field name="view_id" ref="view_top_sales_person_list"/>
+        <field name="domain">[('state', 'in', ['paid', 'done', 'invoiced'])]</field>
+        <field name="context">{
+            'group_by': ['sales_person_id'],
+            'orderby': 'price_total desc',
+            'search_default_sales_person': 1
+        }</field>
+        <field name="help">This report shows the top performing sales persons based on their total revenue.</field>
+    </record>
+
+    <!-- 4. Create Menu Item for Top Sales Persons -->
+    <menuitem
+        id="menu_top_sales_person"
+        name="Top Sales Persons"
+        action="action_top_sales_person"
+        parent="point_of_sale.menu_point_rep"
+        sequence="4"/>
+</odoo>
