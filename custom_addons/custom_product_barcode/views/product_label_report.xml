@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Custom Product Label Report with Code128 -->
+        <report
+            id="action_report_product_label_custom"
+            model="product.product"
+            string="Product Labels (Code128)"
+            report_type="qweb-pdf"
+            name="custom_product_barcode.report_product_label_custom"
+            file="custom_product_barcode.report_product_label_custom"
+            paperformat="product.paperformat_label"
+        />
+
+        <!-- Report Template -->
+        <template id="report_product_label_custom">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="product">
+                    <div class="page" style="page-break-after: always;">
+                        <div class="container">
+                            <div class="row">
+                                <div class="col-12 text-center" style="margin-top: 20px;">
+                                    <!-- Product Name -->
+                                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">
+                                        <span t-field="product.name"/>
+                                    </div>
+
+                                    <!-- Price if available -->
+                                    <div t-if="product.list_price" style="font-size: 12px; margin-bottom: 10px;">
+                                        <span t-field="product.list_price" t-options="{'widget': 'monetary', 'display_currency': product.currency_id}"/>
+                                    </div>
+
+                                    <!-- Code128 Barcode -->
+                                    <div style="margin: 15px 0;">
+                                        <img t-if="product.barcode"
+                                             t-att-src="'/report/barcode/?type=Code128&amp;value=%s&amp;width=%s&amp;height=%s' % (product.barcode, 600, 100)"
+                                             style="width: 250px; height: 60px;"/>
+                                    </div>
+
+                                    <!-- Barcode Text -->
+                                    <div style="font-size: 10px; font-family: monospace;">
+                                        <span t-field="product.barcode"/>
+                                    </div>
+
+                                    <!-- Internal Reference if different from barcode -->
+                                    <div t-if="product.default_code and product.default_code != product.barcode"
+                                         style="font-size: 9px; margin-top: 5px;">
+                                        Ref: <span t-field="product.default_code"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>
