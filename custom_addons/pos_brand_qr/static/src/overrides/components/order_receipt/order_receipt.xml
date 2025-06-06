@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<templates id="template" xml:space="preserve">
+    <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <!-- Add Brand QR Code at the bottom of the receipt -->
+        <xpath expr="//div[hasclass('pos-receipt')]" position="inside">
+            <div t-if="props.data.brand_qr_code and props.data.brand_qr_code.enabled"
+                 class="pos-receipt-brand-qr text-center"
+                 style="margin-top: 20px; padding: 10px; border-top: 1px dashed #000;">
+
+                <!-- QR Code Label -->
+                <div class="pos-receipt-brand-qr-label"
+                     style="font-size: 12px; font-weight: bold; margin-bottom: 10px;">
+                    <t t-esc="props.data.brand_qr_code.label"/>
+                </div>
+
+                <!-- QR Code Image -->
+                <div style="margin-bottom: 10px;">
+                    <img t-att-src="props.data.brand_qr_code.image"
+                         alt="Brand QR Code"
+                         style="width: 120px; height: 120px; display: block; margin: 0 auto;"/>
+                </div>
+            </div>
+        </xpath>
+    </t>
+</templates>
