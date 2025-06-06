@@ -29,17 +29,24 @@ class PosConfig(models.Model):
         # Convert binary image to base64 data URL if present
         qr_image_url = False
         if self.brand_qr_image:
-            # The binary field already contains base64 data, so just add the data URL prefix
             import base64
-            # If it's already base64 encoded, use it directly, otherwise encode it
             try:
-                # Try to decode to check if it's already base64
-                base64.b64decode(self.brand_qr_image)
-                qr_image_url = f"data:image/png;base64,{self.brand_qr_image.decode('utf-8')}"
-            except:
-                # If decoding fails, it might be raw binary data
-                import base64
-                qr_image_url = f"data:image/png;base64,{base64.b64encode(self.brand_qr_image).decode('utf-8')}"
+                # In Odoo, binary fields are stored as base64 strings
+                # We need to ensure it's properly formatted as a data URL
+                if isinstance(self.brand_qr_image, bytes):
+                    # If it's bytes, encode to base64
+                    base64_data = base64.b64encode(self.brand_qr_image).decode('utf-8')
+                else:
+                    # If it's already a string (base64), use it directly
+                    base64_data = self.brand_qr_image
+
+                qr_image_url = f"data:image/png;base64,{base64_data}"
+            except Exception as e:
+                # Log error and continue without QR image
+                import logging
+                _logger = logging.getLogger(__name__)
+                _logger.error(f"Error processing brand QR image: {e}")
+                qr_image_url = False
 
         config_data.update({
             'brand_qr_enabled': self.brand_qr_enabled or False,

@@ -7,55 +7,26 @@ patch(PosOrder.prototype, {
     export_for_printing() {
         const receipt = super.export_for_printing(...arguments);
 
-        console.log('=== POS Brand QR Debug ===');
-
-        // Try different ways to access the POS instance
-        let posInstance = this.pos || this.env?.services?.pos || this.session;
-
-        console.log('this.pos exists:', !!this.pos);
-        console.log('this.env exists:', !!this.env);
-        console.log('this.session exists:', !!this.session);
-        console.log('posInstance found:', !!posInstance);
-
-        if (posInstance && posInstance.config) {
-            console.log('Found config through posInstance');
-            console.log('brand_qr_enabled:', posInstance.config.brand_qr_enabled);
-            console.log('brand_qr_image exists:', !!posInstance.config.brand_qr_image);
-            console.log('brand_qr_label:', posInstance.config.brand_qr_label);
+        // Get POS config - try different ways to access it
+        let config = null;
+        if (this.pos && this.pos.config) {
+            config = this.pos.config;
         } else if (this.config) {
-            console.log('Found config directly on this');
-            posInstance = { config: this.config };
-            console.log('brand_qr_enabled:', this.config.brand_qr_enabled);
-            console.log('brand_qr_image exists:', !!this.config.brand_qr_image);
-        } else {
-            console.log('No config found anywhere');
-            console.log('Available properties on this:', Object.keys(this));
+            config = this.config;
         }
 
-        // Add brand QR code data if enabled and image is uploaded
-        try {
-            if (posInstance && posInstance.config && posInstance.config.brand_qr_enabled && posInstance.config.brand_qr_image) {
-                console.log('Adding QR code to receipt');
-                receipt.brand_qr_code = {
-                    enabled: true,
-                    image: posInstance.config.brand_qr_image,
-                    label: posInstance.config.brand_qr_label || 'Visit our website',
-                };
-            } else {
-                console.log('QR code not added - conditions not met');
-                receipt.brand_qr_code = {
-                    enabled: false
-                };
-            }
-        } catch (error) {
-            console.error('Error adding brand QR code to receipt:', error);
+        // Add brand QR code data if enabled and available
+        if (config && config.brand_qr_enabled && config.brand_qr_image) {
+            receipt.brand_qr_code = {
+                enabled: true,
+                image: config.brand_qr_image,
+                label: config.brand_qr_label || 'Visit our website',
+            };
+        } else {
             receipt.brand_qr_code = {
                 enabled: false
             };
         }
-
-        console.log('Final receipt.brand_qr_code:', receipt.brand_qr_code);
-        console.log('=== End Debug ===');
 
         return receipt;
     },
