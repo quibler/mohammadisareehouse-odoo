@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
+from odoo import models, fields
 
 
 class PosConfig(models.Model):
@@ -26,27 +26,11 @@ class PosConfig(models.Model):
         """Add brand QR settings to the POS config data sent to the frontend"""
         config_data = super()._get_pos_ui_pos_config(params)
 
-        # Convert binary image to base64 data URL if present
+        # Use Odoo's web controller to serve the image
         qr_image_url = False
-        if self.brand_qr_image:
-            import base64
-            try:
-                # In Odoo, binary fields are stored as base64 strings
-                # We need to ensure it's properly formatted as a data URL
-                if isinstance(self.brand_qr_image, bytes):
-                    # If it's bytes, encode to base64
-                    base64_data = base64.b64encode(self.brand_qr_image).decode('utf-8')
-                else:
-                    # If it's already a string (base64), use it directly
-                    base64_data = self.brand_qr_image
-
-                qr_image_url = f"data:image/png;base64,{base64_data}"
-            except Exception as e:
-                # Log error and continue without QR image
-                import logging
-                _logger = logging.getLogger(__name__)
-                _logger.error(f"Error processing brand QR image: {e}")
-                qr_image_url = False
+        if self.brand_qr_enabled and self.brand_qr_image:
+            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            qr_image_url = f"{base_url}/web/image/pos.config/{self.id}/brand_qr_image"
 
         config_data.update({
             'brand_qr_enabled': self.brand_qr_enabled or False,
