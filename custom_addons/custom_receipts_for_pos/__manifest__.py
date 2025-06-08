@@ -21,15 +21,16 @@
 #
 ################################################################################
 {
-    'name': 'POS Receipt Design',
-    'version': '18.0.1.0.3',
+    'name': 'POS Receipt Design - Fixed',
+    'version': '18.0.1.0.4',
     'category': 'Point of Sale',
-    'summary': "POS Receipt, Receipt Design, POS Receipt Template, Design "
-               "Report, Custom Receipt, POS Report, Customise Receipt, Odoo18, "
-               "Odoo Apps",
-    'description': "Option to select the customised Receipts for each POS. So, "
-                   "we can easily updated the Receipt Design for better styles. "
-                   "Includes new design with promotional image support.",
+    'summary': "Fixed POS Receipt with classList error resolution, Receipt Design, "
+               "POS Receipt Template, Design Report, Custom Receipt, POS Report, "
+               "Customise Receipt, Odoo18, Odoo Apps",
+    'description': "Fixed version: Option to select the customised Receipts for each POS. "
+                   "Resolved the 'el.classList is not iterable' error when printing full receipts. "
+                   "Includes error handling and fallback mechanisms for reliable printing. "
+                   "Enhanced with promotional image support and better template validation.",
     'author': 'Cybrosys Techno Solutions',
     'company': 'Cybrosys Techno Solutions',
     'maintainer': 'Cybrosys Techno Solutions',
@@ -39,14 +40,18 @@
         'security/ir.model.access.csv',
         'data/pos_receipt_design1_data.xml',
         'data/pos_receipt_design2_data.xml',
-        'data/pos_receipt_design3_data.xml',  # New design with image
+        'data/pos_receipt_design3_data.xml',
         'views/pos_receipt_views.xml',
         'views/pos_config_views.xml'
     ],
     'assets': {
         'point_of_sale._assets_pos': [
-            'custom_receipts_for_pos/static/src/js/receipt_design.js',
-            'custom_receipts_for_pos/static/src/xml/order_receipt.xml',
+            # Load printer service patch first to handle classList errors
+            'custom_receipts_for_pos/static/src/js/printer_service_patch.js',
+            # Then load the fixed receipt design
+            'custom_receipts_for_pos/static/src/js/receipt_design_fixed.js',
+            # Finally load the XML template
+            'custom_receipts_for_pos/static/src/xml/order_receipt_fixed.xml',
         ],
     },
     'images': ['static/description/banner.png'],

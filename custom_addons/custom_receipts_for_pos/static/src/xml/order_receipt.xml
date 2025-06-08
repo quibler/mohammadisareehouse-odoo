@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--Inherit point_of_sale.OrderReceipt for getting our custom receipt design-->
+<!--Inherit point_of_sale.OrderReceipt with proper error handling-->
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('pos-receipt')]" position="replace">
-            <div class="pos-receipt">
+            <div class="pos-receipt" t-att-data-order-id="props.data.name">
                 <t t-if="isTrue">
+                    <!-- Use standard Odoo receipt template -->
                     <ReceiptHeader data="props.data.headerData"/>
                     <OrderWidget t-if="props.data.orderlines?.length"
                                  lines="props.data.orderlines"
@@ -38,9 +39,7 @@
                                     <span class="fw-bolder"
                                           t-out="subtotal.name"/>
                                     <span t-esc="props.formatCurrency(subtotal.base_amount_currency)" class="ms-auto"/>
-
                                 </div>
-
                                 <div t-foreach="subtotal.tax_groups"
                                      t-as="tax_group" t-key="tax_group_index"
                                      class="d-flex">
@@ -63,7 +62,6 @@
                                 </div>
                             </t>
                         </div>
-
                         <div class="text-center">--------------------------------</div>
                         <div class="pos-receipt-amount receipt-total">
                             <t t-out="props.data.label_total"/>
@@ -90,7 +88,6 @@
                             <span t-esc="props.formatCurrency(line.amount)"
                                   class="pos-receipt-right-align"/>
                         </div>
-
                         <div t-if="'order_change' in taxTotals"
                              class="pos-receipt-amount receipt-change">
                             <t t-out="props.data.label_change"/>
@@ -166,7 +163,28 @@
                     </div>
                 </t>
                 <t t-else="">
-                    <t t-component="templateComponent" t-props="templateProps"/>
+                    <!-- Safe custom template rendering with proper error handling -->
+                    <div class="custom-receipt-wrapper">
+                        <t t-try="">
+                            <t t-component="templateComponent" t-props="templateProps"/>
+                        </t>
+                        <t t-catch="error">
+                            <!-- Fallback to standard receipt if custom template fails -->
+                            <div class="receipt-error-fallback">
+                                <div class="pos-receipt-contact">
+                                    <t t-if="props.data.headerData.company.name">
+                                        <div><t t-esc="props.data.headerData.company.name"/></div>
+                                    </t>
+                                </div>
+                                <div class="text-center">Custom receipt template error. Using fallback.</div>
+                                <OrderWidget t-if="props.data.orderlines?.length"
+                                           lines="props.data.orderlines"/>
+                                <div class="pos-receipt-amount receipt-total">
+                                    Total: <span t-esc="props.formatCurrency(props.data.amount_total)"/>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
                 </t>
             </div>
         </xpath>
