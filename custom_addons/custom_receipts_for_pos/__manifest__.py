@@ -22,13 +22,14 @@
 ################################################################################
 {
     'name': 'POS Receipt Design',
-    'version': '18.0.1.0.2',
+    'version': '18.0.1.0.3',
     'category': 'Point of Sale',
     'summary': "POS Receipt, Receipt Design, POS Receipt Template, Design "
                "Report, Custom Receipt, POS Report, Customise Receipt, Odoo18, "
                "Odoo Apps",
     'description': "Option to select the customised Receipts for each POS. So, "
-                   "we can easily updated the Receipt Design for better styles",
+                   "we can easily updated the Receipt Design for better styles. "
+                   "Includes new design with promotional image support.",
     'author': 'Cybrosys Techno Solutions',
     'company': 'Cybrosys Techno Solutions',
     'maintainer': 'Cybrosys Techno Solutions',
@@ -38,6 +39,7 @@
         'security/ir.model.access.csv',
         'data/pos_receipt_design1_data.xml',
         'data/pos_receipt_design2_data.xml',
+        'data/pos_receipt_design3_data.xml',  # New design with image
         'views/pos_receipt_views.xml',
         'views/pos_config_views.xml'
     ],
