@@ -54,7 +54,7 @@
     ],
     'assets': {
         'point_of_sale._assets_pos': [
-            'custom_receipts_for_pos/static/src/js/render_service_patch.js',  # Load first
+            'custom_receipts_for_pos/static/src/js/simple_error_handler.js',  # Load first
             'custom_receipts_for_pos/static/src/js/receipt_design.js',
             'custom_receipts_for_pos/static/src/xml/order_receipt.xml',
         ],
