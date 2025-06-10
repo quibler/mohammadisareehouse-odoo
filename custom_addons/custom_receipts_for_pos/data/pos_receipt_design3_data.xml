@@ -123,24 +123,8 @@
             <!-- Separator Line -->
             <div style="border-bottom: 1px solid #333; margin: 15px 0;"></div>
 
-            <!-- Tax and Total Information -->
+            <!-- Total Information -->
             <div style="font-size:14px;">
-                <t t-set='taxincluded' t-value='Math.abs(props.receipt.amount_total - props.receipt.total_with_tax) &lt;= 0.000001' />
-
-                <!-- Untaxed Amount (if taxes not included) -->
-                <t t-if='!taxincluded'>
-                    <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-                        <span>Untaxed Amount</span>
-                        <span t-esc='env.utils.formatCurrency(props.data.total_without_tax)'/>
-                    </div>
-                    <!-- Tax Details -->
-                    <t t-foreach='props.data.tax_details' t-as='tax' t-key="index_tax_details">
-                        <div style="display: flex; justify-content: space-between; margin: 5px 0; font-size: 12px;">
-                            <span>Tax <t t-esc='tax.tax.rate'/>%</span>
-                            <span t-esc='env.utils.formatCurrency(tax.amount)'/>
-                        </div>
-                    </t>
-                </t>
 
                 <!-- Total -->
                 <div style="display: flex; justify-content: space-between; margin: 10px 0; font-weight: bold; font-size: 16px; border-top: 2px solid #333; padding-top: 10px;">
