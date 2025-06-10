@@ -10,41 +10,27 @@ patch(OrderReceipt.prototype, {
         this.state = useState({
             template: true,
         })
-        this.pos = useService("pos");
-    },
+        this.pos = useState(useService("pos"));
 
+    },
     get templateProps() {
         return {
             data: this.props.data,
-            // Add proper currency formatting function
-            formatCurrency: this.env.utils.formatCurrency.bind(this.env.utils),
             order: this.pos.get_order(),
-            receipt: this.pos.get_order()?.export_for_printing() || {},
-            orderlines: this.props.data.orderlines || [],
-            paymentlines: this.props.data.paymentlines || []
+            receipt: this.pos.get_order().export_for_printing(),
+            orderlines: this.props.data.orderlines,
+            paymentlines: this.pos.get_order().export_for_printing().paymentlines
         };
     },
-
     get templateComponent() {
         var mainRef = this;
         return class extends Component {
-            setup() {
-                // Ensure environment utilities are available
-                this.env.utils = mainRef.env.utils;
-            }
-
-            // Wrap the custom template to ensure proper DOM structure
-            static template = xml`
-                <div class="pos-receipt">
-                    ${mainRef.pos.config.design_receipt || '<div>No custom design available</div>'}
-                </div>
-            `
+            setup() {}
+            static template = xml`${mainRef.pos.config.design_receipt}`
         };
     },
-
     get isTrue() {
-        // Check if custom receipt is enabled and template exists
-        if (this.env.services.pos.config.is_custom_receipt === false || !this.pos.config.design_receipt) {
+        if (this.env.services.pos.config.is_custom_receipt == false) {
             return true;
         }
         return false;
