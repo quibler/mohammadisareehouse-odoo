@@ -20,7 +20,7 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 ################################################################################
-from odoo import models
+from odoo import models, api
 
 
 class PosSession(models.Model):
