@@ -27,9 +27,7 @@ class PosSession(models.Model):
     """
        This is an Odoo model for Point of Sale (POS) sessions.
        It inherits from the 'pos.session' model and extends its functionality.
-
-       Methods: _loader_params_product_product(): Adds the 'qty_available'
-        field to the search parameters for the product loader.
+       Updated for Odoo 18 POS data loading methods.
     """
     _inherit = 'pos.session'
 
@@ -38,18 +36,6 @@ class PosSession(models.Model):
         result = super()._loader_params_product_product()
         result['search_params']['fields'].append('qty_available')
         return result
-
-    def _loader_params_pos_receipt(self):
-        """Function that returns the product field pos Receipt"""
-        return {
-            'search_params': {
-                'fields': ['design_receipt', 'name'],
-            },
-        }
-
-    def _get_pos_ui_pos_receipt(self, params):
-        """Used to Return the params value to the pos Receipts"""
-        return self.env['pos.receipt'].search_read(**params['search_params'])
 
     @api.model
     def _load_pos_data_models(self, config_id):
@@ -60,14 +46,39 @@ class PosSession(models.Model):
             data.append('pos.receipt')
         return data
 
+    def _loader_params_pos_receipt(self):
+        """Function that returns the loader params for pos.receipt model"""
+        return {
+            'search_params': {
+                'fields': ['name', 'design_receipt'],
+            },
+        }
+
+    def _get_pos_ui_pos_receipt(self, params):
+        """Used to Return the pos receipt data to the POS UI"""
+        return self.env['pos.receipt'].search_read(**params['search_params'])
+
     def _get_pos_ui_pos_config(self, params):
         """Add receipt design data to POS config"""
         result = super()._get_pos_ui_pos_config(params)
         config = self.config_id
-        if config.is_custom_receipt and config.receipt_design_id:
+        if config and hasattr(config, 'is_custom_receipt') and config.is_custom_receipt:
+            if hasattr(config, 'receipt_design_id') and config.receipt_design_id:
+                result.update({
+                    'is_custom_receipt': config.is_custom_receipt,
+                    'design_receipt': config.design_receipt or '',
+                    'receipt_design_id': config.receipt_design_id.id,
+                })
+            else:
+                result.update({
+                    'is_custom_receipt': False,
+                    'design_receipt': '',
+                    'receipt_design_id': False,
+                })
+        else:
             result.update({
-                'is_custom_receipt': config.is_custom_receipt,
-                'design_receipt': config.design_receipt,
-                'receipt_design_id': config.receipt_design_id.id,
+                'is_custom_receipt': False,
+                'design_receipt': '',
+                'receipt_design_id': False,
             })
         return result

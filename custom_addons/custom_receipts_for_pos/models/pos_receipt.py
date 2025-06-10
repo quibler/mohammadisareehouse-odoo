@@ -20,18 +20,24 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 ################################################################################
-from odoo import fields, models
+from odoo import fields, models, api
 
 
 class PosReceipt(models.Model):
     """
         This is an Odoo model for Point of Sale (POS).
         It creates a new model of pos.receipt for providing different types of
-        receipt design.
+        receipt design. In Odoo 18, this model uses pos.load.mixin for POS data loading.
     """
     _name = 'pos.receipt'
     _description = 'POS Receipts'
+    _inherit = ['pos.load.mixin']  # Add this line for Odoo 18 POS loading
 
     name = fields.Char(string='Name', help='Name of the pos receipt')
     design_receipt = fields.Text(string='Receipt XML',
                                  help='Add your customised receipts for pos')
+
+    @api.model
+    def _load_pos_data_fields(self, config_id):
+        """Define which fields should be loaded into POS for this model"""
+        return ['name', 'design_receipt']
