@@ -38,7 +38,6 @@
                                     <span class="fw-bolder"
                                           t-out="subtotal.name"/>
                                     <span t-esc="props.formatCurrency(subtotal.base_amount_currency)" class="ms-auto"/>
-
                                 </div>
 
                                 <div t-foreach="subtotal.tax_groups"
@@ -166,7 +165,10 @@
                     </div>
                 </t>
                 <t t-else="">
-                    <t t-component="templateComponent" t-props="templateProps"/>
+                    <!-- Wrap custom component in proper div structure for printing -->
+                    <div class="pos-receipt-content">
+                        <t t-component="templateComponent" t-props="templateProps"/>
+                    </div>
                 </t>
             </div>
         </xpath>

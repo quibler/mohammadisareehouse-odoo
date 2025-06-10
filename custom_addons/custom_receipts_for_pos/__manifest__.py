@@ -22,14 +22,23 @@
 ################################################################################
 {
     'name': 'POS Receipt Design',
-    'version': '18.0.1.0.3',
+    'version': '18.0.1.0.4',  # Increment version for the fix
     'category': 'Point of Sale',
     'summary': "POS Receipt, Receipt Design, POS Receipt Template, Design "
                "Report, Custom Receipt, POS Report, Customise Receipt, Odoo18, "
-               "Odoo Apps",
-    'description': "Option to select the customised Receipts for each POS. So, "
-                   "we can easily updated the Receipt Design for better styles. "
-                   "Includes new design with promotional image support.",
+               "Odoo Apps - Fixed printing issues",
+    'description': """
+        Option to select the customised Receipts for each POS. So, 
+        we can easily updated the Receipt Design for better styles. 
+        Includes new design with promotional image support.
+
+        Version 18.0.1.0.4 fixes:
+        - Fixed el.classList is not iterable error during PDF printing
+        - Fixed Component props validation errors
+        - Enhanced DOM element error handling
+        - Improved image loading for receipts
+        - Better template structure for printing compatibility
+        """,
     'author': 'Cybrosys Techno Solutions',
     'company': 'Cybrosys Techno Solutions',
     'maintainer': 'Cybrosys Techno Solutions',
@@ -39,12 +48,13 @@
         'security/ir.model.access.csv',
         'data/pos_receipt_design1_data.xml',
         'data/pos_receipt_design2_data.xml',
-        'data/pos_receipt_design3_data.xml',  # New design with image
+        'data/pos_receipt_design3_data.xml',
         'views/pos_receipt_views.xml',
         'views/pos_config_views.xml'
     ],
     'assets': {
         'point_of_sale._assets_pos': [
+            'custom_receipts_for_pos/static/src/js/render_service_patch.js',  # Load first
             'custom_receipts_for_pos/static/src/js/receipt_design.js',
             'custom_receipts_for_pos/static/src/xml/order_receipt.xml',
         ],

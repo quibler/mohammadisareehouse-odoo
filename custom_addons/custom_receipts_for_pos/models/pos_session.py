@@ -50,3 +50,24 @@ class PosSession(models.Model):
     def _get_pos_ui_pos_receipt(self, params):
         """Used to Return the params value to the pos Receipts"""
         return self.env['pos.receipt'].search_read(**params['search_params'])
+
+    @api.model
+    def _load_pos_data_models(self, config_id):
+        """Load pos.receipt model data for the POS interface"""
+        data = super()._load_pos_data_models(config_id)
+        # Add pos.receipt to the list of models to load
+        if 'pos.receipt' not in data:
+            data.append('pos.receipt')
+        return data
+
+    def _get_pos_ui_pos_config(self, params):
+        """Add receipt design data to POS config"""
+        result = super()._get_pos_ui_pos_config(params)
+        config = self.config_id
+        if config.is_custom_receipt and config.receipt_design_id:
+            result.update({
+                'is_custom_receipt': config.is_custom_receipt,
+                'design_receipt': config.design_receipt,
+                'receipt_design_id': config.receipt_design_id.id,
+            })
+        return result
