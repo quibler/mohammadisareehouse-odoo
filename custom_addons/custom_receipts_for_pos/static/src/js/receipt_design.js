@@ -10,23 +10,29 @@ patch(OrderReceipt.prototype, {
         this.state = useState({
             template: true,
         })
-        this.pos = useState(useService("pos"));
+        this.pos = useService("pos");
     },
 
     get templateProps() {
         return {
             data: this.props.data,
+            // Add proper currency formatting function
+            formatCurrency: this.env.utils.formatCurrency.bind(this.env.utils),
             order: this.pos.get_order(),
             receipt: this.pos.get_order()?.export_for_printing() || {},
             orderlines: this.props.data.orderlines || [],
-            paymentlines: this.pos.get_order()?.export_for_printing()?.paymentlines || []
+            paymentlines: this.props.data.paymentlines || []
         };
     },
 
     get templateComponent() {
         var mainRef = this;
         return class extends Component {
-            setup() {}
+            setup() {
+                // Ensure environment utilities are available
+                this.env.utils = mainRef.env.utils;
+            }
+
             // Wrap the custom template to ensure proper DOM structure
             static template = xml`
                 <div class="pos-receipt">

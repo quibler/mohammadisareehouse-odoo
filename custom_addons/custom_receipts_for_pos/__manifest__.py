@@ -49,9 +49,9 @@
             # Load printer service patch first to handle classList errors
             'custom_receipts_for_pos/static/src/js/printer_service_patch.js',
             # Then load the fixed receipt design
-            'custom_receipts_for_pos/static/src/js/receipt_design_fixed.js',
+            'custom_receipts_for_pos/static/src/js/receipt_design.js',
             # Finally load the XML template
-            'custom_receipts_for_pos/static/src/xml/order_receipt_fixed.xml',
+            'custom_receipts_for_pos/static/src/xml/order_receipt.xml',
         ],
     },
     'images': ['static/description/banner.png'],
