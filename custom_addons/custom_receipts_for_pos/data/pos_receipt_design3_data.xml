@@ -1,27 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- New receipt design with image above footer - save as pos_receipt_design3_data.xml -->
-    <record id="pos_receipt_design3_with_image" model="pos.receipt">
-        <field name="name">Design 3 - With Image</field>
+    <!-- Simplified Receipt design 3 without parseFloat in template -->
+    <record id="pos_receipt_design3_image" model="pos.receipt">
+        <field name="name">Design 3 (With Image)</field>
         <field name="design_receipt"><![CDATA[
 
         <div class="pos-receipt">
-            <!-- Header with Logo -->
+            <!-- Company Logo -->
             <t t-if="env.services.pos.config.logo">
-                <div style="text-align:center;">
-                    <img t-att-src="'data:image/png;base64,' + env.services.pos.config.logo"
-                         alt="Logo" class="pos-receipt-logo" style="max-width: 150px; height: auto;"/>
-                </div>
+                <img t-att-src="'data:image/png;base64,' + env.services.pos.config.logo"
+                     alt="Logo" class="pos-receipt-logo"/>
                 <br />
             </t>
 
             <!-- Company Information -->
-            <div class="pos-receipt-contact" style="text-align:center; font-size:13px;">
+            <div class="pos-receipt-contact" style="text-align:center;">
                 <t t-if="env.services.pos.company.name">
-                    <div style="font-weight: bold; font-size: 16px;"><t t-esc="env.services.pos.company.name" /></div>
+                    <div style="font-size:16px; font-weight:bold;"><t t-esc="env.services.pos.company.name" /></div>
                 </t>
                 <t t-if="env.services.pos.company.phone">
-                    <div><t t-esc="env.services.pos.company.phone" /></div>
+                    <div>Tel: <t t-esc="env.services.pos.company.phone" /></div>
                 </t>
                 <t t-if="env.services.pos.company.vat">
                     <div><t t-esc="env.services.pos.company.vat_label"/>: <t t-esc="env.services.pos.company.vat" /></div>
@@ -34,178 +32,181 @@
                 </t>
             </div>
 
-            <br/>
+            <div style="text-align:center; margin: 10px 0;">
+                ================================
+            </div>
 
             <!-- Order Information -->
-            <div style="text-align:center; font-size:13px;">
-                <t t-if="props.receipt.headerData.cashier">
-                    <div>Served by <t t-esc="props.receipt.headerData.cashier" /></div>
-                </t>
-                <div style="font-weight: bold; font-size: 18px; margin: 10px 0;">
-                    <t t-esc="props.receipt.name || props.order.name"/>
-                </div>
-            </div>
-
-            <!-- Separator Line -->
-            <div style="text-align:center; border-bottom: 2px dashed #333; margin: 10px 0;"></div>
-
-            <!-- Order Items Table -->
-            <div>
-                <table class='receipt-orderlines' style="font-size:13px; width:100%; border-collapse: collapse;">
-                    <colgroup>
-                        <col width='50%' />
-                        <col width='20%' />
-                        <col width='30%' />
-                    </colgroup>
-                    <tr style="border-bottom:1px solid #333; font-weight: bold;">
-                        <th style="text-align:left; padding: 5px 0;">Product</th>
-                        <th style="text-align:center; padding: 5px 0;">Qty</th>
-                        <th style="text-align:right; padding: 5px 0;">Amount</th>
-                    </tr>
-
-                    <!-- Dynamic Order Lines -->
-                    <t t-if="props.order and props.order.pos and props.order.pos.mainScreen and props.order.pos.mainScreen.props and props.order.pos.mainScreen.props.order and props.order.pos.mainScreen.props.order.orderlines and props.order.pos.mainScreen.props.order.orderlines.length">
-                        <t t-foreach="props.order.pos.mainScreen.props.order.orderlines" t-as="orderline" t-key="index_orderlines">
-                            <tr style="border-bottom:1px dotted #666;">
-                                <td style="padding: 5px 0; text-align:left; vertical-align: top;">
-                                    <div style="font-weight: bold;"><t t-esc="orderline.productName"/></div>
-                                    <t t-if="orderline.get_unit_price() !== orderline.get_display_price()">
-                                        <div style="font-size:11px; color:#666;">
-                                            <t t-esc="env.utils.formatCurrency(orderline.get_unit_price())"/> x <t t-esc="orderline.get_quantity_str_with_unit()"/>
-                                        </div>
-                                    </t>
-                                    <t t-if="orderline.get_discount() > 0">
-                                        <div style="font-size:11px; font-style:italic; color:#e74c3c;">
-                                            <t t-esc="orderline.get_discount()"/>% discount
-                                        </div>
-                                    </t>
-                                    <t t-if="orderline.customerNote">
-                                        <div style="font-size:11px; font-style:italic; color:#34495e;" t-esc="orderline.customerNote"/>
-                                    </t>
-                                </td>
-                                <td style="text-align:center; padding: 5px 0; vertical-align: top;">
-                                    <t t-esc="orderline.get_quantity_str_with_unit()"/>
-                                </td>
-                                <td style="text-align:right; padding: 5px 0; vertical-align: top; font-weight: bold;">
-                                    <t t-esc="env.utils.formatCurrency(orderline.get_display_price())"/>
-                                </td>
-                            </tr>
-                        </t>
-                    </t>
-
-                    <!-- Fallback for static orderlines -->
-                    <t t-else="">
-                        <t t-if="props.orderlines and props.orderlines.length">
-                            <tr t-foreach="props.orderlines" t-as="orderline" t-key="orderline_index" style="border-bottom:1px dotted #666;">
-                                <td style="padding: 5px 0; text-align:left; vertical-align: top;">
-                                    <div style="font-weight: bold;"><t t-esc="orderline.productName"/></div>
-                                    <t t-if="orderline.discount > 0">
-                                        <div style="font-size:11px; font-style:italic; color:#e74c3c;">
-                                            <t t-esc="orderline.discount"/>% discount
-                                        </div>
-                                    </t>
-                                    <t t-if="orderline.customerNote">
-                                        <div style="font-size:11px; font-style:italic; color:#34495e;" t-esc="orderline.customerNote"/>
-                                    </t>
-                                </td>
-                                <td style="text-align:center; padding: 5px 0; vertical-align: top;">
-                                    <t t-esc="orderline.qty"/>
-                                </td>
-                                <td style="text-align:right; padding: 5px 0; vertical-align: top; font-weight: bold;">
-                                    <t t-esc="orderline.price"/>
-                                </td>
-                            </tr>
-                        </t>
-                    </t>
-                </table>
-            </div>
-
-            <!-- Separator Line -->
-            <div style="border-bottom: 1px solid #333; margin: 15px 0;"></div>
-
-            <!-- Total Information -->
             <div style="font-size:14px;">
+                <div><strong>Order:</strong> <t t-esc="props.receipt.name || props.order.name" /></div>
+                <div><strong>Date:</strong> <t t-esc="props.receipt.date" /></div>
+                <t t-if="props.receipt.headerData.cashier">
+                    <div><strong>Cashier:</strong> <t t-esc="props.receipt.headerData.cashier" /></div>
+                </t>
+                <!-- Sales Person Display -->
+                <t t-if="props.receipt.sales_person">
+                    <div><strong>Sales Person:</strong> <t t-esc="props.receipt.sales_person" /></div>
+                </t>
+                <t t-if="props.order.partner_id">
+                    <div><strong>Customer:</strong> <t t-esc="props.order.partner_id.name" /></div>
+                </t>
+            </div>
 
-                <!-- Total -->
-                <div style="display: flex; justify-content: space-between; margin: 10px 0; font-weight: bold; font-size: 16px; border-top: 2px solid #333; padding-top: 10px;">
-                    <span>TOTAL</span>
-                    <span t-esc='env.utils.formatCurrency(props.data.amount_total)'/>
-                </div>
+            <div style="text-align:center; margin: 10px 0;">
+                ================================
+            </div>
 
-                <!-- Payment Lines -->
-                <t t-if="props.paymentlines and props.paymentlines.length">
-                    <div style="border-top: 1px dotted #666; padding-top: 10px; margin-top: 10px;">
-                        <t t-foreach='props.paymentlines' t-as='line' t-key="index_paymentlines">
-                            <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-                                <span><t t-esc='line.name' /></span>
-                                <span t-esc='env.utils.formatCurrency(line.amount)'/>
-                            </div>
+            <!-- Order Lines -->
+            <table class="receipt-orderlines" style="width:100%; font-size:14px;">
+                <thead>
+                    <tr>
+                        <th style="text-align:left; width:50%;">Item</th>
+                        <th style="text-align:center; width:15%;">Qty</th>
+                        <th style="text-align:right; width:15%;">Price</th>
+                        <th style="text-align:right; width:20%;">Total</th>
+                    </tr>
+                    <tr>
+                        <td colspan="4"><hr style="border-style:dashed;" /></td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-if="props.orderlines and props.orderlines.length">
+                        <t t-foreach="props.orderlines" t-as="line" t-key="line_index">
+                            <tr>
+                                <td style="text-align:left;">
+                                    <t t-esc="line.productName"/>
+                                    <t t-if="line.discount and line.discount > 0">
+                                        <div style="font-size:12px; color:#666;">
+                                            <t t-esc="line.discount"/>% discount
+                                        </div>
+                                    </t>
+                                    <t t-if="line.customerNote">
+                                        <div style="font-size:12px; font-style:italic;">
+                                            Note: <t t-esc="line.customerNote"/>
+                                        </div>
+                                    </t>
+                                </td>
+                                <td style="text-align:center;">
+                                    <t t-esc="line.qty"/>
+                                </td>
+                                <td style="text-align:right;">
+                                    <t t-esc="props.formatCurrency(line.unitPrice || line.price / line.qty)"/>
+                                </td>
+                                <td style="text-align:right;">
+                                    <t t-esc="props.formatCurrency(line.price)"/>
+                                </td>
+                            </tr>
                         </t>
+                    </t>
+                </tbody>
+            </table>
+
+            <div style="text-align:center; margin: 10px 0;">
+                --------------------------------
+            </div>
+
+            <!-- Totals Section -->
+            <div style="font-size:14px;">
+                <t t-set="taxincluded" t-value="Math.abs(props.receipt.amount_total - props.receipt.total_with_tax) &lt;= 0.000001" />
+
+                <!-- Subtotal if taxes not included -->
+                <t t-if="!taxincluded and props.data.total_without_tax">
+                    <div style="text-align:right;">
+                        <span>Subtotal: </span>
+                        <span style="margin-left:20px;">
+                            <t t-esc="props.formatCurrency(props.data.total_without_tax)"/>
+                        </span>
                     </div>
 
-                    <!-- Change -->
-                    <t t-if="props.receipt.change">
-                        <div style="display: flex; justify-content: space-between; margin: 5px 0; font-weight: bold;">
-                            <span>CHANGE</span>
-                            <span t-esc='env.utils.formatCurrency(props.receipt.change)'/>
-                        </div>
+                    <!-- Tax Details -->
+                    <t t-if="props.data.tax_details">
+                        <t t-foreach="props.data.tax_details" t-as="tax" t-key="tax_index">
+                            <div style="text-align:right; font-size:13px;">
+                                <span><t t-esc="tax.tax.name"/>: </span>
+                                <span style="margin-left:20px;">
+                                    <t t-esc="props.formatCurrency(tax.amount)"/>
+                                </span>
+                            </div>
+                        </t>
                     </t>
                 </t>
-            </div>
 
-            <!-- Custom Promotional/Marketing Image Section -->
-            <div style="text-align: center; margin: 20px 0 15px 0;">
-                <!-- You can replace this with your own promotional image -->
-                <!-- Option 1: Static image from your module -->
-                <img src="/custom_receipts_for_pos/static/src/img/promo_image.png"
-                     alt="Promotional Image"
-                     style="max-width: 200px; height: auto; border: 1px solid #ddd; border-radius: 5px;"
-                     onerror="this.style.display='none'"/>
-
-                <!-- Option 2: Base64 encoded image (uncomment and replace with your base64 image) -->
-                <!-- <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
-                     alt="Promotional Content"
-                     style="max-width: 200px; height: auto; border: 1px solid #ddd; border-radius: 5px;"/> -->
-
-                <!-- Option 3: Company logo as promotional content -->
-                <t t-if="env.services.pos.config.logo">
-                    <!-- <img t-att-src="'data:image/png;base64,' + env.services.pos.config.logo"
-                         alt="Company Promo" style="max-width: 150px; height: auto; opacity: 0.8; filter: grayscale(20%);"/> -->
-                </t>
-
-                <!-- Promotional Text -->
-                <div style="font-size: 12px; color: #666; margin-top: 10px; font-style: italic;">
-                    Visit us again for more great deals!
+                <!-- Total -->
+                <div style="text-align:right; font-size:16px; font-weight:bold; margin-top:5px;">
+                    <span>TOTAL: </span>
+                    <span style="margin-left:20px;">
+                        <t t-esc="props.formatCurrency(props.data.amount_total)"/>
+                    </span>
                 </div>
             </div>
 
-            <!-- Order Data -->
-            <div class="pos-receipt-order-data" style="text-align: center; font-size: 11px; color: #666; margin: 15px 0;">
-                <div><t t-esc="props.receipt.name || props.order.name" /></div>
-                <t t-if="props.receipt.date">
-                    <div><t t-esc="props.receipt.date" /></div>
+            <div style="text-align:center; margin: 10px 0;">
+                ================================
+            </div>
+
+            <!-- Payment Details -->
+            <div style="font-size:14px;">
+                <t t-foreach="props.paymentlines" t-as="payment" t-key="payment_index">
+                    <div style="text-align:right;">
+                        <span><t t-esc="payment.name"/>: </span>
+                        <span style="margin-left:20px;">
+                            <t t-esc="props.formatCurrency(payment.amount)"/>
+                        </span>
+                    </div>
                 </t>
-                <t t-else="">
-                    <div><t t-esc="props.order.validation_date" /></div>
+
+                <!-- Change -->
+                <t t-if="props.receipt.change and props.receipt.change > 0">
+                    <div style="text-align:right; font-weight:bold; margin-top:5px;">
+                        <span>Change: </span>
+                        <span style="margin-left:20px;">
+                            <t t-esc="props.formatCurrency(props.receipt.change)"/>
+                        </span>
+                    </div>
                 </t>
             </div>
 
-            <!-- Footer Section -->
-            <div style="text-align: center; font-size: 12px; margin-top: 20px;">
+            <!-- Promotional Image Section -->
+            <t t-if="env.services.pos.config.receipt_image">
+                <div style="text-align:center; margin: 20px 0;">
+                    <img t-att-src="'data:image/png;base64,' + env.services.pos.config.receipt_image"
+                         alt="Promotion" style="max-width:200px; max-height:150px;"/>
+                </div>
+            </t>
+
+            <!-- QR Code Section -->
+            <t t-if="props.data.pos_qr_code">
+                <div style="text-align:center; margin: 15px 0;">
+                    <div style="font-size:12px; margin-bottom:5px;">
+                        Need an invoice? Scan the QR code
+                    </div>
+                    <img t-att-src="props.data.pos_qr_code"
+                         class="pos-receipt-logo" style="width:100px; height:100px;"/>
+                    <div style="font-size:11px; margin-top:5px;">
+                        Code: <t t-esc="props.data.ticket_code"/>
+                    </div>
+                </div>
+            </t>
+
+            <!-- Footer -->
+            <div style="text-align:center; margin-top:20px;">
                 <t t-if="props.receipt.footer">
-                    <div style="white-space: pre-line; margin-bottom: 10px;">
+                    <div style="white-space:pre-line; font-size:12px;">
                         <t t-esc="props.receipt.footer"/>
                     </div>
                 </t>
-                <div style="border-top: 1px dotted #666; padding-top: 10px; margin-top: 10px;">
-                    <div style="font-weight: bold;">Thank You For Your Business!</div>
-                    <div style="font-size: 10px; color: #888; margin-top: 5px;">
-                        Powered by Odoo
-                    </div>
+                <div style="font-size:14px; font-weight:bold; margin-top:10px;">
+                    Thank You For Your Business!
+                </div>
+                <div style="font-size:12px;">
+                    Please Visit Again
                 </div>
             </div>
 
+            <!-- Powered by -->
+            <div style="text-align:center; font-size:10px; margin-top:20px; color:#666;">
+                Powered by Odoo
+            </div>
         </div>]]></field>
     </record>
-
 </odoo>
