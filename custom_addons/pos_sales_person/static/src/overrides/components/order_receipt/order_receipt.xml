@@ -5,5 +5,17 @@
         <xpath expr="//OrderWidget" position="attributes">
             <attribute name="sales_person">props.data.sales_person ? props.data.sales_person : ""</attribute>
         </xpath>
+
+        <!-- Add QR code in footer -->
+        <xpath expr="//div[@class='after-footer']" position="after">
+            <div class="pos-receipt-brand-qr" style="text-align: center; margin-top: 20px; margin-bottom: 10px;">
+                <img src="/pos_sales_person/static/src/img/brand_qr_code.png"
+                     alt="Brand QR Code"
+                     style="width: 100px; height: 100px; display: inline-block;"/>
+                <div style="font-size: 12px; margin-top: 5px;">
+                    Scan to visit our brand page
+                </div>
+            </div>
+        </xpath>
     </t>
 </templates>
