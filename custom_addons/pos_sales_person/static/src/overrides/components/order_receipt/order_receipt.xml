@@ -40,6 +40,19 @@
 
                 <!-- Custom header text if available -->
                 <div t-if="props.data.headerData.header" class="text-center" style="white-space:pre-line" t-esc="props.data.headerData.header" />
+
+                <!-- POS Name and Order Number -->
+                <div class="text-center" style="font-size: 95%; font-weight: 600; margin: 10px 0;">
+                    <!-- POS Configuration Name -->
+                    <div t-if="props.data.pos_config_name">
+                        Shop: <t t-esc="props.data.pos_config_name" />
+                    </div>
+
+                    <!-- Order/Tracking Number -->
+                    <div t-if="props.data.headerData.trackingNumber" style="font-size: 110%; margin-top: 5px;">
+                        #<t t-esc="props.data.headerData.trackingNumber" />
+                    </div>
+                </div>
                 <br/>
             </div>
         </xpath>
