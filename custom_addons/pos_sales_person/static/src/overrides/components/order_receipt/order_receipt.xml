@@ -3,12 +3,39 @@
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
 
-        <!-- Replace the entire ReceiptHeader with a minimal version -->
+        <!-- Replace the entire ReceiptHeader with custom version -->
         <xpath expr="//ReceiptHeader" position="replace">
-            <!-- Minimal header with just logo and custom header text -->
+            <!-- Custom header with logo, address, contact info (no company name) -->
             <div class="receipt-header-custom">
-                <!-- Logo -->
-                <img t-attf-src="/web/image?model=res.company&amp;id={{props.data.headerData.company.id}}&amp;field=logo" alt="Logo" class="pos-receipt-logo"/>
+                <!-- Full Width Logo -->
+                <img t-attf-src="/web/image?model=res.company&amp;id={{props.data.headerData.company.id}}&amp;field=logo" alt="Logo" style="width: 100%; max-width: 100%; display: block; margin: 0 auto;"/>
+                <br/>
+
+                <!-- Company contact info (address, phone, email) - NO company name -->
+                <div class="d-flex flex-column align-items-center">
+                    <div class="pos-receipt-contact text-center" style="font-size: 90%; font-weight: 600;">
+                        <!-- Company Address - Street 1 and Street 2 together -->
+                        <div>
+                            <span t-if="props.data.headerData.company.street" t-esc="props.data.headerData.company.street" />
+                            <span t-if="props.data.headerData.company.street2">, <t t-esc="props.data.headerData.company.street2" /></span>
+                        </div>
+                        <div>
+                            <span t-if="props.data.headerData.company.city" t-esc="props.data.headerData.company.city" />
+                            <span t-if="props.data.headerData.company.zip"> <t t-esc="props.data.headerData.company.zip" /></span>
+                        </div>
+
+                        <!-- Phone and Mobile Numbers - Combined on one line -->
+                        <div>
+                            <span t-if="props.data.headerData.company.phone" t-esc="props.data.headerData.company.phone" />
+                            <span t-if="props.data.headerData.company.phone and (props.data.headerData.company.mobile or props.data.headerData.company.partner_id?.mobile)">, </span>
+                            <span t-if="props.data.headerData.company.mobile" t-esc="props.data.headerData.company.mobile" />
+                            <span t-elif="props.data.headerData.company.partner_id and props.data.headerData.company.partner_id.mobile" t-esc="props.data.headerData.company.partner_id.mobile" />
+                        </div>
+
+                        <!-- Email -->
+                        <div t-if="props.data.headerData.company.email" t-esc="props.data.headerData.company.email" />
+                    </div>
+                </div>
                 <br/>
 
                 <!-- Custom header text if available -->
@@ -78,7 +105,7 @@
                      alt="Brand QR Code"
                      style="width: 100px; height: 100px; display: inline-block;"/>
                 <div style="font-size: 12px; margin-top: 5px;">
-                    Scan to connect with us!
+                    Scan to visit our brand page
                 </div>
             </div>
         </xpath>
