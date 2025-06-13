@@ -2,8 +2,73 @@
 <!-- OrderReceipt Template -->
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
-        <xpath expr="//OrderWidget" position="attributes">
-            <attribute name="sales_person">props.data.sales_person ? props.data.sales_person : ""</attribute>
+
+        <!-- Replace the entire ReceiptHeader with a minimal version -->
+        <xpath expr="//ReceiptHeader" position="replace">
+            <!-- Minimal header with just logo and custom header text -->
+            <div class="receipt-header-custom">
+                <!-- Logo -->
+                <img t-attf-src="/web/image?model=res.company&amp;id={{props.data.headerData.company.id}}&amp;field=logo" alt="Logo" class="pos-receipt-logo"/>
+                <br/>
+
+                <!-- Custom header text if available -->
+                <div t-if="props.data.headerData.header" class="text-center" style="white-space:pre-line" t-esc="props.data.headerData.header" />
+                <br/>
+            </div>
+        </xpath>
+
+        <!-- Replace OrderWidget with custom table -->
+        <xpath expr="//OrderWidget" position="replace">
+            <!-- Sales Person info -->
+            <div t-if="props.data.sales_person" class="text-center mb-2">
+                <div>--------------------------------</div>
+                <div>Sales Person: <t t-esc="props.data.sales_person"/></div>
+                <div>--------------------------------</div>
+            </div>
+
+            <!-- Order Items Table -->
+            <div t-if="props.data.orderlines?.length" class="order-items-table" style="font-size: 12px;">
+                <!-- Table Header -->
+                <div class="table-header" style="display: flex; border-bottom: 1px dashed #000; padding-bottom: 2px; margin-bottom: 4px; font-weight: bold;">
+                    <div style="flex: 2; text-align: left;">Item</div>
+                    <div style="flex: 0.5; text-align: center;">Qty</div>
+                    <div style="flex: 1; text-align: right;">Price</div>
+                    <div style="flex: 1; text-align: right;">Amount</div>
+                </div>
+
+                <!-- Order Lines -->
+                <div t-foreach="props.data.orderlines" t-as="line" t-key="line_index" class="order-line" style="display: flex; margin-bottom: 2px; align-items: flex-start;">
+                    <!-- Item name and details -->
+                    <div style="flex: 2; text-align: left; padding-right: 4px;">
+                        <div style="font-weight: bold;" t-esc="line.productName"/>
+                        <div t-if="line.discount and line.discount !== '0'" style="font-size: 10px; color: #666;">
+                            Discount: <t t-esc="line.discount"/>%
+                        </div>
+                        <div t-if="line.customerNote" style="font-size: 10px; font-style: italic; color: #666;">
+                            Note: <t t-esc="line.customerNote"/>
+                        </div>
+                    </div>
+
+                    <!-- Quantity -->
+                    <div style="flex: 0.5; text-align: center;" t-esc="line.qty"/>
+
+                    <!-- Unit Price - use unitPrice (formatted string) -->
+                    <div style="flex: 1; text-align: right;" t-esc="line.unitPrice"/>
+
+                    <!-- Line Total - use price (formatted string) -->
+                    <div style="flex: 1; text-align: right; font-weight: bold;" t-esc="line.price"/>
+                </div>
+
+                <!-- General Note if exists -->
+                <div t-if="props.data.generalNote" class="general-note" style="margin-top: 8px; font-style: italic; font-size: 11px; padding: 4px; border-top: 1px dashed #000;">
+                    <strong>Note:</strong> <t t-esc="props.data.generalNote"/>
+                </div>
+            </div>
+        </xpath>
+
+        <!-- Remove only the "Powered by Odoo" text, keep order number and date -->
+        <xpath expr="//div[@class='pos-receipt-order-data']//p[text()='Powered by Odoo']" position="replace">
+            <!-- Remove this completely -->
         </xpath>
 
         <!-- Add QR code in footer -->
@@ -13,7 +78,7 @@
                      alt="Brand QR Code"
                      style="width: 100px; height: 100px; display: inline-block;"/>
                 <div style="font-size: 12px; margin-top: 5px;">
-                    Scan to visit our brand page
+                    Scan to connect with us!
                 </div>
             </div>
         </xpath>
