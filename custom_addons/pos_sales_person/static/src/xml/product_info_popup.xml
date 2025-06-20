@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="point_of_sale.ProductInfoPopup" t-inherit="point_of_sale.ProductInfoPopup" t-inherit-mode="extension">
+        <!-- Remove the entire financials-order section -->
+        <xpath expr="//div[hasclass('financials-order')]" position="replace">
+            <!-- This removes the entire financials table and order section -->
+        </xpath>
+    </t>
+</templates>
