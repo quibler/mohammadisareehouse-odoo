@@ -39,9 +39,9 @@ class AccountMove(models.Model):
                         help='specify the rate')
 
     sale_order_id = fields.Many2one('sale.order', string="Sale Order", compute="_compute_sale_order",
-                                    store=True,help="Linking corresponding Sale Order")
+                                    store=True, help="Linking corresponding Sale Order")
     purchase_order_id = fields.Many2one('purchase.order', string="Purchase Order",
-                                        compute="_compute_purchase_order", store=True,help="Linking Purchase Order")
+                                        compute="_compute_purchase_order", store=True, help="Linking Purchase Order")
 
     @api.constrains('company_currency_id', 'currency_id')
     def _onchange_different_currency(self):
@@ -98,7 +98,7 @@ class AccountMove(models.Model):
         """ Allow manual editing of is_exchange in account.move """
         pass
 
-    @api.depends('sale_order_id.rate', 'purchase_order_id.rate')
+    @api.depends('sale_order_id.rate', 'purchase_order_id.rate', 'currency_id', 'company_currency_id', 'company_id', 'date')
     def _compute_rate(self):
         """ Compute The rate based on sale order and purchase order"""
         for move in self:
@@ -107,12 +107,14 @@ class AccountMove(models.Model):
             elif move.purchase_order_id:
                 move.rate = move.purchase_order_id.rate
             else:
+                # Fixed the singleton error by using move.date instead of self.date
+                rate_date = move.date or fields.Date.context_today(move)
                 move.rate = move.env['res.currency']._get_conversion_rate(
-                from_currency=move.company_currency_id,
-                to_currency=move.currency_id,
-                company=move.company_id,
-                date=self.date,
-            )
+                    from_currency=move.company_currency_id,
+                    to_currency=move.currency_id,
+                    company=move.company_id,
+                    date=rate_date,
+                )
 
     def _inverse_rate(self):
         """ Allow manual editing of rate in account.move """
