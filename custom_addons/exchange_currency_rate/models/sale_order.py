@@ -1,57 +1,73 @@
 # -*- coding: utf-8 -*-
-################################################################################
-#
-#    Cybrosys Technologies Pvt. Ltd.
-#
-#    Copyright (C) 2024-TODAY Cybrosys Technologies(<https://www.cybrosys.com>).
-#    Author: Farook Al Ameen (odoo@cybrosys.info)
-#
-#    You can modify it under the terms of the GNU AFFERO
-#    GENERAL PUBLIC LICENSE (AGPL v3), Version 3.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU AFFERO GENERAL PUBLIC LICENSE (AGPL v3) for more details.
-#
-#    You should have received a copy of the GNU AFFERO GENERAL PUBLIC LICENSE
-#    (AGPL v3) along with this program.
-#    If not, see <http://www.gnu.org/licenses/>.
-#
-################################################################################
 from odoo import api, fields, models
 
+
 class SaleOrder(models.Model):
-    """This class extends the base 'sale.order' model to introduce a
-    new field, 'is_exchange',which allows users to manually apply an exchange
-    rate for a transaction. When this option is enabled,users can specify the
-    exchange rate through the 'rate' field."""
     _inherit = 'sale.order'
 
     company_currency_id = fields.Many2one(
         string='Company Currency',
-        related='company_id.currency_id', readonly=True,help='Store the Company Currency'
+        related='company_id.currency_id', readonly=True
+    )
+    company_rate = fields.Float(
+        string='Exchange Rate',
+        help='Foreign currency per company currency',
+        digits=(12, 6)
     )
 
-    is_exchange = fields.Boolean(string='Apply Manual Currency',
-                                 help='Enable the boolean field to display '
-                                      'rate field')
-    rate = fields.Float(string='Rate', help='specify the currency rate',default=1)
+    @api.onchange('currency_id')
+    def _onchange_currency_id(self):
+        """Load last exchange rate when currency changes"""
+        if self.currency_id and self.currency_id != self.company_currency_id:
+            # Get the latest rate for this currency
+            latest_rate = self.env['res.currency.rate'].search([
+                ('currency_id', '=', self.currency_id.id),
+                ('company_id', '=', self.company_id.id)
+            ], order='name desc', limit=1)
 
-    @api.constrains('company_currency_id', 'currency_id')
-    def _onchange_different_currency(self):
-        """ When the Currency is changed back to company currency, the boolean field is disabled """
-        if self.company_currency_id == self.currency_id:
-            if self.is_exchange:
-                self.is_exchange = False
+            if latest_rate:
+                self.company_rate = latest_rate.company_rate
+            else:
+                # Fallback to system rate
+                system_rate = self.env['res.currency']._get_conversion_rate(
+                    from_currency=self.company_currency_id,
+                    to_currency=self.currency_id,
+                    company=self.company_id,
+                    date=self.date_order or fields.Date.today(),
+                )
+                self.company_rate = 1.0 / system_rate if system_rate else 1.0
+        else:
+            self.company_rate = 0.0
 
-    @api.onchange('is_exchange')
-    def _onchange_is_exchange(self):
-        """ Update Rate when is_exchange is Enabled."""
-        if self.is_exchange:
-            self.rate = self.env['res.currency']._get_conversion_rate(
-                from_currency=self.company_currency_id,
-                to_currency=self.currency_id,
-                company=self.company_id,
-                date=self.date_order,
-            )
+    @api.onchange('company_rate')
+    def _onchange_company_rate(self):
+        """Update currency rate when manual rate is changed"""
+        if self.company_rate > 0 and self.currency_id != self.company_currency_id:
+            self._update_currency_rate()
+
+    def _update_currency_rate(self):
+        """Update the global currency rate table"""
+        if not self.company_rate or not self.currency_id or self.currency_id == self.company_currency_id:
+            return
+
+        rate_date = self.date_order.date() if self.date_order else fields.Date.today()
+
+        existing_rate = self.env['res.currency.rate'].search([
+            ('currency_id', '=', self.currency_id.id),
+            ('name', '=', rate_date),
+            ('company_id', '=', self.company_id.id)
+        ])
+
+        rate_values = {
+            'company_rate': self.company_rate,
+        }
+
+        if existing_rate:
+            existing_rate.write(rate_values)
+        else:
+            rate_values.update({
+                'currency_id': self.currency_id.id,
+                'name': rate_date,
+                'company_id': self.company_id.id,
+            })
+            self.env['res.currency.rate'].create(rate_values)
