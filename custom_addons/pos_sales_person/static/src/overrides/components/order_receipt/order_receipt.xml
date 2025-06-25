@@ -1,126 +1,157 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- OrderReceipt Template -->
+<!-- OrderReceipt Template - Compact Thermal Printer Version -->
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
 
-        <!-- Replace the entire ReceiptHeader with custom version -->
+        <!-- Add sales person and global discount to receipt data -->
+        <xpath expr="//t[@t-set='receipt']" position="after">
+            <!-- Add sales person to receipt data -->
+            <t t-if="props.data.sales_person_id">
+                <t t-set="receipt.sales_person"
+                   t-value="props.data.employees?.find(emp => emp.id === props.data.sales_person_id)?.name"/>
+            </t>
+
+            <!-- Add global discount data -->
+            <t t-if="props.data.global_discount_amount and props.data.global_discount_amount > 0">
+                <t t-set="receipt.global_discount_amount" t-value="props.data.global_discount_amount"/>
+                <t t-set="receipt.formatted_global_discount_amount"
+                   t-value="env.utils.formatCurrency(props.data.global_discount_amount)"/>
+                <t t-set="receipt.global_discount_type" t-value="'amount'"/>
+            </t>
+            <t t-elif="props.data.global_discount_percentage and props.data.global_discount_percentage > 0">
+                <t t-set="receipt.global_discount_percentage" t-value="props.data.global_discount_percentage"/>
+                <t t-set="receipt.global_discount_type" t-value="'percentage'"/>
+            </t>
+        </xpath>
+
+        <!-- Replace the entire ReceiptHeader with compact version -->
         <xpath expr="//ReceiptHeader" position="replace">
-            <!-- Custom header with logo, address, contact info (no company name) -->
-            <div class="receipt-header-custom">
-                <!-- Full Width Logo -->
-                <img t-attf-src="/web/image?model=res.company&amp;id={{props.data.headerData.company.id}}&amp;field=logo" alt="Logo" style="width: 100%; max-width: 100%; display: block; margin: 0 auto;"/>
-                <br/>
+            <!-- Compact header for thermal printer -->
+            <div class="receipt-header-compact" style="text-align: center; font-size: 12px; line-height: 1.2;">
+                <!-- Company Logo - smaller -->
+                <img t-attf-src="/web/image?model=res.company&amp;id={{props.data.headerData.company.id}}&amp;field=logo"
+                     alt="Logo" style="max-width: 120px; max-height: 40px; margin: 2px auto;"/>
 
-                <!-- Company contact info (address, phone, email) - NO company name -->
-                <div class="d-flex flex-column align-items-center">
-                    <div class="pos-receipt-contact text-center" style="font-size: 90%; font-weight: 600;">
-                        <!-- Company Address - Street 1 and Street 2 together -->
-                        <div>
-                            <span t-if="props.data.headerData.company.street" t-esc="props.data.headerData.company.street" />
-                            <span t-if="props.data.headerData.company.street2">, <t t-esc="props.data.headerData.company.street2" /></span>
-                        </div>
-                        <div>
-                            <span t-if="props.data.headerData.company.city" t-esc="props.data.headerData.company.city" />
-                            <span t-if="props.data.headerData.company.zip"> <t t-esc="props.data.headerData.company.zip" /></span>
-                        </div>
+                <!-- Company Name -->
+                <div style="font-weight: bold; font-size: 14px; margin: 2px 0;">
+                    <t t-esc="props.data.headerData.company.name"/>
+                </div>
 
-                        <!-- Phone and Mobile Numbers - Combined on one line -->
-                        <div>
-                            <span t-if="props.data.headerData.company.phone" t-esc="props.data.headerData.company.phone" />
-                            <span t-if="props.data.headerData.company.phone and (props.data.headerData.company.mobile or props.data.headerData.company.partner_id?.mobile)">, </span>
-                            <span t-if="props.data.headerData.company.mobile" t-esc="props.data.headerData.company.mobile" />
-                            <span t-elif="props.data.headerData.company.partner_id and props.data.headerData.company.partner_id.mobile" t-esc="props.data.headerData.company.partner_id.mobile" />
-                        </div>
+                <!-- Address - compact format -->
+                <div style="font-size: 10px; line-height: 1.1;">
+                    <div t-if="props.data.headerData.company.street or props.data.headerData.company.street2">
+                        <span t-if="props.data.headerData.company.street" t-esc="props.data.headerData.company.street"/>
+                        <span t-if="props.data.headerData.company.street2">, <t t-esc="props.data.headerData.company.street2"/></span>
+                    </div>
+                    <div t-if="props.data.headerData.company.city or props.data.headerData.company.zip">
+                        <span t-if="props.data.headerData.company.city" t-esc="props.data.headerData.company.city"/>
+                        <span t-if="props.data.headerData.company.zip"> <t t-esc="props.data.headerData.company.zip"/></span>
+                    </div>
+                    <!-- Phone - single line -->
+                    <div t-if="props.data.headerData.company.phone" t-esc="props.data.headerData.company.phone"/>
+                </div>
 
-                        <!-- Email -->
-                        <div t-if="props.data.headerData.company.email" t-esc="props.data.headerData.company.email" />
+                <!-- Order info - compact -->
+                <div style="margin: 5px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 2px 0;">
+                    <div style="font-size: 11px;">
+                        <span t-if="props.data.pos_config_name">Shop: <t t-esc="props.data.pos_config_name"/></span>
+                    </div>
+                    <div t-if="props.data.headerData.trackingNumber" style="font-weight: bold; font-size: 12px;">
+                        #<t t-esc="props.data.headerData.trackingNumber"/>
                     </div>
                 </div>
-                <br/>
 
-                <!-- Custom header text if available -->
-                <div t-if="props.data.headerData.header" class="text-center" style="white-space:pre-line" t-esc="props.data.headerData.header" />
-
-                <!-- POS Name and Order Number -->
-                <div class="text-center" style="font-size: 95%; font-weight: 600; margin: 10px 0;">
-                    <!-- POS Configuration Name -->
-                    <div t-if="props.data.pos_config_name">
-                        Shop: <t t-esc="props.data.pos_config_name" />
-                    </div>
-
-                    <!-- Order/Tracking Number -->
-                    <div t-if="props.data.headerData.trackingNumber" style="font-size: 110%; margin-top: 5px;">
-                        #<t t-esc="props.data.headerData.trackingNumber" />
-                    </div>
+                <!-- Sales Person - compact -->
+                <div t-if="receipt.sales_person" style="font-size: 10px; margin: 2px 0;">
+                    Sales Person: <t t-esc="receipt.sales_person"/>
                 </div>
-                <br/>
             </div>
         </xpath>
 
-        <!-- Replace OrderWidget with custom table -->
+        <!-- Replace OrderWidget with ultra-compact version -->
         <xpath expr="//OrderWidget" position="replace">
-            <!-- Sales Person info -->
-            <div t-if="props.data.sales_person" class="text-center mb-2">
-                <div>--------------------------------</div>
-                <div>Sales Person: <t t-esc="props.data.sales_person"/></div>
-                <div>--------------------------------</div>
-            </div>
+            <!-- Compact Order Lines like left receipt -->
+            <div class="compact-order-lines" style="font-size: 10px; line-height: 1.2;">
 
-            <!-- Order Items Table -->
-            <div t-if="props.data.orderlines?.length" class="order-items-table" style="font-size: 12px;">
-                <!-- Table Header -->
-                <div class="table-header" style="display: flex; border-bottom: 1px dashed #000; padding-bottom: 2px; margin-bottom: 4px; font-weight: bold;">
-                    <div style="flex: 2; text-align: left;">Item</div>
-                    <div style="flex: 0.5; text-align: center;">Qty</div>
-                    <div style="flex: 1; text-align: right;">Price</div>
-                    <div style="flex: 1; text-align: right;">Amount</div>
+                <!-- Table header -->
+                <div style="border-bottom: 1px dashed #000; padding: 1px 0; margin: 2px 0;">
+                    <table style="width: 100%; font-size: 9px;">
+                        <tr>
+                            <td style="text-align: left;">Item</td>
+                            <td style="text-align: center; width: 15%;">Qty</td>
+                            <td style="text-align: right; width: 20%;">Rate</td>
+                            <td style="text-align: right; width: 20%;">Amount</td>
+                        </tr>
+                    </table>
                 </div>
 
-                <!-- Order Lines -->
-                <div t-foreach="props.data.orderlines" t-as="line" t-key="line_index" class="order-line" style="display: flex; margin-bottom: 2px; align-items: flex-start;">
-                    <!-- Item name and details -->
-                    <div style="flex: 2; text-align: left; padding-right: 4px;">
-                        <div style="font-weight: bold;" t-esc="line.productName"/>
-                        <div t-if="line.discount and line.discount !== '0'" style="font-size: 10px; color: #666;">
-                            Discount: <t t-esc="line.discount"/>%
-                        </div>
-                        <div t-if="line.customerNote" style="font-size: 10px; font-style: italic; color: #666;">
-                            Note: <t t-esc="line.customerNote"/>
-                        </div>
+                <!-- Order Lines - compact table format -->
+                <div t-foreach="props.data.orderlines" t-as="line" t-key="line.id">
+                    <table style="width: 100%; font-size: 9px; margin: 1px 0;">
+                        <tr>
+                            <td style="text-align: left; padding-right: 5px;">
+                                <t t-esc="line.productName"/>
+                                <div t-if="line.discount > 0" style="font-size: 8px;">
+                                    Disc: <t t-esc="line.discount"/>%
+                                </div>
+                            </td>
+                            <td style="text-align: center; width: 15%;" t-esc="line.qty"/>
+                            <td style="text-align: right; width: 20%;" t-esc="line.unitPrice"/>
+                            <td style="text-align: right; width: 20%;" t-esc="line.price"/>
+                        </tr>
+                    </table>
+                    <!-- Customer note if exists -->
+                    <div t-if="line.customerNote" style="font-size: 8px; margin-left: 5px; font-style: italic;">
+                        Note: <t t-esc="line.customerNote"/>
                     </div>
-
-                    <!-- Quantity -->
-                    <div style="flex: 0.5; text-align: center;" t-esc="line.qty"/>
-
-                    <!-- Unit Price - use unitPrice (formatted string) -->
-                    <div style="flex: 1; text-align: right;" t-esc="line.unitPrice"/>
-
-                    <!-- Line Total - use price (formatted string) -->
-                    <div style="flex: 1; text-align: right; font-weight: bold;" t-esc="line.price"/>
                 </div>
 
-                <!-- General Note if exists -->
-                <div t-if="props.data.generalNote" class="general-note" style="margin-top: 8px; font-style: italic; font-size: 11px; padding: 4px; border-top: 1px dashed #000;">
+                <!-- Separator before totals -->
+                <div style="border-top: 1px dashed #000; margin: 3px 0;"></div>
+
+                <!-- Global Discount - compact format -->
+                <div t-if="receipt.global_discount_amount or receipt.global_discount_percentage">
+                    <table style="width: 100%; font-size: 9px;">
+                        <tr>
+                            <td style="text-align: left;">
+                                Global Discount
+                                <span t-if="receipt.global_discount_type === 'amount'">(Amount)</span>
+                                <span t-elif="receipt.global_discount_type === 'percentage'">(Percent)</span>
+                            </td>
+                            <td style="text-align: right;">
+                                <span t-if="receipt.global_discount_type === 'amount'"
+                                      t-esc="receipt.formatted_global_discount_amount"/>
+                                <span t-elif="receipt.global_discount_type === 'percentage'">
+                                    <t t-esc="receipt.global_discount_percentage"/>%
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- General Note - compact -->
+                <div t-if="props.data.generalNote" style="font-size: 8px; margin: 3px 0; font-style: italic; border-top: 1px dashed #000; padding-top: 2px;">
                     <strong>Note:</strong> <t t-esc="props.data.generalNote"/>
                 </div>
             </div>
         </xpath>
 
-        <!-- Remove only the "Powered by Odoo" text, keep order number and date -->
+        <!-- Remove "Powered by Odoo" -->
         <xpath expr="//div[@class='pos-receipt-order-data']//p[text()='Powered by Odoo']" position="replace">
-            <!-- Remove this completely -->
+            <!-- Remove completely -->
         </xpath>
 
-        <!-- Add QR code in footer -->
+        <!-- Compact QR code footer -->
         <xpath expr="//div[@class='after-footer']" position="after">
-            <div class="pos-receipt-brand-qr" style="text-align: center; margin-top: 20px; margin-bottom: 10px;">
-                <img src="/pos_sales_person/static/src/img/brand_qr_code.png"
-                     alt="Brand QR Code"
-                     style="width: 100px; height: 100px; display: inline-block;"/>
-                <div style="font-size: 12px; margin-top: 5px;">
+            <div style="text-align: center; margin: 5px 0;">
+                <img src="/custom_pos/static/src/img/brand_qr_code.png"
+                     alt="QR Code"
+                     style="width: 60px; height: 60px;"/>
+                <div style="font-size: 8px; margin-top: 2px;">
                     Scan to visit our brand page
                 </div>
             </div>
         </xpath>
+
     </t>
 </templates>

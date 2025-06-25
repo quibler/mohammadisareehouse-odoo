@@ -1,91 +1,90 @@
 /** @odoo-module **/
 
-import { _t } from "@web/core/l10n/translation";
 import { Component } from "@odoo/owl";
-import { usePos } from "@point_of_sale/app/store/pos_hook";
 import { useService } from "@web/core/utils/hooks";
-import { SelectionPopup } from "@point_of_sale/app/utils/input_popups/selection_popup";
-import { makeAwaitable, ask } from "@point_of_sale/app/store/make_awaitable_dialog";
+import { _t } from "@web/core/l10n/translation";
 
 export class SalesPersonButton extends Component {
-    static template = "pos_sales_person.SalesPersonButton";
-    static props = {};
+    static template = "custom_pos.SalesPersonButton";
 
     setup() {
-        this.pos = usePos();
-        this.dialog = useService("dialog");
+        this.pos = useService("pos");
+        this.popup = useService("popup");
+        this.notification = useService("pos_notification");
     }
 
-    _prepareEmployeeList(currentSalesPerson) {
-        // Get all employees using the getAll() method
-        const allEmployees = this.pos.models["hr.employee"].getAll();
+    get currentOrder() {
+        return this.pos.get_order();
+    }
 
-        // Get the allowed employee IDs
-        let allowedEmployeeIds = [];
-        if (this.pos.config.sales_person_ids && Array.isArray(this.pos.config.sales_person_ids)) {
-            // Extract IDs from the Proxy objects
-            allowedEmployeeIds = Array.from(this.pos.config.sales_person_ids).map(emp => emp.id);
+    get salesPersonName() {
+        const order = this.currentOrder;
+        if (order && order.sales_person_id) {
+            const employee = this.pos.employees.find(emp => emp.id === order.sales_person_id);
+            return employee ? employee.name : _t("Unknown");
         }
+        return _t("Select Sales Person");
+    }
 
-        // Filter employees that are in the allowed list
-        let employeesToShow = allEmployees;
-        if (allowedEmployeeIds.length > 0) {
-            employeesToShow = allEmployees.filter(
-                (employee) => allowedEmployeeIds.includes(employee.id)
-            );
+    get allowedEmployees() {
+        const allowedIds = this.pos.config.sales_person_ids || [];
+        if (allowedIds.length === 0) {
+            return this.pos.employees; // If no restriction, show all employees
         }
-
-        const res = employeesToShow.map((employee) => {
-            return {
-                id: employee.id,
-                item: employee,
-                label: employee.name,
-                isSelected: employee.id === currentSalesPerson,
-            };
-        });
-
-        if (currentSalesPerson) {
-            res.push({
-                id: -1,
-                item: {},
-                label: "Clear",
-                isSelected: false,
-            });
-        }
-
-        return res;
+        return this.pos.employees.filter(emp => allowedIds.includes(emp.id));
     }
 
     async onClick() {
-        const order = this.pos.get_order();
-
+        const order = this.currentOrder;
         if (!order) {
             return;
         }
 
-        const employeesList = this._prepareEmployeeList(order.getSalesPerson()?.id);
+        const allowedEmployees = this.allowedEmployees;
 
-        if (!employeesList.length) {
-            await ask(this.dialog, {
-                title: _t("No Sales Person"),
-                body: _t("There are no sales persons available for this POS. Please configure allowed sales persons in the POS settings."),
-            });
+        if (allowedEmployees.length === 0) {
+            this.notification.add(
+                _t("No sales persons configured for this POS"),
+                { type: "warning" }
+            );
             return;
         }
 
-        let sales_person = await makeAwaitable(this.dialog, SelectionPopup, {
-            title: _t("Select Sales Person"),
-            list: employeesList,
+        const selectionList = allowedEmployees.map(emp => ({
+            id: emp.id,
+            label: emp.name,
+            isSelected: order.sales_person_id === emp.id,
+            item: emp
+        }));
+
+        // Add option to clear selection
+        selectionList.unshift({
+            id: null,
+            label: _t("No Sales Person"),
+            isSelected: !order.sales_person_id,
+            item: null
         });
 
-        if (!sales_person) {
-            return;
-        }
+        const { confirmed, payload } = await this.popup.add("SelectionPopup", {
+            title: _t("Select Sales Person"),
+            list: selectionList,
+        });
 
-        if (sales_person.id === -1){
-            order.setSalesPerson(false);
-        } else {
-            order.setSalesPerson(sales_person);
+        if (confirmed) {
+            const selectedEmployee = payload;
+            order.set_sales_person(selectedEmployee ? selectedEmployee.id : null);
+
+            if (selectedEmployee) {
+                this.notification.add(
+                    _t("Sales person set to %s", selectedEmployee.name),
+                    { type: "success" }
+                );
+            } else {
+                this.notification.add(
+                    _t("Sales person cleared"),
+                    { type: "info" }
+                );
+            }
         }
     }
 }

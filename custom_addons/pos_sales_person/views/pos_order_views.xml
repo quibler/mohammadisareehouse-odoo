@@ -1,26 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <record id="view_pos_order_tree_inherit_sales_person" model="ir.ui.view">
-            <field name="name">pos.order.tree.sales_person</field>
+
+        <!-- Add custom fields to POS Order Form -->
+        <record id="view_pos_order_form_inherit_custom_pos" model="ir.ui.view">
+            <field name="name">pos.order.form.inherit.custom.pos</field>
             <field name="model">pos.order</field>
-            <field name="inherit_id" ref="point_of_sale.view_pos_order_tree"/>
+            <field name="inherit_id" ref="point_of_sale.view_pos_order_form"/>
             <field name="arch" type="xml">
-                <field name="amount_total" position="before">
+                <xpath expr="//field[@name='employee_id']" position="after">
                     <field name="sales_person_id"/>
-                </field>
+                </xpath>
+                <xpath expr="//field[@name='amount_total']" position="before">
+                    <field name="global_discount_type" invisible="not global_discount_type"/>
+                    <field name="global_discount_amount" invisible="global_discount_type != 'amount'"/>
+                    <field name="global_discount_percentage" invisible="global_discount_type != 'percentage'"/>
+                </xpath>
             </field>
         </record>
 
-        <record id="view_pos_order_form_inherit_sales_person" model="ir.ui.view">
-            <field name="name">pos.order.form.sales_person</field>
+        <!-- Add custom fields to POS Order Tree -->
+        <record id="view_pos_order_tree_inherit_custom_pos" model="ir.ui.view">
+            <field name="name">pos.order.tree.inherit.custom.pos</field>
             <field name="model">pos.order</field>
-            <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+            <field name="inherit_id" ref="point_of_sale.view_pos_order_tree"/>
             <field name="arch" type="xml">
-                <field name="user_id" position="after">
-                    <field name="sales_person_id" readonly="1"/>
-                </field>
+                <xpath expr="//field[@name='employee_id']" position="after">
+                    <field name="sales_person_id" optional="hide"/>
+                </xpath>
+                <xpath expr="//field[@name='amount_total']" position="before">
+                    <field name="global_discount_amount" optional="hide"
+                           invisible="global_discount_type != 'amount'"/>
+                </xpath>
             </field>
         </record>
+
+        <!-- Add search filters -->
+        <record id="view_pos_order_search_inherit_custom_pos" model="ir.ui.view">
+            <field name="name">pos.order.search.inherit.custom.pos</field>
+            <field name="model">pos.order</field>
+            <field name="inherit_id" ref="point_of_sale.view_pos_order_search"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='employee_id']" position="after">
+                    <field name="sales_person_id"/>
+                </xpath>
+                <xpath expr="//group" position="inside">
+                    <filter string="Sales Person" name="group_sales_person"
+                            context="{'group_by': 'sales_person_id'}"/>
+                    <filter string="Discount Type" name="group_discount_type"
+                            context="{'group_by': 'global_discount_type'}"/>
+                </xpath>
+            </field>
+        </record>
+
     </data>
 </odoo>
