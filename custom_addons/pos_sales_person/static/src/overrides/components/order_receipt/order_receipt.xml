@@ -13,7 +13,7 @@
 
                 <!-- Company contact info (address, phone, email) - NO company name -->
                 <div class="d-flex flex-column align-items-center">
-                    <div class="pos-receipt-contact text-center" style="font-size: 90%; font-weight: 600;">
+                    <div class="pos-receipt-contact text-center" style="font-size: 12px; font-weight: 400;">
                         <!-- Company Address - Street 1 and Street 2 together -->
                         <div>
                             <span t-if="props.data.headerData.company.street" t-esc="props.data.headerData.company.street" />
@@ -36,43 +36,46 @@
                         <div t-if="props.data.headerData.company.email" t-esc="props.data.headerData.company.email" />
                     </div>
                 </div>
-                <br/>
 
                 <!-- Custom header text if available -->
-                <div t-if="props.data.headerData.header" class="text-center" style="white-space:pre-line" t-esc="props.data.headerData.header" />
+                <div t-if="props.data.headerData.header" class="text-center" style="white-space:pre-line; font-size: 12px;" t-esc="props.data.headerData.header" />
 
-                <!-- POS Name and Order Number -->
-                <div class="text-center" style="font-size: 95%; font-weight: 600; margin: 10px 0;">
-                    <!-- POS Configuration Name -->
-                    <div t-if="props.data.pos_config_name">
-                        Shop: <t t-esc="props.data.pos_config_name" />
+                <!-- Left aligned info section like the left receipt -->
+                <div style="font-size: 12px; text-align: left; margin: 10px 0; border-top: 1px dashed #000; padding-top: 5px;">
+                    <!-- Shop and Order on same line -->
+                    <div t-if="props.data.pos_config_name or props.data.headerData.trackingNumber">
+                        <span t-if="props.data.pos_config_name">Shop: <t t-esc="props.data.pos_config_name" /></span>
+                        <span t-if="props.data.pos_config_name and props.data.headerData.trackingNumber">, </span>
+                        <span t-if="props.data.headerData.trackingNumber">Order: #<t t-esc="props.data.headerData.trackingNumber" /></span>
                     </div>
 
-                    <!-- Order/Tracking Number -->
-                    <div t-if="props.data.headerData.trackingNumber" style="font-size: 110%; margin-top: 5px;">
-                        #<t t-esc="props.data.headerData.trackingNumber" />
+                    <!-- Sales Person -->
+                    <div t-if="props.data.sales_person">
+                        Sales person: <t t-esc="props.data.sales_person"/>
+                    </div>
+
+                    <!-- Receipt -->
+                    <div t-if="props.data.name">
+                        Receipt: <t t-esc="props.data.name" />
+                    </div>
+
+                    <!-- Date -->
+                    <div t-if="props.data.date">
+                        Date: <t t-esc="props.data.date" />
                     </div>
                 </div>
-                <br/>
             </div>
         </xpath>
 
-        <!-- Replace OrderWidget with custom table -->
+        <!-- Replace OrderWidget with custom compact table -->
         <xpath expr="//OrderWidget" position="replace">
-            <!-- Sales Person info -->
-            <div t-if="props.data.sales_person" class="text-center mb-2">
-                <div>--------------------------------</div>
-                <div>Sales Person: <t t-esc="props.data.sales_person"/></div>
-                <div>--------------------------------</div>
-            </div>
-
             <!-- Order Items Table -->
             <div t-if="props.data.orderlines?.length" class="order-items-table" style="font-size: 12px;">
                 <!-- Table Header -->
                 <div class="table-header" style="display: flex; border-bottom: 1px dashed #000; padding-bottom: 2px; margin-bottom: 4px; font-weight: bold;">
                     <div style="flex: 2; text-align: left;">Item</div>
                     <div style="flex: 0.5; text-align: center;">Qty</div>
-                    <div style="flex: 1; text-align: right;">Price</div>
+                    <div style="flex: 1; text-align: right;">Rate</div>
                     <div style="flex: 1; text-align: right;">Amount</div>
                 </div>
 
@@ -81,10 +84,10 @@
                     <!-- Item name and details -->
                     <div style="flex: 2; text-align: left; padding-right: 4px;">
                         <div style="font-weight: bold;" t-esc="line.productName"/>
-                        <div t-if="line.discount and line.discount !== '0'" style="font-size: 10px; color: #666;">
+                        <div t-if="line.discount and line.discount !== '0'" style="font-size: 11px; color: #666;">
                             Discount: <t t-esc="line.discount"/>%
                         </div>
-                        <div t-if="line.customerNote" style="font-size: 10px; font-style: italic; color: #666;">
+                        <div t-if="line.customerNote" style="font-size: 11px; font-style: italic; color: #666;">
                             Note: <t t-esc="line.customerNote"/>
                         </div>
                     </div>
@@ -92,11 +95,17 @@
                     <!-- Quantity -->
                     <div style="flex: 0.5; text-align: center;" t-esc="line.qty"/>
 
-                    <!-- Unit Price - use unitPrice (formatted string) -->
-                    <div style="flex: 1; text-align: right;" t-esc="line.unitPrice"/>
+                    <!-- Unit Price - extract just the number part -->
+                    <div style="flex: 1; text-align: right;">
+                        <t t-set="unitPriceNum" t-value="line.unitPrice.split(' ')[0]"/>
+                        <t t-esc="unitPriceNum"/>
+                    </div>
 
-                    <!-- Line Total - use price (formatted string) -->
-                    <div style="flex: 1; text-align: right; font-weight: bold;" t-esc="line.price"/>
+                    <!-- Line Total - extract just the number part -->
+                    <div style="flex: 1; text-align: right; font-weight: bold;">
+                        <t t-set="priceNum" t-value="line.price.split(' ')[0]"/>
+                        <t t-esc="priceNum"/>
+                    </div>
                 </div>
 
                 <!-- General Note if exists -->
@@ -106,21 +115,53 @@
             </div>
         </xpath>
 
-        <!-- Remove only the "Powered by Odoo" text, keep order number and date -->
-        <xpath expr="//div[@class='pos-receipt-order-data']//p[text()='Powered by Odoo']" position="replace">
-            <!-- Remove this completely -->
+        <!-- Style the total section with larger font -->
+        <xpath expr="//div[contains(@class, 'pos-receipt-amount')]" position="attributes">
+            <attribute name="style">font-size: 16px; font-weight: bold;</attribute>
         </xpath>
 
-        <!-- Add QR code in footer -->
-        <xpath expr="//div[@class='after-footer']" position="after">
-            <div class="pos-receipt-brand-qr" style="text-align: center; margin-top: 20px; margin-bottom: 10px;">
+        <!-- Also target tax totals and payment lines for consistency -->
+        <xpath expr="//div[contains(@class, 'pos-receipt-taxes')]" position="attributes">
+            <attribute name="style">font-size: 16px;</attribute>
+        </xpath>
+
+        <!-- Style the custom footer with larger base font -->
+        <xpath expr="//div[@t-if='props.data.footer']" position="attributes">
+            <attribute name="style">white-space:pre-line; font-size: 12px;</attribute>
+        </xpath>
+
+        <!-- Remove the empty pos-receipt-order-data div that serves as placeholder -->
+        <xpath expr="//div[@class='pos-receipt-order-data'][not(node())]" position="replace">
+            <!-- Remove empty order data placeholder -->
+        </xpath>
+
+        <!-- Remove shipping date section completely -->
+        <xpath expr="//t[@t-if='props.data.shippingDate']" position="replace">
+            <!-- Remove shipping date section -->
+        </xpath>
+
+        <!-- Remove the BR tag before the final pos-receipt-order-data -->
+        <xpath expr="//br[following-sibling::div[@class='pos-receipt-order-data']]" position="replace">
+            <!-- Remove BR before order data -->
+        </xpath>
+
+        <!-- Remove the final pos-receipt-order-data section with Powered by Odoo -->
+        <xpath expr="//div[@class='pos-receipt-order-data'][p[text()='Powered by Odoo']]" position="replace">
+            <!-- Remove the entire section with Powered by Odoo -->
+        </xpath>
+
+        <!-- Replace everything after footer with just our QR code -->
+        <xpath expr="//div[@class='after-footer']" position="replace">
+            <!-- Our QR section becomes the final element -->
+            <div class="pos-receipt-brand-qr" style="text-align: center; margin-top: 10px; margin-bottom: 10px;">
                 <img src="/pos_sales_person/static/src/img/brand_qr_code.png"
                      alt="Brand QR Code"
-                     style="width: 100px; height: 100px; display: inline-block;"/>
-                <div style="font-size: 12px; margin-top: 5px;">
+                     style="width: 60px; height: 60px; display: inline-block;"/>
+                <div style="font-size: 12px; margin-top: 3px;">
                     Scan to visit our brand page
                 </div>
             </div>
         </xpath>
+
     </t>
 </templates>
