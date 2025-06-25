@@ -1,13 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <templates id="template" xml:space="preserve">
-    <t t-name="custom_pos.SalesPersonButton">
-        <div class="control-button sales-person-button"
-             t-on-click="onClick"
-             t-att-class="{ 'highlight': currentOrder and currentOrder.sales_person_id }">
-            <i class="fa fa-user" role="img" aria-label="Sales Person"/>
-            <span class="control-button-label">
-                <t t-esc="salesPersonName"/>
-            </span>
-        </div>
+    <t t-name="pos_sales_person.SalesPersonButton">
+        <button class="control-button btn btn-lg lh-lg text-truncate w-auto" t-on-click="() => this.onClick()">
+            <span>Sales Person</span>
+        </button>
     </t>
 </templates>

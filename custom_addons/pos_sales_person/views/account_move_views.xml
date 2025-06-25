@@ -1,41 +1,25 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-
-        <!-- Add Sales Person to Invoice Form -->
-        <record id="view_move_form_inherit_custom_pos" model="ir.ui.view">
-            <field name="name">account.move.form.inherit.custom.pos</field>
-            <field name="model">account.move</field>
-            <field name="inherit_id" ref="account.view_move_form"/>
-            <field name="arch" type="xml">
-                <!-- Add Sales Person field after partner_id -->
-                <xpath expr="//field[@name='partner_id']" position="after">
-                    <field name="sales_person_id" readonly="1"
-                           invisible="move_type not in ('out_invoice', 'out_refund')"
-                           string="Sales Person"/>
-                </xpath>
-
-                <!-- Add global discount fields after ref field -->
-                <xpath expr="//field[@name='ref']" position="after">
-                    <field name="global_discount_amount" readonly="1"
-                           invisible="not global_discount_amount or move_type not in ('out_invoice', 'out_refund')"
-                           string="Global Discount"/>
-                    <field name="global_discount_type" readonly="1" invisible="1"/>
-                </xpath>
-            </field>
-        </record>
-
-        <!-- Add Sales Person to Invoice Tree -->
-        <record id="view_invoice_tree_inherit_custom_pos" model="ir.ui.view">
-            <field name="name">account.move.tree.inherit.custom.pos</field>
+        <record id="invoice_tree_inherit_sales_person" model="ir.ui.view">
+            <field name="name">account.invoice.tree.sales_person.inherit</field>
             <field name="model">account.move</field>
             <field name="inherit_id" ref="account.view_invoice_tree"/>
             <field name="arch" type="xml">
-                <xpath expr="//field[@name='partner_id']" position="after">
-                    <field name="sales_person_id" optional="hide"/>
-                </xpath>
+                <field name="invoice_user_id" position="after">
+                    <field name="pos_sales_person_id"/>
+                </field>
             </field>
         </record>
 
+        <record id="invoice_form_inherit_sales_person" model="ir.ui.view">
+            <field name="name">account.invoice.form.sales_person.inherit</field>
+            <field name="model">account.move</field>
+            <field name="inherit_id" ref="account.view_move_form"/>
+            <field name="arch" type="xml">
+                <field name="invoice_user_id" position="after">
+                    <field name="pos_sales_person_id"/>
+                </field>
+            </field>
+        </record>
     </data>
 </odoo>

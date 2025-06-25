@@ -1,61 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Inherit POS Configuration Settings -->
-        <record id="res_config_settings_view_form_inherit_custom_pos" model="ir.ui.view">
-            <field name="name">res.config.settings.view.form.inherit.custom.pos</field>
+        <record id="res_config_settings_pos_sales_person" model="ir.ui.view">
+            <field name="name">pos.config.form.view</field>
             <field name="model">res.config.settings</field>
             <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
             <field name="arch" type="xml">
-
-                <!-- Add Sales Person Configuration -->
-                <xpath expr="//div[@id='module_pos_hr']/.." position="after">
-                    <setting id="sales_person_config" string="Sales Person Configuration"
-                             help="Configure allowed sales persons for this POS">
-                        <field name="pos_sales_person_ids" widget="many2many_tags"
-                               domain="[('employee_type', '=', 'employee')]"
-                               options="{'no_create': True, 'no_edit': True}"/>
+                <xpath expr="//block[@id='pos_interface_section']" position="inside">
+                    <setting id="allowed_sales_person" string="Allowed Sales Person" help="Allowed sales person">
+                        <field name="pos_sales_person_ids" colspan="4"
+                               widget="many2many_tags"
+                               readonly="pos_has_active_session"
+                               options="{'no_create': True}"/>
                     </setting>
                 </xpath>
-
-                <!-- Add Global Discount Configuration -->
-                <xpath expr="//setting[@id='manual_discount']" position="after">
-                    <setting id="global_discount_config" string="Global Discount Configuration"
-                             help="Configure global discount options for this POS">
-                        <div class="content-group">
-                            <div class="row">
-                                <label for="pos_global_discount_type" class="col-3 o_light_label"/>
-                                <field name="pos_global_discount_type" class="col-3"/>
-                            </div>
-                            <div class="row mt8" invisible="not pos_global_discount_type or pos_global_discount_type == 'percentage'">
-                                <label for="pos_enable_amount_discount" class="col-3 o_light_label" string="Enable Amount Discount"/>
-                                <field name="pos_enable_amount_discount" class="col-3"/>
-                            </div>
-                            <div class="row mt8" invisible="not pos_enable_amount_discount">
-                                <label for="pos_max_global_discount_amount" class="col-3 o_light_label" string="Max Discount Amount"/>
-                                <field name="pos_max_global_discount_amount" class="col-3"/>
-                            </div>
-                        </div>
-                    </setting>
-                </xpath>
-
-                <!-- Add Sales Person and Discount fields to POS Config -->
-                <xpath expr="//field[@name='module_pos_hr']" position="after">
-                    <field name="sales_person_ids" widget="many2many_tags"
-                           string="Allowed Sales Persons"
-                           domain="[('employee_type', '=', 'employee')]"
-                           options="{'no_create': True, 'no_edit': True}"/>
-                </xpath>
-
-                <xpath expr="//field[@name='module_pos_discount']" position="after">
-                    <field name="global_discount_type" string="Global Discount Type"/>
-                    <field name="enable_amount_discount" string="Enable Amount Discount"/>
-                    <field name="max_global_discount_amount" string="Max Discount Amount"
-                           invisible="not enable_amount_discount"/>
-                </xpath>
-
             </field>
         </record>
-
     </data>
 </odoo>
