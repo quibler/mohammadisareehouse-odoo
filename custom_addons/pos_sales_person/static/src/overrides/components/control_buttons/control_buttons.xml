@@ -1,8 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.ControlButtons" t-inherit-mode="extension">
-        <xpath expr="//t[@t-if='!props.showRemainingButtons || (ui.isSmall and props.showRemainingButtons)']" position="inside">
-            <SalesPersonButton/>
+        <!-- Remove internal notes from main control area -->
+        <xpath expr="//t[@t-if='!props.showRemainingButtons || (ui.isSmall and props.showRemainingButtons)']/OrderlineNoteButton[@label='internalNoteLabel()']" position="replace"/>
+
+        <!-- Add Sales Person and Discount buttons to main control area ONLY -->
+        <xpath expr="//SelectPartnerButton[@t-if='!props.showRemainingButtons']" position="after">
+            <SalesPersonButton t-if="!props.showRemainingButtons"/>
+            <DiscountButton t-if="!props.showRemainingButtons"/>
+        </xpath>
+
+        <!-- Add internal notes to Actions dialog (showRemainingButtons section) -->
+        <xpath expr="//div[@class='control-buttons control-buttons-modal d-grid gap-2 mt-2']" position="inside">
+            <OrderlineNoteButton
+                class="'btn btn-secondary btn-lg py-5'"
+                label="'Internal Note'"
+                getter="(orderline) => orderline.getNote()"
+                setter="(orderline, note) => orderline.setNote(note)" />
         </xpath>
     </t>
 </templates>
