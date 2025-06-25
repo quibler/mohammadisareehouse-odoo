@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_sales_person.DiscountButton">
+        <button class="btn btn-light btn-lg lh-lg text-truncate w-auto" t-on-click="() => this.onClick()">
+            <i class="fa fa-percent me-2" role="img" aria-label="Discount" title="Discount" />
+            <span>Discount</span>
+        </button>
+    </t>
+</templates>
