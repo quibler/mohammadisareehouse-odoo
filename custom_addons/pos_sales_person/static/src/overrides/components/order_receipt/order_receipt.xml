@@ -5,6 +5,9 @@
 
         <!-- Replace the entire ReceiptHeader with custom version -->
         <xpath expr="//ReceiptHeader" position="replace">
+            <!-- Debug log to check company data -->
+            <t t-log="props.data.headerData"/>
+
             <!-- Custom header with logo, address, contact info (no company name) -->
             <div class="receipt-header-custom">
                 <!-- Full Width Logo -->
@@ -24,12 +27,17 @@
                             <span t-if="props.data.headerData.company.zip"> <t t-esc="props.data.headerData.company.zip" /></span>
                         </div>
 
-                        <!-- Phone and Mobile Numbers - Combined on one line -->
-                        <div>
-                            <span t-if="props.data.headerData.company.phone" t-esc="props.data.headerData.company.phone" />
-                            <span t-if="props.data.headerData.company.phone and (props.data.headerData.company.mobile or props.data.headerData.company.partner_id?.mobile)">, </span>
-                            <span t-if="props.data.headerData.company.mobile" t-esc="props.data.headerData.company.mobile" />
-                            <span t-elif="props.data.headerData.company.partner_id and props.data.headerData.company.partner_id.mobile" t-esc="props.data.headerData.company.partner_id.mobile" />
+                        <!-- Phone Number - Separate line -->
+                        <div t-if="props.data.headerData.company.phone">
+                            <span t-esc="props.data.headerData.company.phone" />
+                        </div>
+
+                        <!-- Mobile Number - Separate line -->
+                        <div t-if="props.data.headerData.company.mobile">
+                            <span t-esc="props.data.headerData.company.mobile" />
+                        </div>
+                        <div t-elif="props.data.headerData.company.partner_id and props.data.headerData.company.partner_id.mobile">
+                            <span t-esc="props.data.headerData.company.partner_id.mobile" />
                         </div>
 
                         <!-- Email -->
@@ -125,6 +133,11 @@
             <attribute name="style">font-size: 12px;</attribute>
         </xpath>
 
+        <!-- Style payment lines with smaller font size -->
+        <xpath expr="//div[contains(@class, 'paymentlines')]" position="attributes">
+            <attribute name="style">font-size: 10px;</attribute>
+        </xpath>
+
         <!-- Remove the empty pos-receipt-order-data div that serves as placeholder -->
         <xpath expr="//div[@class='pos-receipt-order-data'][not(node())]" position="replace">
             <!-- Remove empty order data placeholder -->
@@ -166,5 +179,6 @@
         <xpath expr="//div[@class='after-footer']" position="replace">
             <!-- Remove after-footer section completely -->
         </xpath>
+
     </t>
 </templates>
