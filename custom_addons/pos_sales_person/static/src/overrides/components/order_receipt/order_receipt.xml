@@ -125,11 +125,6 @@
             <attribute name="style">font-size: 12px;</attribute>
         </xpath>
 
-        <!-- Style the custom footer with larger base font -->
-        <xpath expr="//div[@t-if='props.data.footer']" position="attributes">
-            <attribute name="style">white-space:pre-line; font-size: 10px;</attribute>
-        </xpath>
-
         <!-- Remove the empty pos-receipt-order-data div that serves as placeholder -->
         <xpath expr="//div[@class='pos-receipt-order-data'][not(node())]" position="replace">
             <!-- Remove empty order data placeholder -->
@@ -150,9 +145,8 @@
             <!-- Remove the entire section with Powered by Odoo -->
         </xpath>
 
-        <!-- Replace everything after footer with just our QR code -->
-        <xpath expr="//div[@class='after-footer']" position="replace">
-            <!-- Our QR section becomes the final element -->
+        <!-- Add QR code BEFORE the footer text -->
+        <xpath expr="//div[@t-if='props.data.footer']" position="before">
             <div class="pos-receipt-brand-qr" style="text-align: center; margin-top: 10px; margin-bottom: 10px;">
                 <img src="/pos_sales_person/static/src/img/brand_qr_code.png"
                      alt="Brand QR Code"
@@ -163,5 +157,14 @@
             </div>
         </xpath>
 
+        <!-- Style the custom footer with larger base font -->
+        <xpath expr="//div[@t-if='props.data.footer']" position="attributes">
+            <attribute name="style">white-space:pre-line; font-size: 10px;</attribute>
+        </xpath>
+
+        <!-- Remove the after-footer div completely since we're not using it anymore -->
+        <xpath expr="//div[@class='after-footer']" position="replace">
+            <!-- Remove after-footer section completely -->
+        </xpath>
     </t>
 </templates>
