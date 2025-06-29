@@ -5,5 +5,15 @@
         <xpath expr="//div[hasclass('financials-order')]" position="replace">
             <!-- This removes the entire financials table and order section -->
         </xpath>
+
+        <!-- Remove the entire replenishment section -->
+        <xpath expr="//div[hasclass('section-supplier')]" position="replace">
+            <!-- This completely removes the replenishment section with vendor info and cost prices -->
+        </xpath>
+
+        <!-- Remove the entire inventory section since the banner already shows on-hand quantity -->
+        <xpath expr="//div[hasclass('section-inventory')]" position="replace">
+            <!-- This removes the entire inventory section to avoid duplication with the banner -->
+        </xpath>
     </t>
 </templates>
