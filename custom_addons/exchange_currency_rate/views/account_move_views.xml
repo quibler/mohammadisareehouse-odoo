@@ -1,20 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Universal Account Move Form View for both Invoices and Bills -->
     <record id="view_move_form_inherit_currency" model="ir.ui.view">
         <field name="name">account.move.form.inherit.currency</field>
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_move_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='currency_id']" position='after'>
-                <div invisible="currency_id == company_currency_id" class="d-flex align-items-center">
+                <div invisible="currency_id == company_currency_id" class="d-flex align-items-center mt-2">
+                    <span class="o_form_label fw-bold" style="margin-right: 8px;">Exchange Rate:</span>
                     <span class="o_form_label" style="margin-right: 5px;">1</span>
                     <field name="company_currency_id" readonly="1" class="oe_inline" style="border: none; background: transparent; margin-right: 5px;"/>
                     <span class="o_form_label" style="margin-right: 5px;">=</span>
                     <field name="company_rate"
                            readonly="state != 'draft'"
-                           class="oe_inline" style="width: 120px; margin-right: 5px;"/>
+                           class="oe_inline" style="width: 120px; margin-right: 5px;"
+                           placeholder="Rate"/>
                     <field name="currency_id" readonly="1" class="oe_inline" style="border: none; background: transparent;"/>
+                    <span class="text-muted small" style="margin-left: 10px;" invisible="move_type not in ['in_invoice', 'in_refund']">
+                        <i class="fa fa-calculator"/> Vendor Bill Rate
+                    </span>
+                    <span class="text-muted small" style="margin-left: 10px;" invisible="move_type not in ['out_invoice', 'out_refund']">
+                        <i class="fa fa-money"/> Customer Invoice Rate
+                    </span>
+                    <span class="text-info small" style="margin-left: 10px;">
+                        (Manual rate - updates global rates)
+                    </span>
                 </div>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Tree view enhancement for quick rate visibility -->
+    <record id="view_invoice_tree_inherit_currency" model="ir.ui.view">
+        <field name="name">account.move.tree.inherit.currency</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_invoice_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='currency_id']" position='after'>
+                <field name="company_rate" optional="hide" string="Exch. Rate"/>
             </xpath>
         </field>
     </record>

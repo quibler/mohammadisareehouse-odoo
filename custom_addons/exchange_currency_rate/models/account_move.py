@@ -7,7 +7,7 @@ class AccountMove(models.Model):
 
     company_rate = fields.Float(
         string='Exchange Rate',
-        help='Foreign currency per company currency',
+        help='Foreign currency per company currency (e.g., 1 KWD = 3.25 USD)',
         digits=(12, 6)
     )
 
@@ -43,6 +43,17 @@ class AccountMove(models.Model):
         """Update currency rate when manual rate is changed"""
         if self.company_rate > 0 and self.currency_id != self.company_currency_id:
             self._update_currency_rate()
+            # Trigger recalculation of amounts when rate changes
+            if self.state == 'draft':
+                try:
+                    # Recompute dynamic lines (taxes, payment terms, etc.)
+                    self.with_context(check_move_validity=False)._recompute_dynamic_lines()
+                except:
+                    # Fallback - just recompute tax lines
+                    try:
+                        self.with_context(check_move_validity=False)._recompute_tax_lines()
+                    except:
+                        pass
 
     def _update_currency_rate(self):
         """Update the global currency rate table"""
@@ -70,3 +81,20 @@ class AccountMove(models.Model):
                 'company_id': self.company_id.id,
             })
             self.env['res.currency.rate'].create(rate_values)
+
+    @api.model
+    def create(self, vals):
+        """Ensure rate is set when creating new invoices/bills"""
+        move = super().create(vals)
+        if move.currency_id != move.company_currency_id and not move.company_rate:
+            move._onchange_currency_id()
+        return move
+
+    def write(self, vals):
+        """Handle rate updates on existing records"""
+        result = super().write(vals)
+        if 'currency_id' in vals:
+            for move in self:
+                if move.currency_id != move.company_currency_id:
+                    move._onchange_currency_id()
+        return result
