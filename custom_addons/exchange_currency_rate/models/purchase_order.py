@@ -2,9 +2,13 @@
 from odoo import api, fields, models
 
 
-class AccountMove(models.Model):
-    _inherit = 'account.move'
+class PurchaseOrder(models.Model):
+    _inherit = 'purchase.order'
 
+    company_currency_id = fields.Many2one(
+        string='Company Currency',
+        related='company_id.currency_id', readonly=True
+    )
     company_rate = fields.Float(
         string='Exchange Rate',
         help='Foreign currency per company currency',
@@ -25,16 +29,13 @@ class AccountMove(models.Model):
                 self.company_rate = latest_rate.company_rate
             else:
                 # Fallback to system rate
-                try:
-                    system_rate = self.env['res.currency']._get_conversion_rate(
-                        from_currency=self.company_currency_id,
-                        to_currency=self.currency_id,
-                        company=self.company_id,
-                        date=self.date or fields.Date.today(),
-                    )
-                    self.company_rate = 1.0 / system_rate if system_rate else 1.0
-                except:
-                    self.company_rate = 1.0
+                system_rate = self.env['res.currency']._get_conversion_rate(
+                    from_currency=self.company_currency_id,
+                    to_currency=self.currency_id,
+                    company=self.company_id,
+                    date=self.date_order or fields.Date.today(),
+                )
+                self.company_rate = 1.0 / system_rate if system_rate else 1.0
         else:
             self.company_rate = 0.0
 
@@ -49,7 +50,7 @@ class AccountMove(models.Model):
         if not self.company_rate or not self.currency_id or self.currency_id == self.company_currency_id:
             return
 
-        rate_date = self.date or fields.Date.today()
+        rate_date = self.date_order.date() if self.date_order else fields.Date.today()
 
         existing_rate = self.env['res.currency.rate'].search([
             ('currency_id', '=', self.currency_id.id),
