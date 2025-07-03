@@ -1,20 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_move_form_inherit_currency" model="ir.ui.view">
-        <field name="name">account.move.form.inherit.currency</field>
+    <!-- Enhanced exchange rate display for vendor bills -->
+    <record id="view_move_form_inherit_currency_vendor_bills" model="ir.ui.view">
+        <field name="name">account.move.form.inherit.currency.vendor.bills</field>
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_move_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='currency_id']" position='after'>
-                <div invisible="currency_id == company_currency_id" class="d-flex align-items-center">
-                    <span class="o_form_label" style="margin-right: 5px;">1</span>
-                    <field name="company_currency_id" readonly="1" class="oe_inline" style="border: none; background: transparent; margin-right: 5px;"/>
-                    <span class="o_form_label" style="margin-right: 5px;">=</span>
+            <!-- Replace the static currency conversion with manual rate input -->
+            <xpath expr="//div[@name='currency_conversion_div']" position='replace'>
+                <div name="manual_currency_conversion_div"
+                     class="d-flex text-muted float-start align-items-center"
+                     invisible="currency_id == company_currency_id or move_type not in ('in_invoice', 'in_refund', 'in_receipt')">
+                    <span>1 </span>
+                    <field name="company_currency_id" readonly="True" options="{'no_open': True}"/>
+                    <span> = </span>
                     <field name="company_rate"
                            readonly="state != 'draft'"
-                           class="oe_inline" style="width: 120px; margin-right: 5px;"/>
-                    <field name="currency_id" readonly="1" class="oe_inline" style="border: none; background: transparent;"/>
+                           digits="[12,6]"
+                           style="width: 100px; margin: 0 2px;"/>
+                    <span> </span>
+                    <field name="currency_id" readonly="True" options="{'no_open': True}"/>
                 </div>
+            </xpath>
+
+            <!-- Add company currency total right within the subtotal footer group -->
+            <xpath expr="//group[@class='oe_subtotal_footer']/field[@name='amount_residual']" position='before'>
+                <field name="amount_total_company_currency"
+                       invisible="currency_id == company_currency_id or move_type not in ('in_invoice', 'in_refund', 'in_receipt')"
+                       readonly="1"
+                       string="Total (Company Currency)"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Optional: Add company rate field to list view for vendor bills -->
+    <record id="view_in_invoice_tree_inherit_currency" model="ir.ui.view">
+        <field name="name">account.move.tree.inherit.currency.vendor.bills</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_in_invoice_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='currency_id']" position='after'>
+                <field name="company_rate" optional="hide"
+                       invisible="currency_id == company_currency_id"
+                       string="Exchange Rate"/>
             </xpath>
         </field>
     </record>
