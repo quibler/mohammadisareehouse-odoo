@@ -4,21 +4,13 @@ from odoo import api, fields, models
 class ResPartner(models.Model):
     _inherit = "res.partner"
 
-    # New field. #T6480
-    available_in_pos = fields.Boolean(string="Available in POS", copy=False)
-
-    @api.model
-    def _load_pos_data_fields(self, config_id):
-        """#T8412:  Add 'available_in_pos' to the list of fields"""
-        fields = super()._load_pos_data_fields(config_id)
-        fields.append("available_in_pos")
-        return fields
-
     @api.model
     def _load_pos_data_domain(self, data):
         """
-        #T8412: Add domain available_in_pos in existing domain
+        Modified to use customer_rank > 0 instead of available_in_pos field
+        Only load partners that are marked as customers (customer_rank > 0)
         """
         domain = super()._load_pos_data_domain(data)
-        domain.append(("available_in_pos", "=", True))
+        # Replace the available_in_pos domain with customer_rank check
+        domain.append(("customer_rank", ">", 0))
         return domain
