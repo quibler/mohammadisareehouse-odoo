@@ -39,6 +39,7 @@
     'data': [
         'views/account_move_views.xml',
         'views/pos_order_views.xml',
+        'views/pos_config_views.xml',
         'views/res_config_settings_views.xml',
         'views/product_label_layout_views.xml',
         'views/pos_session_sales_details.xml',  # New: Custom report titles
