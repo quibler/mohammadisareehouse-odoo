@@ -14,18 +14,25 @@
         - Optimized for retail environments where price adjustments are common
         - Maintains all standard POS functionality
 
+        Label Layout Features:
+        - Simplified label layout options (Dymo and Dymo without price only)
+        - Custom Dymo label template without price display
+        - Streamlined label printing for retail operations
+
         Perfect for retail clothing stores in Kuwait and similar operations.
         """,
     'author': 'Ashwini Kumar',
     'category': 'Point Of Sale',
-    'version': '18.0.1.1.0',  # Updated version
-    'depends': ['account', 'point_of_sale', 'pos_hr'],
+    'version': '18.0.1.22.0',  # Force field cache clear with static selection
+    'depends': ['account', 'point_of_sale', 'pos_hr', 'product'],  # Added 'product' dependency
     'data': [
         'views/account_move_views.xml',
         'views/pos_order_views.xml',
         'views/res_config_settings_views.xml',
+        'views/product_label_layout_views.xml',  # Added view override with correct ID
         'report/pos_report_views.xml',
         'report/top_sales_person_views.xml',
+        'data/product_label_reports.xml',  # Added label reports
     ],
     'assets': {
         'point_of_sale._assets_pos': [
