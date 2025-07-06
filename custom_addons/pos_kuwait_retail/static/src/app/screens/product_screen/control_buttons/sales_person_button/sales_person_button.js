@@ -8,7 +8,7 @@ import { SelectionPopup } from "@point_of_sale/app/utils/input_popups/selection_
 import { makeAwaitable, ask } from "@point_of_sale/app/store/make_awaitable_dialog";
 
 export class SalesPersonButton extends Component {
-    static template = "pos_sales_person.SalesPersonButton";
+    static template = "pos_kuwait_retail.SalesPersonButton";
     static props = {};
 
     setup() {

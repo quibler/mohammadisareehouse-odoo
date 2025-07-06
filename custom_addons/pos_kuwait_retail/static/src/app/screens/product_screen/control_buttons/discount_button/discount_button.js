@@ -9,7 +9,7 @@ import { makeAwaitable, ask } from "@point_of_sale/app/store/make_awaitable_dial
 import { parseFloat } from "@web/views/fields/parsers";
 
 export class DiscountButton extends Component {
-    static template = "pos_sales_person.DiscountButton";
+    static template = "pos_kuwait_retail.DiscountButton";
     static props = {};
 
     setup() {
