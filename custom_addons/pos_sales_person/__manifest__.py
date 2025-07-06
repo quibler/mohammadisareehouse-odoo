@@ -23,7 +23,7 @@
         """,
     'author': 'Ashwini Kumar',
     'category': 'Point Of Sale',
-    'version': '18.0.1.22.0',  # Force field cache clear with static selection
+    'version': '18.0.1.23.0',  # Force field cache clear with static selection
     'depends': ['account', 'point_of_sale', 'pos_hr', 'product'],  # Added 'product' dependency
     'data': [
         'views/account_move_views.xml',

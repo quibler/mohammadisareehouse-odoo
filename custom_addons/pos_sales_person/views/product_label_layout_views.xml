@@ -7,11 +7,9 @@
             <field name="model">product.label.layout</field>
             <field name="inherit_id" ref="product.product_label_layout_form"/>
             <field name="arch" type="xml">
-                <!-- Replace the print_format field with only our two options -->
                 <field name="print_format" position="replace">
                     <field name="print_format" widget="radio" required="1">
                         <option value="dymo">Dymo</option>
-                        <option value="dymo_without_price">Dymo without price</option>
                     </field>
                 </field>
             </field>

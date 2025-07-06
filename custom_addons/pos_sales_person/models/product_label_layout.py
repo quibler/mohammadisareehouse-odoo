@@ -5,10 +5,9 @@ class ProductLabelLayout(models.TransientModel):
     _inherit = 'product.label.layout'
 
     def _get_print_format_selection(self):
-        """Return only our custom selection options"""
+        """Return only the standard Dymo option"""
         return [
             ('dymo', 'Dymo'),
-            ('dymo_without_price', 'Dymo without price'),
         ]
 
     # Completely redefine the field with _rec_name trick to force override
