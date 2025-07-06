@@ -161,7 +161,7 @@
         <!-- Add QR code BEFORE the footer text -->
         <xpath expr="//div[@t-if='props.data.footer']" position="before">
             <div class="pos-receipt-brand-qr" style="text-align: center; margin-top: 10px; margin-bottom: 10px;">
-                <img src="/pos_sales_person/static/src/img/brand_qr_code.png"
+                <img src="/pos_kuwait_retail/static/src/img/brand_qr_code.png"
                      alt="Brand QR Code"
                      style="width: 60px; height: 60px; display: inline-block;"/>
                 <div style="font-size: 10px; margin-top: 3px;">

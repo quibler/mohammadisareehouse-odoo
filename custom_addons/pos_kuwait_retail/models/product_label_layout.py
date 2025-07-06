@@ -22,7 +22,7 @@ class ProductLabelLayout(models.TransientModel):
         """Override to handle both dymo formats correctly"""
         if self.print_format == 'dymo_without_price':
             # Use our custom report action
-            xml_id = 'pos_sales_person.action_report_dymo_without_price'
+            xml_id = 'pos_kuwait_retail.action_report_dymo_without_price'
             data = {}
         elif self.print_format == 'dymo':
             # For standard Dymo, call the parent method to get proper data

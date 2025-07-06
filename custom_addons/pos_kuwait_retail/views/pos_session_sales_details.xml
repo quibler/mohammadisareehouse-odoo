@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Inherit the POS session sales details template to customize report titles -->
+        <template id="pos_session_sales_details_custom" inherit_id="point_of_sale.pos_session_sales_details">
+            <!-- Replace the Daily Sales Report title section with descriptive terms -->
+            <xpath expr="//h2[@id='daily_report_title']" position="replace">
+                <h2 t-if="state == 'closed' or state == 'opened'" id="daily_report_title">Daily Sales Report
+                    <t t-if="state == 'closed'">- Session Closing</t>
+                    <t t-else="">- Mid-Session</t>
+                </h2>
+            </xpath>
+        </template>
+    </data>
+</odoo>
