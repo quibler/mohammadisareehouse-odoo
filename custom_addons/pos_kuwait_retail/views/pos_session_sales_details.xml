@@ -10,6 +10,95 @@
                     <t t-else="">- Mid-Session</t>
                 </h2>
             </xpath>
+
+            <!-- Replace the entire sales section with simplified table structure -->
+            <xpath expr="//div[@id='sales']" position="replace">
+                <div t-if="products" id="sales">
+                    <h6 class="bg-secondary p-1 fw-bold">Sales</h6>
+                    <div class="oe_structure"></div>
+                    <table class="table table-sm table-borderless">
+                        <!-- Add proper table headers -->
+                        <thead>
+                            <tr class="border-bottom border-secondary">
+                                <th class="ps-2 fw-bold">Product</th>
+                                <th></th>
+                                <th class="text-end fw-bold">Qty</th>
+                                <th class="text-end fw-bold">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Flatten products without categories - directly iterate through all products -->
+                            <t t-set="all_products" t-value="[]"/>
+                            <t t-foreach="products" t-as="category">
+                                <t t-set="all_products" t-value="all_products + category['products']"/>
+                            </t>
+
+                            <!-- Display each product as a simple row -->
+                            <tr t-foreach="all_products" t-as="line" class="border-bottom border-secondary">
+                                <t t-set="internal_reference" t-value="line['code'] and '[%s] ' % line['code'] or ''" />
+                                <td class="ps-2">
+                                    <span t-out="internal_reference">Ref 876787</span>
+                                    <span t-out="line['product_name']">Product Name</span>
+                                </td>
+                                <td/>
+                                <td class="text-end">
+                                    <span t-out="line['quantity']">5</span>
+                                    <t t-if='line["uom"] != "Units"'>
+                                        <span t-out='line["uom"]'>Unit</span>
+                                    </t>
+                                </td>
+                                <td class="text-end">
+                                    <t t-if="currency['position']">
+                                        <span t-out='line["base_amount"]' t-options="{'widget': 'float', 'precision': currency['precision']}">567789</span>
+                                        <span t-out='currency["symbol"]'>$</span>
+                                    </t>
+                                    <t t-else="">
+                                        <span t-out='currency["symbol"]'>$</span>
+                                        <span t-out='line["base_amount"]' t-options="{'widget': 'float', 'precision': currency['precision']}">567789</span>
+                                    </t>
+                                    <!-- Remove discount information: <t t-if='line["discount"] != 0'>Disc: <span t-out='line["discount"]'>45</span>%</t> -->
+                                </td>
+                            </tr>
+
+                            <!-- Total row -->
+                            <tr>
+                                <td class="ps-2"><strong>Total</strong></td>
+                                <td/>
+                                <td class="text-end"><strong><span t-out="products_info['qty']">5</span></strong></td>
+                                <td class="text-end">
+                                    <t t-if="currency['position']">
+                                        <strong>
+                                            <span t-out='products_info["total"]' t-options="{'widget': 'float', 'precision': currency['precision']}">10000</span>
+                                            <span t-out='currency["symbol"]'>$</span>
+                                        </strong>
+                                    </t>
+                                    <t t-else="">
+                                        <strong>
+                                            <span t-out='currency["symbol"]'>$</span>
+                                            <span t-out='products_info["total"]' t-options="{'widget': 'float', 'precision': currency['precision']}">1000</span>
+                                        </strong>
+                                    </t>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </xpath>
+
+            <!-- Remove the entire taxes section -->
+            <xpath expr="//div[@id='taxe_sales']" position="replace">
+                <!-- Taxes section completely removed for Kuwait retail (no taxes) -->
+            </xpath>
+
+            <!-- Remove the entire discounts section -->
+            <xpath expr="//div[@id='discounts']" position="replace">
+                <!-- Discounts section completely removed -->
+            </xpath>
+
+            <!-- Remove refund taxes section if it exists -->
+            <xpath expr="//div[@id='taxe_refunds']" position="replace">
+                <!-- Refund taxes section completely removed -->
+            </xpath>
         </template>
     </data>
 </odoo>
