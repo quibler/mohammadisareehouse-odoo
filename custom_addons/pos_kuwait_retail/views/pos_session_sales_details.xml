@@ -3,9 +3,14 @@
     <data>
         <!-- Inherit the POS session sales details template to customize report titles -->
         <template id="pos_session_sales_details_custom" inherit_id="point_of_sale.pos_session_sales_details">
-            <!-- Replace the Daily Sales Report title section with descriptive terms -->
+            <!-- Replace the Daily Sales Report title section with descriptive terms and add POS name -->
             <xpath expr="//h2[@id='daily_report_title']" position="replace">
-                <h2 t-if="state == 'closed' or state == 'opened'" id="daily_report_title">Daily Sales Report
+                <h2 t-if="state == 'closed' or state == 'opened'" id="daily_report_title">
+                    <!-- Show POS name at the top -->
+                    <t t-if="config_names and len(config_names) == 1">
+                        <span t-out="config_names[0]">POS Name</span><br/>
+                    </t>
+                    Daily Sales Report
                     <t t-if="state == 'closed'">- Session Closing</t>
                     <t t-else="">- Mid-Session</t>
                 </h2>
@@ -98,6 +103,11 @@
             <!-- Remove refund taxes section if it exists -->
             <xpath expr="//div[@id='taxe_refunds']" position="replace">
                 <!-- Refund taxes section completely removed -->
+            </xpath>
+
+            <!-- Remove the Session Control section (expected balance, counted, difference) -->
+            <xpath expr="//t[@id='closing_session']" position="replace">
+                <!-- Session Control section completely removed -->
             </xpath>
         </template>
     </data>
