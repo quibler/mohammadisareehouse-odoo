@@ -19,6 +19,7 @@
         'data/account_account_type.xml',
         'views/menu.xml',
         'views/ledger_menu.xml',
+        'views/receivable_payable_ledgers.xml',
         'views/financial_report.xml',
         'views/settings.xml',
         'wizard/account_report_common_view.xml',
