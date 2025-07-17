@@ -25,7 +25,7 @@ class AccountMove(models.Model):
             move.auto_stock_picking_count = 1 if move.auto_stock_picking_id else 0
 
     def action_post(self):
-        """Override to create stock movements after posting vendor bills"""
+        """Override to create stock movements and update costs after posting vendor bills"""
         # Call the original method first
         result = super().action_post()
 
@@ -41,17 +41,134 @@ class AccountMove(models.Model):
         for bill in vendor_bills:
             try:
                 _logger.info(f"Processing bill {bill.name} for auto stock update")
+
+                # NEW: Update product costs FIRST (before stock movements)
+                bill._update_product_costs_from_bill()
+
+                # Existing: Create stock movements
                 bill._create_auto_stock_picking()
+
             except Exception as e:
-                _logger.error(f"Failed to create auto stock picking for bill {bill.name}: {str(e)}")
+                _logger.error(f"Failed to process bill {bill.name}: {str(e)}")
                 # Create a message in the chatter instead of blocking the bill
                 bill.message_post(
-                    body=_("Warning: Failed to automatically update stock. Error: %s") % str(e),
+                    body=_("Warning: Failed to automatically process vendor bill. Error: %s") % str(e),
                     message_type='comment',
                     subtype_xmlid='mail.mt_note'
                 )
 
         return result
+
+    def _update_product_costs_from_bill(self):
+        """NEW METHOD: Update product cost prices based on vendor bill line unit prices"""
+        self.ensure_one()
+
+        if self.move_type != 'in_invoice':
+            return
+
+        _logger.info(f"Starting product cost update for bill {self.name}")
+
+        # Get eligible lines for cost updates
+        cost_update_lines = self.invoice_line_ids.filtered(
+            lambda line: line.product_id
+                         and line.product_id.type in ['product', 'consu']
+                         and line.quantity > 0
+                         and line.price_unit > 0
+                         and line.product_id.categ_id.property_cost_method == 'standard'
+                         and line.product_id.categ_id.auto_update_cost_from_bill
+                         and (line.display_type == 'product' or not line.display_type)
+        )
+
+        _logger.info(f"Found {len(cost_update_lines)} lines eligible for cost updates")
+
+        for line in cost_update_lines:
+            try:
+                self._update_single_product_cost(line)
+            except Exception as e:
+                _logger.error(f"Failed to update cost for product {line.product_id.name}: {str(e)}")
+                # Continue with other products
+                continue
+
+    def _update_single_product_cost(self, line):
+        """Update cost for a single product based on invoice line"""
+        product = line.product_id
+
+        # Get the unit price in company currency
+        company_currency = self.company_id.currency_id
+        unit_price_company_currency = line.price_unit
+
+        if line.currency_id != company_currency:
+            # Convert to company currency
+            unit_price_company_currency = line.currency_id._convert(
+                line.price_unit,
+                company_currency,
+                self.company_id,
+                self.invoice_date or fields.Date.today()
+            )
+
+        # Handle UOM conversion if needed
+        product_uom = product.uom_po_id
+        if line.product_uom_id != product_uom:
+            unit_price_company_currency = line.product_uom_id._compute_price(
+                unit_price_company_currency, product_uom
+            )
+
+        # Apply cost update strategy
+        cost_update_strategy = product.categ_id.cost_update_strategy
+        current_cost = product.standard_price
+
+        if cost_update_strategy == 'always':
+            new_cost = unit_price_company_currency
+        elif cost_update_strategy == 'if_higher':
+            new_cost = max(current_cost, unit_price_company_currency)
+        elif cost_update_strategy == 'if_lower':
+            new_cost = min(current_cost, unit_price_company_currency)
+        elif cost_update_strategy == 'weighted_average':
+            # Calculate weighted average with existing stock
+            current_qty = product.qty_available or 1
+            new_qty = line.quantity
+
+            total_value = (current_cost * current_qty) + (unit_price_company_currency * new_qty)
+            total_qty = current_qty + new_qty
+            new_cost = total_value / total_qty if total_qty > 0 else unit_price_company_currency
+        else:
+            new_cost = unit_price_company_currency
+
+        # Round the cost according to precision
+        new_cost = round(new_cost, 2)
+
+        # Only update if there's a significant difference
+        min_difference = float(self.env['ir.config_parameter'].sudo().get_param(
+            'auto_stock_update.min_cost_difference', '0.01'
+        ))
+
+        if abs(current_cost - new_cost) >= min_difference:
+            # Update the product cost
+            product.with_context(auto_cost_update=True).write({
+                'standard_price': new_cost
+            })
+
+            _logger.info(
+                f"Updated cost for product {product.name} "
+                f"from {current_cost} to {new_cost} "
+                f"based on vendor bill {self.name}"
+            )
+
+            # Add message to product
+            product.message_post(
+                body=_(
+                    "Cost price updated from %s to %s based on vendor bill %s (Strategy: %s)"
+                ) % (current_cost, new_cost, self.name, cost_update_strategy),
+                message_type='comment'
+            )
+
+            # Add message to vendor bill
+            self.message_post(
+                body=_(
+                    "Updated cost price for product %s from %s to %s (Strategy: %s)"
+                ) % (product.name, current_cost, new_cost, cost_update_strategy),
+                message_type='comment'
+            )
 
     def _create_auto_stock_picking(self):
         """Create stock picking and moves from vendor bill"""
@@ -101,10 +218,7 @@ class AccountMove(models.Model):
         for line in stockable_lines:
             try:
                 _logger.info(f"Processing product: {line.product_id.name}, Qty: {line.quantity}")
-
-                # Method 1: Use inventory adjustment approach
                 self._create_inventory_adjustment(line.product_id, line.quantity, stock_location)
-
                 _logger.info(f"Successfully updated stock for {line.product_id.name}")
 
             except Exception as e:
@@ -166,7 +280,6 @@ class AccountMove(models.Model):
                 'location_dest_id': location.id,
                 'origin': f"{self.name} (Auto Stock Update)",
                 'company_id': self.company_id.id,
-                # Don't set state to 'done' initially - let it flow naturally
             }
 
             # Create picking with ONLY the required fields
@@ -185,7 +298,6 @@ class AccountMove(models.Model):
                     'picking_id': picking.id,
                     'company_id': self.company_id.id,
                     'price_unit': line.price_unit,
-                    # Don't set quantity_done or state - let Odoo handle it
                 }
 
                 move = self.env['stock.move'].create(move_vals)
