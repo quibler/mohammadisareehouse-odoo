@@ -132,7 +132,7 @@ class AccountMove(models.Model):
         wizard = self.env['product.label.layout'].create({
             'product_ids': [(6, 0, [p.id for p in products])],
             'custom_quantity': total_labels,
-            'print_format': '2x7xprice'
+            'print_format': 'dymo'
         })
 
         return {

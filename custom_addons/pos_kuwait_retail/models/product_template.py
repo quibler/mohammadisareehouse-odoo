@@ -27,12 +27,6 @@ class ProductTemplate(models.Model):
         help="Price at which the product is sold to customers."
     )
 
-    is_storable = fields.Boolean(
-        string='Is Storable',
-        default=True,  # Default to True for inventory tracking
-        help="Check if you want to track inventory for this product."
-    )
-
     @api.model
     def create(self, vals):
         """Override create to ensure default values are applied"""
@@ -45,10 +39,6 @@ class ProductTemplate(models.Model):
 
         if 'list_price' not in vals:
             vals['list_price'] = 0.0
-
-        # Enable inventory tracking for retail clothing products
-        if 'is_storable' not in vals and vals.get('type') == 'consu':
-            vals['is_storable'] = True
 
         return super(ProductTemplate, self).create(vals)
 
@@ -67,7 +57,34 @@ class ProductTemplate(models.Model):
         if 'list_price' in fields_list:
             defaults['list_price'] = 0.0
 
-        # Enable inventory tracking for retail clothing products
+        return defaults
+
+
+class ProductProduct(models.Model):
+    _inherit = 'product.product'
+
+    # Set default for inventory tracking
+    is_storable = fields.Boolean(
+        string='Track Inventory',
+        default=True,  # Default to True for inventory tracking
+        help="Check if you want to track inventory for this product."
+    )
+
+    @api.model
+    def create(self, vals):
+        """Override create to ensure is_storable is True by default for consu products"""
+        # Set default is_storable for consu products
+        if vals.get('type') == 'consu' and 'is_storable' not in vals:
+            vals['is_storable'] = True
+
+        return super(ProductProduct, self).create(vals)
+
+    @api.model
+    def default_get(self, fields_list):
+        """Override default_get to set is_storable default"""
+        defaults = super(ProductProduct, self).default_get(fields_list)
+
+        # Set is_storable to True by default for consu products
         if 'is_storable' in fields_list and defaults.get('type') == 'consu':
             defaults['is_storable'] = True
 
