@@ -24,6 +24,28 @@ class AccountMove(models.Model):
         for move in self:
             move.auto_stock_picking_count = 1 if move.auto_stock_picking_id else 0
 
+    @api.model
+    def default_get(self, fields_list):
+        """Override default_get to set default dates for vendor bills"""
+        defaults = super().default_get(fields_list)
+
+        # Check if this is a vendor bill context
+        move_type = defaults.get('move_type') or self._context.get('default_move_type')
+
+        # Set default dates for vendor bills (in_invoice and in_refund)
+        if move_type in ('in_invoice', 'in_refund', 'in_receipt'):
+            today = fields.Date.context_today(self)
+
+            # Set default invoice_date (Bill Date) to today
+            if 'invoice_date' in fields_list and not defaults.get('invoice_date'):
+                defaults['invoice_date'] = today
+
+            # Set default date (Accounting Date) to today
+            if 'date' in fields_list and not defaults.get('date'):
+                defaults['date'] = today
+
+        return defaults
+
     def action_post(self):
         """Override to create stock movements and update costs after posting vendor bills"""
         # Call the original method first
