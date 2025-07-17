@@ -1,0 +1,123 @@
+# -*- coding: utf-8 -*-
+
+from odoo import models, fields, api
+from odoo.osv.expression import OR
+
+
+class PosConfig(models.Model):
+    _inherit = 'pos.config'
+
+    sales_person_ids = fields.Many2many(
+        'hr.employee',
+        'config_salesperson_rel',
+        'config_id',
+        'employee_id',
+        string="Allowed Sales Persons",
+        help="Restrict which employees can be selected as sales persons in this POS"
+    )
+
+    def _employee_domain(self, user_id):
+        """Override to respect sales person restrictions"""
+        domain = super()._employee_domain(user_id)
+
+        if self.module_pos_hr:
+            if self.sales_person_ids:
+                # Add allowed sales persons to the domain
+                domain = OR([domain, [('id', 'in', self.sales_person_ids.ids)]])
+            else:
+                # If no sales persons configured, use default domain
+                pass
+        else:
+            # If pos_hr is disabled, only use configured sales persons
+            domain = [('id', 'in', self.sales_person_ids.ids)]
+
+        return domain
+
+    def _get_pos_ui_pos_config(self, params):
+        """Add sales person IDs to frontend config"""
+        config_data = super()._get_pos_ui_pos_config(params)
+        config_data['sales_person_ids'] = self.sales_person_ids.ids
+        return config_data
+
+
+class PosSession(models.Model):
+    _inherit = 'pos.session'
+
+    @api.model
+    def _load_pos_data_models(self, config_id):
+        """Ensure hr.employee is loaded for sales person functionality"""
+        data = super()._load_pos_data_models(config_id)
+        config = self.env['pos.config'].browse(config_id)
+
+        # Always load employees if we have sales person restrictions
+        if not config.module_pos_hr and config.sales_person_ids:
+            data += ['hr.employee']
+
+        return data
+
+
+class PosOrder(models.Model):
+    _inherit = 'pos.order'
+
+    sales_person_id = fields.Many2one(
+        'hr.employee',
+        string='Sales Person',
+        help="Employee who handled this order"
+    )
+
+    def _get_fields_for_order_line(self):
+        """Include sales person in order line data"""
+        fields = super()._get_fields_for_order_line()
+        fields.append('sales_person_id')
+        return fields
+
+
+class ResConfigSettings(models.TransientModel):
+    _inherit = 'res.config.settings'
+
+    pos_sales_person_ids = fields.Many2many(
+        related='pos_config_id.sales_person_ids',
+        readonly=False,
+        string="Allowed Sales Persons"
+    )
+
+
+class AccountMove(models.Model):
+    _inherit = "account.move"
+
+    pos_sales_person_id = fields.Many2one(
+        "hr.employee",
+        string="POS Sales Person",
+        help="Sales person from the original POS order"
+    )
+
+
+class ResPartner(models.Model):
+    _inherit = "res.partner"
+
+    @api.model
+    def _load_pos_data_domain(self, data):
+        """Load only customers in POS"""
+        domain = super()._load_pos_data_domain(data)
+        domain.append(("customer_rank", ">", 0))
+        return domain
+
+    @api.model
+    def _load_pos_data_fields(self, config_id):
+        """Include customer_rank field"""
+        fields = super()._load_pos_data_fields(config_id)
+        if 'customer_rank' not in fields:
+            fields.append('customer_rank')
+        return fields
+
+
+class ResCompany(models.Model):
+    _inherit = 'res.company'
+
+    @api.model
+    def _load_pos_data_fields(self, config_id):
+        """Include mobile field for receipts"""
+        fields = super()._load_pos_data_fields(config_id)
+        if 'mobile' not in fields:
+            fields.append('mobile')
+        return fields
