@@ -64,10 +64,10 @@ class AccountMove(models.Model):
             try:
                 _logger.info(f"Processing bill {bill.name} for auto stock update")
 
-                # NEW: Update product costs FIRST (before stock movements)
+                # Update product costs FIRST (before stock movements)
                 bill._update_product_costs_from_bill()
 
-                # Existing: Create stock movements
+                # Create stock movements
                 bill._create_auto_stock_picking()
 
             except Exception as e:
@@ -81,48 +81,108 @@ class AccountMove(models.Model):
 
         return result
 
-    def _update_product_costs_from_bill(self):
-        """NEW METHOD: Update product cost prices based on vendor bill line unit prices"""
+    def action_view_auto_stock_picking(self):
+        """Action to view the auto-created stock picking"""
         self.ensure_one()
-
-        if self.move_type != 'in_invoice':
+        if not self.auto_stock_picking_id:
             return
 
-        _logger.info(f"Starting product cost update for bill {self.name}")
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Auto Stock Picking'),
+            'res_model': 'stock.picking',
+            'res_id': self.auto_stock_picking_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
 
-        # Get eligible lines for cost updates
-        cost_update_lines = self.invoice_line_ids.filtered(
+    def action_print_product_labels(self):
+        """Action to print product labels from vendor bill lines"""
+        self.ensure_one()
+
+        if self.move_type != 'in_invoice' or self.state != 'posted':
+            raise UserError(_('Labels can only be printed for confirmed vendor bills.'))
+
+        # Get products from invoice lines (only stockable products)
+        stockable_lines = self.invoice_line_ids.filtered(
             lambda line: line.product_id
                          and line.product_id.type in ['product', 'consu']
                          and line.quantity > 0
-                         and line.price_unit > 0
-                         and line.product_id.categ_id.property_cost_method == 'standard'
-                         and line.product_id.categ_id.auto_update_cost_from_bill
                          and (line.display_type == 'product' or not line.display_type)
         )
 
-        _logger.info(f"Found {len(cost_update_lines)} lines eligible for cost updates")
+        if not stockable_lines:
+            raise UserError(_('No stockable products found to print labels for.'))
 
-        for line in cost_update_lines:
+        # Calculate total quantity for each product
+        product_quantities = {}
+        for line in stockable_lines:
+            product = line.product_id
+            quantity = int(line.quantity)
+            if product in product_quantities:
+                product_quantities[product] += quantity
+            else:
+                product_quantities[product] = quantity
+
+        # Get all products
+        products = list(product_quantities.keys())
+        total_labels = sum(product_quantities.values())
+
+        # Create label layout wizard with pre-populated data
+        wizard = self.env['product.label.layout'].create({
+            'product_ids': [(6, 0, [p.id for p in products])],
+            'custom_quantity': total_labels,
+            'print_format': '2x7xprice'
+        })
+
+        return {
+            'name': _('Print Product Labels - %s') % self.name,
+            'type': 'ir.actions.act_window',
+            'res_model': 'product.label.layout',
+            'view_mode': 'form',
+            'res_id': wizard.id,
+            'target': 'new',
+        }
+
+    def _update_product_costs_from_bill(self):
+        """Update product costs based on vendor bill prices"""
+        self.ensure_one()
+
+        if self.move_type != 'in_invoice' or self.state != 'posted':
+            return
+
+        _logger.info(f"Starting cost update for bill {self.name}")
+
+        # Get vendor bill lines with products
+        cost_lines = self.invoice_line_ids.filtered(
+            lambda line: line.product_id
+                         and line.product_id.type in ['product', 'consu']
+                         and line.quantity > 0
+                         and (line.display_type == 'product' or not line.display_type)
+                         and line.product_id.categ_id.auto_update_cost_from_bill
+        )
+
+        _logger.info(f"Found {len(cost_lines)} lines for cost update")
+
+        for line in cost_lines:
             try:
-                self._update_single_product_cost(line)
+                self._update_product_cost_from_line(line)
             except Exception as e:
                 _logger.error(f"Failed to update cost for product {line.product_id.name}: {str(e)}")
-                # Continue with other products
-                continue
 
-    def _update_single_product_cost(self, line):
-        """Update cost for a single product based on invoice line"""
+    def _update_product_cost_from_line(self, line):
+        """Update individual product cost from bill line"""
         product = line.product_id
+        _logger.info(f"Updating cost for product: {product.name}")
 
-        # Get the unit price in company currency
-        company_currency = self.company_id.currency_id
+        # Calculate unit price in company currency
         unit_price_company_currency = line.price_unit
 
-        if line.currency_id != company_currency:
-            # Convert to company currency
+        # Handle currency conversion if needed
+        if line.currency_id != self.company_id.currency_id:
+            company_currency = self.company_id.currency_id
             unit_price_company_currency = line.currency_id._convert(
-                line.price_unit,
+                unit_price_company_currency,
                 company_currency,
                 self.company_id,
                 self.invoice_date or fields.Date.today()
@@ -294,7 +354,7 @@ class AccountMove(models.Model):
                 _logger.warning("No incoming picking type found, skipping reference picking")
                 return
 
-            # Create picking for reference only - CLEAN VALUES ONLY
+            # Create picking for reference only
             picking_vals = {
                 'partner_id': self.partner_id.id,
                 'picking_type_id': picking_type.id,
@@ -347,18 +407,3 @@ class AccountMove(models.Model):
             # But log more details for debugging
             import traceback
             _logger.error(f"Full traceback: {traceback.format_exc()}")
-
-    def action_view_auto_stock_picking(self):
-        """Action to view the auto-created stock picking"""
-        self.ensure_one()
-        if not self.auto_stock_picking_id:
-            return
-
-        return {
-            'type': 'ir.actions.act_window',
-            'name': _('Auto Stock Picking'),
-            'res_model': 'stock.picking',
-            'res_id': self.auto_stock_picking_id.id,
-            'view_mode': 'form',
-            'target': 'current',
-        }

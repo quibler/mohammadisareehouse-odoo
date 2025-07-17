@@ -1,17 +1,16 @@
 {
     'name': 'Auto Stock Update from Vendor Bills with Cost Price Updates',
-    'version': '18.0.1.1.0',
+    'version': '18.0.1.2.0',  # Increment version
     'category': 'Inventory/Purchase',
-    'summary': 'Automatically update stock and product cost prices when vendor bills are validated',
+    'summary': 'Automatically update stock, cost prices, and print product labels from vendor bills',
     'description': """
         This module automatically creates stock movements and updates inventory
         when vendor bills are validated, eliminating the need for separate receipt validation.
 
-        NEW: Also automatically updates product cost prices from vendor bill unit prices.
-
         Features:
         - Auto-create stock pickings from vendor bills
-        - AUTO-UPDATE PRODUCT COST PRICES from vendor bill unit prices
+        - Auto-update product cost prices from vendor bill unit prices
+        - PRINT PRODUCT LABELS with quantities from vendor bill lines
         - Integration with existing purchase orders
         - Only processes stockable products
         - Proper inventory valuation handling
@@ -26,7 +25,7 @@
         'stock',
         'purchase',
         'purchase_stock',
-        'product',
+        'product',  # This includes the label printing functionality
     ],
     'data': [
         'views/account_move_views.xml',
