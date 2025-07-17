@@ -96,54 +96,6 @@ class AccountMove(models.Model):
             'target': 'current',
         }
 
-    def action_print_product_labels(self):
-        """Action to print product labels from vendor bill lines"""
-        self.ensure_one()
-
-        if self.move_type != 'in_invoice' or self.state != 'posted':
-            raise UserError(_('Labels can only be printed for confirmed vendor bills.'))
-
-        # Get products from invoice lines (only stockable products)
-        stockable_lines = self.invoice_line_ids.filtered(
-            lambda line: line.product_id
-                         and line.product_id.type in ['product', 'consu']
-                         and line.quantity > 0
-                         and (line.display_type == 'product' or not line.display_type)
-        )
-
-        if not stockable_lines:
-            raise UserError(_('No stockable products found to print labels for.'))
-
-        # Calculate total quantity for each product
-        product_quantities = {}
-        for line in stockable_lines:
-            product = line.product_id
-            quantity = int(line.quantity)
-            if product in product_quantities:
-                product_quantities[product] += quantity
-            else:
-                product_quantities[product] = quantity
-
-        # Get all products
-        products = list(product_quantities.keys())
-        total_labels = sum(product_quantities.values())
-
-        # Create label layout wizard with pre-populated data
-        wizard = self.env['product.label.layout'].create({
-            'product_ids': [(6, 0, [p.id for p in products])],
-            'custom_quantity': total_labels,
-            'print_format': 'dymo'
-        })
-
-        return {
-            'name': _('Print Product Labels - %s') % self.name,
-            'type': 'ir.actions.act_window',
-            'res_model': 'product.label.layout',
-            'view_mode': 'form',
-            'res_id': wizard.id,
-            'target': 'new',
-        }
-
     def _update_product_costs_from_bill(self):
         """Update product costs based on vendor bill prices"""
         self.ensure_one()
