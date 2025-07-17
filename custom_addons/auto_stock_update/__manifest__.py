@@ -30,8 +30,6 @@
     ],
     'data': [
         'views/account_move_views.xml',
-        'views/product_category_views.xml',
-        'data/ir_config_parameter.xml',
     ],
     'installable': True,
     'auto_install': False,
