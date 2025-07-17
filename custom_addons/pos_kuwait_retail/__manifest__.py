@@ -15,6 +15,13 @@
         - Optimized for retail environments where price adjustments are common
         - Maintains all standard POS functionality
 
+        Delete Line Features:
+        - X button on each order line for quick deletion
+        - Delete key support for selected lines
+        - Instant deletion without confirmation
+        - Smooth animations and hover effects
+        - Hidden by default, appears on hover or selection
+
         Label & Printing Features:
         - Simplified label layout options (Dymo and Dymo without price)
         - Custom Dymo label template without price display
@@ -34,7 +41,7 @@
         """,
     'author': 'Ashwini Kumar',
     'category': 'Point Of Sale',
-    'version': '18.0.1.23.0',
+    'version': '18.0.1.24.0',
     'depends': ['account', 'point_of_sale', 'pos_hr', 'product'],
     'data': [
         'views/account_move_views.xml',
@@ -50,6 +57,7 @@
     'assets': {
         'point_of_sale._assets_pos': [
             'pos_kuwait_retail/static/src/**/*',
+            'pos_kuwait_retail/static/src/css/delete_button.css',
         ],
     },
     'license': 'Other proprietary',

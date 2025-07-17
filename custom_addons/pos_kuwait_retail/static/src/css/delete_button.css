@@ -1,0 +1,61 @@
+/* X Button Styling */
+.delete-line-x-btn {
+    min-width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+    border: 1px solid #dc3545;
+    background-color: transparent;
+    color: #dc3545;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.delete-line-x-btn:hover {
+    opacity: 1;
+    background-color: #dc3545;
+    color: white;
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.delete-line-x-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+/* Order line container styling */
+.orderline-container {
+    padding: 4px 40px 4px 4px; /* Add right padding for X button */
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.orderline-container:hover {
+    background-color: rgba(248, 249, 250, 0.8);
+}
+
+/* Selected line styling */
+.orderline-container:has(.selected) {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+/* Hide X button by default, show on hover */
+.delete-line-x-btn {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+}
+
+.orderline-container:hover .delete-line-x-btn,
+.orderline-container:has(.selected) .delete-line-x-btn {
+    opacity: 0.7;
+    visibility: visible;
+}
+
+.delete-line-x-btn:hover {
+    opacity: 1 !important;
+}

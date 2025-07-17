@@ -5,5 +5,29 @@
         <xpath expr="//OrderWidget" position="attributes">
             <attribute name="sales_person">currentOrder.sales_person_id?.name</attribute>
         </xpath>
+        
+        <!-- Wrap Orderline with div and add X button -->
+        <xpath expr="//Orderline" position="replace">
+            <div class="position-relative orderline-container">
+                <Orderline 
+                    line="line.getDisplayData()"
+                    class="{ ...line.getDisplayClasses(), 'selected' : line.isSelected() }"
+                    t-on-click="(event) => this.clickLine(event, line)">
+                    <t t-set-slot="product-name">
+                        <i t-if="line.get_product()?.isTracked()"
+                            t-on-click.stop="() => this.editPackLotLines(line)" role="img"
+                            t-attf-class="{{ line.has_valid_product_lot() ? 'text-success' : 'text-danger'}} fa fa-list line-lot-icon ms-1"
+                            t-attf-title="{{ line.has_valid_product_lot() ? 'Valid product lot' : 'Invalid product lot'}}" />
+                    </t>
+                </Orderline>
+                <button 
+                    class="btn btn-sm btn-outline-danger delete-line-x-btn position-absolute"
+                    style="right: 8px; top: 50%; transform: translateY(-50%); z-index: 10;"
+                    t-on-click.stop="() => this.deleteOrderLine(line)"
+                    title="Delete this line">
+                    <i class="fa fa-times"/>
+                </button>
+            </div>
+        </xpath>
     </t>
 </templates>

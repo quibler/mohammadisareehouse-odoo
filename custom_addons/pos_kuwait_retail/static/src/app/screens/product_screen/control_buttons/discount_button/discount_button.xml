@@ -2,7 +2,7 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_kuwait_retail.DiscountButton">
         <button class="btn btn-light btn-lg lh-lg text-truncate w-auto" t-on-click="() => this.onClick()">
-            <i class="fa fa-percent me-2" role="img" aria-label="Discount" title="Discount" />
+            <i class="fa fa-tag me-2" role="img" aria-label="Discount" title="Discount" />
             <span>Discount</span>
         </button>
     </t>
