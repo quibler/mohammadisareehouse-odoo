@@ -28,6 +28,25 @@ class ProductTemplate(models.Model):
         })
         return defaults
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Auto-generate barcodes when creating product templates"""
+        # Create templates first
+        templates = super().create(vals_list)
+
+        # Now ensure variants get barcodes
+        for template in templates:
+            # Only process if template has exactly one variant (standard case)
+            if len(template.product_variant_ids) == 1:
+                variant = template.product_variant_ids[0]
+                if not variant.barcode and template.name:
+                    # Generate barcode using the variant's method
+                    generated_barcode = variant._generate_barcode_from_name(template.name)
+                    variant.barcode = generated_barcode
+                    _logger.info(f"Generated barcode '{generated_barcode}' for template variant '{template.name}'")
+
+        return templates
+
 
 class ProductProduct(models.Model):
     _inherit = 'product.product'
@@ -78,7 +97,7 @@ class ProductProduct(models.Model):
             barcode = (base_barcode[:max_base] if len(base_barcode) > max_base else base_barcode) + suffix
 
     def _generate_barcode_from_name(self, name):
-        """Main barcode generation method"""
+        """Main barcode generation method - generates Code128 compatible barcode from name"""
         cleaned = self._clean_name_for_barcode(name)
 
         if not cleaned:
