@@ -31,6 +31,7 @@
     'data': [
         'views/account_move_views.xml',
         'views/product_category_views.xml',
+        'views/menu_customization.xml',
         'data/ir_config_parameter.xml',
     ],
     'installable': True,
