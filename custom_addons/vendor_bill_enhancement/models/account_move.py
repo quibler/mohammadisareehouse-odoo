@@ -1,5 +1,6 @@
-from odoo import models, fields, api, _
-from odoo.exceptions import UserError, ValidationError
+# -*- coding: utf-8 -*-
+from odoo import api, fields, models, _
+from odoo.exceptions import UserError
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -8,21 +9,55 @@ _logger = logging.getLogger(__name__)
 class AccountMove(models.Model):
     _inherit = 'account.move'
 
+    # Enhanced fields for auto stock functionality
     auto_stock_picking_id = fields.Many2one(
         'stock.picking',
         string='Auto Stock Picking',
-        readonly=True,
-        help="Stock picking automatically created from this vendor bill"
+        readonly=True
     )
     auto_stock_picking_count = fields.Integer(
-        string='Auto Stock Pickings',
+        string='Stock Picking Count',
         compute='_compute_auto_stock_picking_count'
+    )
+
+    # Enhanced Manual Currency Exchange Rate fields
+    manual_currency_rate = fields.Float(
+        string='Manual Exchange Rate',
+        help='Manual exchange rate: 1 Company Currency = X Foreign Currency',
+        digits=(12, 6),
+        copy=False
+    )
+    is_manual_currency_rate = fields.Boolean(
+        string='Use Manual Rate',
+        compute='_compute_is_manual_currency_rate',
+        store=True,
+        help='Automatically enabled when foreign currency is selected'
+    )
+
+    # Company currency totals for better visibility
+    amount_total_company_currency = fields.Monetary(
+        string='Total (Company Currency)',
+        compute='_compute_company_currency_totals',
+        currency_field='company_currency_id',
+        help='Total amount in company currency using manual rate'
+    )
+    amount_untaxed_company_currency = fields.Monetary(
+        string='Untaxed Amount (Company Currency)',
+        compute='_compute_company_currency_totals',
+        currency_field='company_currency_id',
+        help='Untaxed amount in company currency using manual rate'
+    )
+    amount_tax_company_currency = fields.Monetary(
+        string='Tax (Company Currency)',
+        compute='_compute_company_currency_totals',
+        currency_field='company_currency_id',
+        help='Tax amount in company currency using manual rate'
     )
 
     @api.depends('auto_stock_picking_id')
     def _compute_auto_stock_picking_count(self):
-        for move in self:
-            move.auto_stock_picking_count = 1 if move.auto_stock_picking_id else 0
+        for record in self:
+            record.auto_stock_picking_count = 1 if record.auto_stock_picking_id else 0
 
     @api.model
     def default_get(self, fields_list):
@@ -37,10 +72,10 @@ class AccountMove(models.Model):
             today = fields.Date.context_today(self)
 
             # Set default invoice_date (Bill Date) to today
-            if 'invoice_date' in fields_list and not defaults.get('invoice_date'):
+            if 'invoice_date' in fields_list:
                 defaults['invoice_date'] = today
 
-            # Set default date (Accounting Date) to today
+            # Set default date (Accounting Date) to today only if not already set
             if 'date' in fields_list and not defaults.get('date'):
                 defaults['date'] = today
 
@@ -91,10 +126,167 @@ class AccountMove(models.Model):
             'type': 'ir.actions.act_window',
             'name': _('Auto Stock Picking'),
             'res_model': 'stock.picking',
-            'res_id': self.auto_stock_picking_id.id,
             'view_mode': 'form',
+            'res_id': self.auto_stock_picking_id.id,
             'target': 'current',
         }
+
+    @api.depends('currency_id', 'company_currency_id', 'company_id', 'invoice_date', 'manual_currency_rate',
+                 'is_manual_currency_rate')
+    def _compute_invoice_currency_rate_enhanced(self):
+        """Enhanced computation that uses manual rate when available"""
+        for move in self:
+            if move.is_invoice(include_receipts=True):
+                if move.currency_id:
+                    # Use manual rate for vendor bills if available
+                    if (move.is_manual_currency_rate and
+                            move.manual_currency_rate > 0 and
+                            move.move_type in ('in_invoice', 'in_refund', 'in_receipt')):
+                        # Convert our rate format to Odoo's display format
+                        move.invoice_currency_rate = move.manual_currency_rate
+                    else:
+                        # Use standard Odoo rate calculation
+                        move.invoice_currency_rate = self.env['res.currency']._get_conversion_rate(
+                            from_currency=move.company_currency_id,
+                            to_currency=move.currency_id,
+                            company=move.company_id,
+                            date=move._get_invoice_currency_rate_date(),
+                        )
+                else:
+                    move.invoice_currency_rate = 1
+            else:
+                move.invoice_currency_rate = 1
+
+    @api.depends('currency_id', 'company_currency_id')
+    def _compute_is_manual_currency_rate(self):
+        """Automatically enable manual rate when foreign currency is selected"""
+        for move in self:
+            move.is_manual_currency_rate = (
+                    move.currency_id and
+                    move.currency_id != move.company_currency_id and
+                    move.move_type in ('in_invoice', 'in_refund', 'in_receipt')
+            )
+
+    @api.depends('invoice_line_ids.price_subtotal', 'invoice_line_ids.price_total', 'invoice_line_ids.tax_ids',
+                 'manual_currency_rate', 'currency_id', 'company_currency_id', 'invoice_line_ids.quantity',
+                 'invoice_line_ids.price_unit', 'invoice_line_ids.discount', 'is_manual_currency_rate')
+    def _compute_company_currency_totals(self):
+        """Compute totals in company currency based on manual exchange rate"""
+        for move in self:
+            if move.is_manual_currency_rate and move.manual_currency_rate > 0:
+                # Use manual exchange rate: divide by rate since rate is Company Currency = X Foreign Currency
+                move.amount_total_company_currency = move.amount_total / move.manual_currency_rate
+                move.amount_untaxed_company_currency = move.amount_untaxed / move.manual_currency_rate
+                move.amount_tax_company_currency = move.amount_tax / move.manual_currency_rate
+            elif move.currency_id == move.company_currency_id:
+                # Same currency, no conversion needed
+                move.amount_total_company_currency = move.amount_total
+                move.amount_untaxed_company_currency = move.amount_untaxed
+                move.amount_tax_company_currency = move.amount_tax
+            else:
+                # Use standard Odoo conversion
+                move.amount_total_company_currency = move.currency_id._convert(
+                    move.amount_total, move.company_currency_id, move.company_id,
+                    move.date or fields.Date.today()
+                )
+                move.amount_untaxed_company_currency = move.currency_id._convert(
+                    move.amount_untaxed, move.company_currency_id, move.company_id,
+                    move.date or fields.Date.today()
+                )
+                move.amount_tax_company_currency = move.currency_id._convert(
+                    move.amount_tax, move.company_currency_id, move.company_id,
+                    move.date or fields.Date.today()
+                )
+
+    @api.onchange('currency_id')
+    def _onchange_currency_id(self):
+        """Auto-load last exchange rate when currency changes"""
+        # Call parent method first if it exists
+        res = super()._onchange_currency_id() if hasattr(super(), '_onchange_currency_id') else None
+
+        # Only apply to vendor bills
+        if self.move_type not in ('in_invoice', 'in_refund', 'in_receipt'):
+            return res
+
+        if self.currency_id and self.currency_id != self.company_currency_id:
+            # Get the latest manual rate for this currency
+            latest_rate = self.env['res.currency.rate'].search([
+                ('currency_id', '=', self.currency_id.id),
+                ('company_id', '=', self.company_id.id)
+            ], order='name desc', limit=1)
+
+            if latest_rate and hasattr(latest_rate, 'manual_rate'):
+                self.manual_currency_rate = latest_rate.manual_rate
+            else:
+                # Calculate system rate in our format (1 Company = X Foreign)
+                try:
+                    system_rate = self.env['res.currency']._get_conversion_rate(
+                        from_currency=self.company_currency_id,
+                        to_currency=self.currency_id,
+                        company=self.company_id,
+                        date=self.date or fields.Date.today(),
+                    )
+                    self.manual_currency_rate = system_rate
+                except:
+                    self.manual_currency_rate = 1.0
+        else:
+            self.manual_currency_rate = 0.0
+
+        # Trigger recalculation of company currency totals
+        self._compute_company_currency_totals()
+
+        return res
+
+    @api.onchange('manual_currency_rate')
+    def _onchange_manual_currency_rate(self):
+        """Update system currency rate when manual rate changes"""
+        # Only apply to vendor bills with manual rate enabled
+        if (self.move_type not in ('in_invoice', 'in_refund', 'in_receipt') or
+                not self.is_manual_currency_rate):
+            return
+
+        # Trigger recalculation of company currency totals
+        self._compute_company_currency_totals()
+
+        # Update system-wide currency rate if valid rate is entered
+        if self.manual_currency_rate > 0 and self.currency_id != self.company_currency_id:
+            self._update_system_currency_rate()
+
+    def _update_system_currency_rate(self):
+        """Update the global currency rate table with manual rate"""
+        if not self.manual_currency_rate or not self.currency_id or self.currency_id == self.company_currency_id:
+            return
+
+        rate_date = self.date or fields.Date.today()
+
+        existing_rate = self.env['res.currency.rate'].search([
+            ('currency_id', '=', self.currency_id.id),
+            ('name', '=', rate_date),
+            ('company_id', '=', self.company_id.id)
+        ])
+
+        # Convert our rate format to Odoo's standard format
+        # Our format: 1 Company = X Foreign (e.g., 1 KWD = 250 INR)
+        # Odoo format: 1 Foreign = X Company (e.g., 1 INR = 0.004 KWD)
+        odoo_rate = 1.0 / self.manual_currency_rate if self.manual_currency_rate else 1.0
+
+        rate_values = {
+            'company_rate': odoo_rate,
+        }
+
+        # Store our manual rate for future reference
+        if hasattr(self.env['res.currency.rate'], 'manual_rate'):
+            rate_values['manual_rate'] = self.manual_currency_rate
+
+        if existing_rate:
+            existing_rate.write(rate_values)
+        else:
+            rate_values.update({
+                'currency_id': self.currency_id.id,
+                'name': rate_date,
+                'company_id': self.company_id.id,
+            })
+            self.env['res.currency.rate'].create(rate_values)
 
     def _update_product_costs_from_bill(self):
         """Update product costs based on vendor bill prices"""
