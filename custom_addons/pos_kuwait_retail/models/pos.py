@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from odoo import models, fields, api
+from odoo import models, fields, api, _
 from odoo.osv.expression import OR
 
 
@@ -70,6 +70,28 @@ class PosOrder(models.Model):
         fields = super()._get_fields_for_order_line()
         fields.append('sales_person_id')
         return fields
+
+    def _prepare_mail_values(self, email, ticket, basic_ticket):
+        """Custom email template for Mohammadi saree house - Kuwait Retail"""
+        from markupsafe import Markup
+
+        # Custom message with the exact requirements
+        message = Markup(
+            _("<p>Thank you for your order with Mohammadi saree house, "
+              "Here is your receipt amounting %(amount)s.<br/><br/>"
+              "For more, contact us on WhatsApp - 94190213</p>")
+        ) % {
+                      'amount': self.currency_id.format(self.amount_total),
+                  }
+
+        return {
+            'subject': _('Receipt'),
+            'body_html': message,
+            'author_id': self.env.user.partner_id.id,
+            'email_from': self.env.company.email or self.env.user.email_formatted,
+            'email_to': email,
+            'attachment_ids': self._add_mail_attachment(self.name, ticket, basic_ticket),
+        }
 
 
 class ResConfigSettings(models.TransientModel):

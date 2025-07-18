@@ -1,6 +1,6 @@
 {
     'name': 'Kuwait Retail POS Suite',
-    'summary': 'Complete retail POS solution for Kuwait clothing stores with auto barcode generation',
+    'summary': 'Complete retail POS solution for Kuwait clothing stores with auto barcode generation and custom receipt emails',
     'description': """
         All-in-one Point of Sale solution for Kuwait retail clothing stores:
 
@@ -20,6 +20,11 @@
         • Quick line deletion with X buttons
         • Clean receipt format optimized for Kuwait retail
 
+        📧 CUSTOM EMAIL RECEIPTS
+        • Customized email receipt template for Mohammadi saree house
+        • Professional email formatting with WhatsApp contact info
+        • Simple subject line: "Receipt"
+
         📊 REPORTING & COMPLIANCE
         • Simplified daily sales reports (no taxes/discounts for Kuwait)
         • Sales person performance analytics
@@ -34,7 +39,7 @@
         """,
     'author': 'Ashwini Kumar',
     'category': 'Point Of Sale',
-    'version': '18.0.3.0.0',  # Major version bump for streamlined release
+    'version': '18.0.3.1.0',  # Version bump for email template feature
     'depends': [
         'point_of_sale',
         'pos_hr',
