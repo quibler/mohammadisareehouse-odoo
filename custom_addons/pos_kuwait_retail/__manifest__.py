@@ -55,6 +55,7 @@
         # Product & barcode management
         'views/product_label_layout_views.xml',
         'data/product_label_reports.xml',
+        'data/dymo_paper_format.xml',
 
         # Sales person & order management
         'views/pos_order_views.xml',

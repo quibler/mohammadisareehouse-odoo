@@ -1,12 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Override standard Dymo template to remove product name -->
+        <!-- Override Dymo paper format to reduce height by 40% and adjust spacing -->
+        <record id="paperformat_label_sheet_dymo_compact" model="report.paperformat">
+            <field name="name">Dymo Label Sheet - Compact</field>
+            <field name="default" eval="False" />
+            <field name="format">custom</field>
+            <field name="page_height">57</field> <!-- Keep width the same -->
+            <field name="page_width">19</field>  <!-- Reduced from 32mm to 19mm (40% reduction) -->
+            <field name="orientation">Landscape</field>
+            <field name="margin_top">0</field>
+            <field name="margin_bottom">0</field>
+            <field name="margin_left">0</field>
+            <field name="margin_right">0</field>
+            <field name="disable_shrinking" eval="True"/>
+            <field name="dpi">96</field>
+        </record>
+
+        <!-- Update the Dymo report to use the compact paper format -->
+        <record id="product.report_product_template_label_dymo" model="ir.actions.report">
+            <field name="paperformat_id" ref="paperformat_label_sheet_dymo_compact"/>
+        </record>
+
+        <!-- Override standard Dymo template to remove product name and adjust spacing precisely -->
         <template id="report_simple_label_dymo_inherit" inherit_id="product.report_simple_label_dymo">
             <!-- Remove the product name div -->
             <xpath expr="//div[contains(@class, 'o_label_name') and contains(@style, 'line-height')]" position="replace">
                 <!-- Replace with empty div -->
                 <div></div>
+            </xpath>
+
+            <!-- Fine-tune the main container to exactly match paper format -->
+            <xpath expr="//div[@class='o_label_sheet o_label_dymo']" position="attributes">
+                <attribute name="style">
+                    font-size: 90%;
+                    width: 57mm;
+                    height: 19mm;
+                    margin: 0;
+                    padding: 0.5mm;
+                    box-sizing: border-box;
+                </attribute>
+            </xpath>
+
+            <!-- Adjust the inner content container -->
+            <xpath expr="//div[@class='o_label_full']" position="attributes">
+                <attribute name="style" add="height: 100%; padding: 0; margin: 0;" separator=" "/>
+            </xpath>
+        </template>
+
+        <!-- Override template variables to fix dimensions and remove empty pages -->
+        <template id="report_productlabel_dymo_inherit" inherit_id="product.report_productlabel_dymo">
+            <!-- Adjust barcode size proportionally -->
+            <xpath expr="//t[@t-set='barcode_size']" position="attributes">
+                <attribute name="t-value">'width:45mm;height:6mm'</attribute>
+            </xpath>
+
+            <!-- Match table style to exact paper dimensions -->
+            <xpath expr="//t[@t-set='table_style']" position="attributes">
+                <attribute name="t-value">'width:100%;height:19mm;'</attribute>
+            </xpath>
+
+            <!-- Minimal padding to prevent overflow -->
+            <xpath expr="//t[@t-set='padding_page']" position="attributes">
+                <attribute name="t-value">'padding: 0.5mm'</attribute>
+            </xpath>
+        </template>
+
+        <!-- Custom CSS to fix page breaks and eliminate empty pages -->
+        <template id="report_dymo_page_break_css" inherit_id="web.report_assets_common">
+            <xpath expr="." position="inside">
+                <style type="text/css">
+                    /* Fix Dymo label page breaks to eliminate empty pages */
+                    .o_label_sheet.o_label_dymo {
+                        page-break-after: always !important;
+                        page-break-inside: avoid !important;
+                        display: block !important;
+                        width: 57mm !important;
+                        height: 19mm !important;
+                        margin: 0 !important;
+                        padding: 0.5mm !important;
+                    }
+
+                    /* Remove any extra spacing between labels */
+                    .o_label_sheet.o_label_dymo:last-child {
+                        page-break-after: avoid !important;
+                    }
+
+                    /* Ensure proper sizing for print */
+                    @media print {
+                        .o_label_sheet.o_label_dymo {
+                            width: 57mm !important;
+                            height: 19mm !important;
+                            margin: 0 !important;
+                            padding: 0.5mm !important;
+                        }
+                    }
+                </style>
             </xpath>
         </template>
     </data>
