@@ -49,15 +49,52 @@ export class SalesPersonButton extends Component {
     }
 
     _prepareEmployeeList(currentSalesPerson) {
-        // Get all employees using the getAll() method
-        const allEmployees = this.pos.models["hr.employee"].getAll();
+        // In Odoo 18, use the new models API
+        // Try multiple approaches to get employees
+        let allEmployees = [];
+
+        try {
+            // Method 1: Try the new orderedRecords property
+            if (this.pos.models["hr.employee"] && this.pos.models["hr.employee"].orderedRecords) {
+                allEmployees = this.pos.models["hr.employee"].orderedRecords;
+            }
+            // Method 2: Try the records property and convert to array
+            else if (this.pos.models["hr.employee"] && this.pos.models["hr.employee"].records) {
+                allEmployees = Array.from(this.pos.models["hr.employee"].records.values());
+            }
+            // Method 3: Check if it's an array directly
+            else if (Array.isArray(this.pos.models["hr.employee"])) {
+                allEmployees = this.pos.models["hr.employee"];
+            }
+            // Method 4: Try accessing data property
+            else if (this.pos.models["hr.employee"] && this.pos.models["hr.employee"].data) {
+                allEmployees = this.pos.models["hr.employee"].data;
+            }
+            // Method 5: Fallback to pos.employees if available
+            else if (this.pos.employees) {
+                allEmployees = this.pos.employees;
+            }
+            // Method 6: Last resort - try to get from pos data
+            else if (this.pos.data && this.pos.data.employees) {
+                allEmployees = this.pos.data.employees;
+            }
+        } catch (error) {
+            console.error('Error accessing employees:', error);
+            allEmployees = [];
+        }
+
+        console.log('All employees found:', allEmployees);
 
         // Get the allowed employee IDs
         let allowedEmployeeIds = [];
         if (this.pos.config.sales_person_ids && Array.isArray(this.pos.config.sales_person_ids)) {
-            // Extract IDs from the Proxy objects
-            allowedEmployeeIds = Array.from(this.pos.config.sales_person_ids).map(emp => emp.id);
+            // Extract IDs from the objects/Proxy objects
+            allowedEmployeeIds = Array.from(this.pos.config.sales_person_ids).map(emp => {
+                return typeof emp === 'object' ? emp.id : emp;
+            });
         }
+
+        console.log('Allowed employee IDs:', allowedEmployeeIds);
 
         // Filter employees that are in the allowed list
         let employeesToShow = allEmployees;
@@ -66,6 +103,8 @@ export class SalesPersonButton extends Component {
                 (employee) => allowedEmployeeIds.includes(employee.id)
             );
         }
+
+        console.log('Employees to show:', employeesToShow);
 
         const res = employeesToShow.map((employee) => {
             return {
