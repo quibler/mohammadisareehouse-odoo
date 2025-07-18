@@ -15,5 +15,10 @@
         <xpath expr="//div[hasclass('section-inventory')]" position="replace">
             <!-- This removes the entire inventory section to avoid duplication with the banner -->
         </xpath>
+
+        <!-- Remove the Edit button from footer -->
+        <xpath expr="//button[@t-on-click='editProduct']" position="replace">
+            <!-- This completely removes the Edit button from the product info popup -->
+        </xpath>
     </t>
 </templates>
