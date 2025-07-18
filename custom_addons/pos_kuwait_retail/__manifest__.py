@@ -62,16 +62,7 @@
     ],
     'assets': {
         'point_of_sale._assets_pos': [
-            # Core POS functionality
-            'kuwait_retail_pos/static/src/app/**/*.js',
-            'kuwait_retail_pos/static/src/app/**/*.xml',
-
-            # UI overrides
-            'kuwait_retail_pos/static/src/overrides/**/*.js',
-            'kuwait_retail_pos/static/src/overrides/**/*.xml',
-
-            # Styling
-            'kuwait_retail_pos/static/src/css/pos_enhancements.css',
+            'pos_kuwait_retail/static/src/**/*',
         ],
     },
     'post_init_hook': 'post_init_hook',

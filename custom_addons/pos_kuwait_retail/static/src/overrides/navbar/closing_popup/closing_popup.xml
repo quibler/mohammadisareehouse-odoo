@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="pos_kuwait_retail.ClosePosPopup" t-inherit="point_of_sale.ClosePosPopup" t-inherit-mode="extension">
+
+        <!-- Remove the Opening line -->
+        <xpath expr="//div[span[text()='Opening']]" position="replace">
+            <!-- Opening line removed -->
+        </xpath>
+
+        <!-- Remove the Payments in line -->
+        <xpath expr="//div[@t-if='props.default_cash_details.payment_amount']" position="replace">
+            <!-- Payments line removed -->
+        </xpath>
+
+        <!-- Remove the PaymentMethodBreakdown (Cash In/Out) -->
+        <xpath expr="//PaymentMethodBreakdown" position="replace">
+            <!-- Cash In/Out breakdown removed -->
+        </xpath>
+
+        <!-- Remove the cash difference line -->
+        <xpath expr="//div[span[@class='cash-difference']]" position="replace">
+            <!-- Cash difference line removed -->
+        </xpath>
+
+        <!-- Remove non-cash difference lines by targeting the conditional class attribute -->
+        <xpath expr="//div[contains(@t-att-class, 'text-danger')]" position="replace">
+            <!-- Non-cash difference lines removed -->
+        </xpath>
+
+    </t>
+
+</templates>
