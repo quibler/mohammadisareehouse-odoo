@@ -37,65 +37,54 @@
                     width: 57mm;
                     height: 19mm;
                     margin: 0;
-                    padding: 0.5mm;
+                    padding: 2mm 3mm 0 0;
                     box-sizing: border-box;
+                    page-break-after: always;
+                    page-break-inside: avoid;
                 </attribute>
             </xpath>
 
             <!-- Adjust the inner content container -->
             <xpath expr="//div[@class='o_label_full']" position="attributes">
-                <attribute name="style" add="height: 100%; padding: 0; margin: 0;" separator=" "/>
+                <attribute name="style" add="height: 100%; padding: 0; margin: 0; text-align: left;" separator=" "/>
             </xpath>
         </template>
 
-        <!-- Override template variables to fix dimensions and remove empty pages -->
-        <template id="report_productlabel_dymo_inherit" inherit_id="product.report_productlabel_dymo">
-            <!-- Adjust barcode size proportionally -->
-            <xpath expr="//t[@t-set='barcode_size']" position="attributes">
-                <attribute name="t-value">'width:45mm;height:6mm'</attribute>
-            </xpath>
-
-            <!-- Match table style to exact paper dimensions -->
-            <xpath expr="//t[@t-set='table_style']" position="attributes">
-                <attribute name="t-value">'width:100%;height:19mm;'</attribute>
-            </xpath>
-
-            <!-- Minimal padding to prevent overflow -->
-            <xpath expr="//t[@t-set='padding_page']" position="attributes">
-                <attribute name="t-value">'padding: 0.5mm'</attribute>
+        <!-- CRITICAL FIX: Override the main Dymo template to remove html_container that causes empty pages -->
+        <template id="report_productlabel_dymo_custom" inherit_id="product.report_productlabel_dymo">
+            <!-- Replace the entire template to eliminate web.html_container wrapper -->
+            <xpath expr="." position="replace">
+                <template id="report_productlabel_dymo_custom">
+                    <t t-set="barcode_size" t-value="'width:45mm;height:6mm'"/>
+                    <t t-set="table_style" t-value="'width:100%;height:19mm;'"/>
+                    <t t-set="padding_page" t-value="'padding: 2mm 3mm 0 0'"/>
+                    <t t-foreach="quantity.items()" t-as="barcode_and_qty_by_product">
+                        <t t-set="product" t-value="barcode_and_qty_by_product[0]"/>
+                        <t t-foreach="barcode_and_qty_by_product[1]" t-as="barcode_and_qty">
+                            <t t-set="barcode" t-value="barcode_and_qty[0]"/>
+                            <t t-foreach="range(barcode_and_qty[1])" t-as="qty">
+                                <t t-call="product.report_simple_label_dymo"/>
+                            </t>
+                        </t>
+                    </t>
+                </template>
             </xpath>
         </template>
 
-        <!-- Custom CSS to fix page breaks and eliminate empty pages -->
-        <template id="report_dymo_page_break_css" inherit_id="web.report_assets_common">
-            <xpath expr="." position="inside">
-                <style type="text/css">
-                    /* Fix Dymo label page breaks to eliminate empty pages */
-                    .o_label_sheet.o_label_dymo {
-                        page-break-after: always !important;
-                        page-break-inside: avoid !important;
-                        display: block !important;
-                        width: 57mm !important;
-                        height: 19mm !important;
-                        margin: 0 !important;
-                        padding: 0.5mm !important;
-                    }
-
-                    /* Remove any extra spacing between labels */
-                    .o_label_sheet.o_label_dymo:last-child {
-                        page-break-after: avoid !important;
-                    }
-
-                    /* Ensure proper sizing for print */
-                    @media print {
-                        .o_label_sheet.o_label_dymo {
-                            width: 57mm !important;
-                            height: 19mm !important;
-                            margin: 0 !important;
-                            padding: 0.5mm !important;
-                        }
-                    }
-                </style>
+        <!-- Ensure the last label doesn't have a page break -->
+        <template id="report_simple_label_dymo_last_child" inherit_id="product.report_simple_label_dymo">
+            <xpath expr="//div[@class='o_label_sheet o_label_dymo']" position="attributes">
+                <attribute name="t-attf-style">
+                    font-size: 90%;
+                    width: 57mm;
+                    height: 19mm;
+                    margin: 0;
+                    padding: 2mm 3mm 0 0;
+                    box-sizing: border-box;
+                    text-align: left;
+                    page-break-after: #{qty_index == (barcode_and_qty[1] - 1) and 'avoid' or 'always'};
+                    page-break-inside: avoid;
+                </attribute>
             </xpath>
         </template>
     </data>
