@@ -71,7 +71,6 @@
             'pos_kuwait_retail/static/src/**/*',
         ],
     },
-    'post_init_hook': 'post_init_hook',
     'license': 'Other proprietary',
     'application': False,
     'installable': True,
