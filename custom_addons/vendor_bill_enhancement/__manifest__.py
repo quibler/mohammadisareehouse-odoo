@@ -23,8 +23,6 @@
     'depends': [
         'account',
         'stock',
-        'purchase',
-        'purchase_stock',
         'product',  # This includes the label printing functionality
         'pos_kuwait_retail',
     ],

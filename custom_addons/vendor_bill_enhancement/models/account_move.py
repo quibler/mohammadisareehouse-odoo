@@ -20,7 +20,6 @@ class AccountMove(models.Model):
         compute='_compute_auto_stock_picking_count'
     )
 
-
     @api.depends('auto_stock_picking_id')
     def _compute_auto_stock_picking_count(self):
         for record in self:
@@ -98,7 +97,6 @@ class AccountMove(models.Model):
             'target': 'current',
         }
 
-
     def _update_product_costs_from_bill(self):
         """Update product costs based on vendor bill prices"""
         self.ensure_one()
@@ -134,26 +132,19 @@ class AccountMove(models.Model):
         unit_price_company_currency = line.price_unit
 
         # Handle currency conversion if needed
-        if line.currency_id != self.company_id.currency_id:
-            company_currency = self.company_id.currency_id
-            unit_price_company_currency = line.currency_id._convert(
-                unit_price_company_currency,
-                company_currency,
+        if self.currency_id != self.company_id.currency_id:
+            unit_price_company_currency = self.currency_id._convert(
+                line.price_unit,
+                self.company_id.currency_id,
                 self.company_id,
-                self.invoice_date or fields.Date.today()
+                self.invoice_date or fields.Date.context_today(self)
             )
 
-        # Handle UOM conversion if needed
-        product_uom = product.uom_po_id
-        if line.product_uom_id != product_uom:
-            unit_price_company_currency = line.product_uom_id._compute_price(
-                unit_price_company_currency, product_uom
-            )
-
-        # Apply cost update strategy
-        cost_update_strategy = product.categ_id.cost_update_strategy
+        # Get cost update strategy from product category
+        cost_update_strategy = product.categ_id.cost_update_strategy or 'always'
         current_cost = product.standard_price
 
+        # Calculate new cost based on strategy
         if cost_update_strategy == 'always':
             new_cost = unit_price_company_currency
         elif cost_update_strategy == 'if_higher':
@@ -161,51 +152,52 @@ class AccountMove(models.Model):
         elif cost_update_strategy == 'if_lower':
             new_cost = min(current_cost, unit_price_company_currency)
         elif cost_update_strategy == 'weighted_average':
-            # Calculate weighted average with existing stock
-            current_qty = product.qty_available or 1
-            new_qty = line.quantity
+            # Calculate weighted average based on existing stock
+            existing_qty = product.qty_available
+            bill_qty = line.quantity
+            total_qty = existing_qty + bill_qty
 
-            total_value = (current_cost * current_qty) + (unit_price_company_currency * new_qty)
-            total_qty = current_qty + new_qty
-            new_cost = total_value / total_qty if total_qty > 0 else unit_price_company_currency
+            if total_qty > 0:
+                new_cost = ((current_cost * existing_qty) + (unit_price_company_currency * bill_qty)) / total_qty
+            else:
+                new_cost = unit_price_company_currency
         else:
             new_cost = unit_price_company_currency
 
-        # Round the cost according to precision
-        new_cost = round(new_cost, 2)
+        # Check minimum cost difference to avoid unnecessary updates
+        min_diff = float(
+            self.env['ir.config_parameter'].sudo().get_param('auto_stock_update.min_cost_difference', '0.01'))
 
-        # Only update if there's a significant difference
-        min_difference = float(self.env['ir.config_parameter'].sudo().get_param(
-            'auto_stock_update.min_cost_difference', '0.01'
-        ))
+        if abs(new_cost - current_cost) < min_diff:
+            _logger.info(f"Cost difference too small for {product.name}, skipping update")
+            return
 
-        if abs(current_cost - new_cost) >= min_difference:
-            # Update the product cost
-            product.with_context(auto_cost_update=True).write({
-                'standard_price': new_cost
-            })
+        # Update product cost
+        product.with_context(auto_cost_update=True).write({
+            'standard_price': new_cost
+        })
 
-            _logger.info(
-                f"Updated cost for product {product.name} "
-                f"from {current_cost} to {new_cost} "
-                f"based on vendor bill {self.name}"
-            )
+        _logger.info(
+            f"Updated cost for product {product.name} "
+            f"from {current_cost} to {new_cost} "
+            f"based on vendor bill {self.name}"
+        )
 
-            # Add message to product
-            product.message_post(
-                body=_(
-                    "Cost price updated from %s to %s based on vendor bill %s (Strategy: %s)"
-                ) % (current_cost, new_cost, self.name, cost_update_strategy),
-                message_type='comment'
-            )
+        # Add message to product
+        product.message_post(
+            body=_(
+                "Cost price updated from %s to %s based on vendor bill %s (Strategy: %s)"
+            ) % (current_cost, new_cost, self.name, cost_update_strategy),
+            message_type='comment'
+        )
 
-            # Add message to vendor bill
-            self.message_post(
-                body=_(
-                    "Updated cost price for product %s from %s to %s (Strategy: %s)"
-                ) % (product.name, current_cost, new_cost, cost_update_strategy),
-                message_type='comment'
-            )
+        # Add message to vendor bill
+        self.message_post(
+            body=_(
+                "Updated cost price for product %s from %s to %s (Strategy: %s)"
+            ) % (product.name, current_cost, new_cost, cost_update_strategy),
+            message_type='comment'
+        )
 
     def _create_auto_stock_picking(self):
         """Create stock picking and moves from vendor bill"""
@@ -266,7 +258,7 @@ class AccountMove(models.Model):
         self._create_reference_picking(stockable_lines, stock_location)
 
     def _create_inventory_adjustment(self, product, quantity, location):
-        """Create an inventory adjustment to update stock"""
+        """Create an inventory adjustment to update stock with proper vendor bill reference"""
         _logger.info(f"Creating inventory adjustment for {product.name}, qty: {quantity}")
 
         # Check if quant exists
@@ -283,16 +275,25 @@ class AccountMove(models.Model):
             new_qty = quantity
             _logger.info(f"No existing quant. Creating new with qty: {new_qty}")
 
-        # Create inventory adjustment using the proper method
-        quant = self.env['stock.quant'].with_context(inventory_mode=True).create({
+        # Create meaningful reference name for the inventory adjustment
+        vendor_name = self.partner_id.name or "Vendor"
+        adjustment_reference = f"Stock Receipt from {vendor_name} - {self.name}"
+
+        _logger.info(f"Using inventory adjustment reference: {adjustment_reference}")
+
+        # Create inventory adjustment using the proper method with custom reference
+        quant = self.env['stock.quant'].with_context(
+            inventory_mode=True,
+            inventory_name=adjustment_reference  # This will be used as the stock move reference
+        ).create({
             'product_id': product.id,
             'location_id': location.id,
             'inventory_quantity': new_qty,
         })
 
-        # Apply the inventory adjustment
-        quant.action_apply_inventory()
-        _logger.info(f"Inventory adjustment applied for {product.name}")
+        # Apply the inventory adjustment with custom reference
+        quant.with_context(inventory_name=adjustment_reference).action_apply_inventory()
+        _logger.info(f"Inventory adjustment applied for {product.name} with reference: {adjustment_reference}")
 
     def _create_reference_picking(self, stockable_lines, location):
         """Create a reference picking for traceability (won't affect stock)"""
