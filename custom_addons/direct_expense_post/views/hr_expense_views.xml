@@ -1,37 +1,118 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Add Post Directly button to expense form -->
+        <!-- Remove dashboard from expense list views -->
+        <record id="view_my_expenses_tree_no_dashboard" model="ir.ui.view">
+            <field name="name">hr.expense.list.no.dashboard</field>
+            <field name="model">hr.expense</field>
+            <field name="inherit_id" ref="hr_expense.view_my_expenses_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//list" position="attributes">
+                    <!-- Remove dashboard by changing js_class -->
+                    <attribute name="js_class">hr_expense_tree</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_expenses_tree_no_dashboard" model="ir.ui.view">
+            <field name="name">hr.expense.tree.no.dashboard</field>
+            <field name="model">hr.expense</field>
+            <field name="inherit_id" ref="hr_expense.view_expenses_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//list" position="attributes">
+                    <!-- Remove dashboard by changing js_class -->
+                    <attribute name="js_class">hr_expense_tree</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Update action to set defaults in context -->
+        <record id="action_hr_expense_my_all_with_defaults" model="ir.actions.act_window">
+            <field name="name">My Expenses</field>
+            <field name="res_model">hr.expense</field>
+            <field name="view_mode">list,kanban,form,pivot,graph</field>
+            <field name="context">{
+                'search_default_my_expenses': 1,
+                'search_default_no_report': 1,
+                'default_employee_id': uid,
+                'default_product_id': ref('hr_expense.product_product_no_cost_product_template'),
+                'default_payment_mode': 'company_account',
+            }</field>
+            <field name="domain">[('employee_id.user_id', '=', uid)]</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Add a new expense
+                </p><p>
+                    Keep track of your expenses and get them reimbursed.
+                </p>
+            </field>
+        </record>
+
+        <!-- Minimal expense form - only direct posting functionality -->
         <record id="hr_expense_view_form_direct_post" model="ir.ui.view">
             <field name="name">hr.expense.form.direct.post</field>
             <field name="model">hr.expense</field>
             <field name="inherit_id" ref="hr_expense.hr_expense_view_form"/>
             <field name="arch" type="xml">
-                <button name="action_submit_expenses" position="after">
-                    <button name="action_post_directly" 
-                            string="Post Directly" 
-                            type="object" 
-                            class="btn-primary"
-                            invisible="state not in ('draft', 'reported')"
-                            groups="account.group_account_user"/>
-                </button>
+                <!-- Replace entire header to remove all standard buttons -->
+                <xpath expr="//header" position="replace">
+                    <header>
+                        <!-- Only the Mark as Paid button -->
+                        <button name="action_post_directly"
+                                string="Mark as Paid"
+                                type="object"
+                                class="btn-primary"
+                                invisible="state not in ('draft', 'reported')"
+                                groups="account.group_account_user"
+                                help="Process and mark expense as paid in one click"/>
+                        <!-- Completely hide status bar -->
+                        <field name="state" invisible="1"/>
+                    </header>
+                </xpath>
+
+                <!-- Add success indicator for individual expenses -->
+                <xpath expr="//sheet" position="before">
+                    <div class="alert alert-success" role="alert"
+                         invisible="state != 'done'"
+                         style="margin: 15px; padding: 15px; font-size: 16px; font-weight: bold;">
+                        <i class="fa fa-check-circle" style="margin-right: 8px;"></i>
+                        <strong>PAID:</strong> This expense has been processed and paid directly.
+                    </div>
+                </xpath>
             </field>
         </record>
-        
-        <!-- Add Post Directly button to expense sheet form -->
+
+        <!-- Minimal expense sheet form -->
         <record id="hr_expense_sheet_view_form_direct_post" model="ir.ui.view">
             <field name="name">hr.expense.sheet.form.direct.post</field>
             <field name="model">hr.expense.sheet</field>
             <field name="inherit_id" ref="hr_expense.view_hr_expense_sheet_form"/>
             <field name="arch" type="xml">
-                <button name="action_submit_sheet" position="after">
-                    <button name="action_post_directly" 
-                            string="Post Directly" 
-                            type="object" 
-                            class="btn-primary"
-                            invisible="state not in ('draft')"
-                            groups="account.group_account_user"/>
-                </button>
+                <!-- Replace entire header to remove all standard buttons -->
+                <xpath expr="//header" position="replace">
+                    <header>
+                        <!-- Only the Mark as Paid button -->
+                        <button name="action_post_directly"
+                                string="Mark as Paid"
+                                type="object"
+                                class="btn-primary"
+                                invisible="state not in ('draft', 'submit')"
+                                groups="account.group_account_user"
+                                help="Process and mark expense as paid in one click"/>
+                        <!-- Hide status bar -->
+                        <field name="state" invisible="1"/>
+                    </header>
+                </xpath>
+
+                <!-- Add success indicator for expense sheets -->
+                <xpath expr="//sheet" position="before">
+                    <div class="alert alert-success" role="alert"
+                         invisible="state != 'done'"
+                         style="margin: 15px; padding: 15px; font-size: 16px; font-weight: bold;">
+                        <i class="fa fa-check-circle" style="margin-right: 8px;"></i>
+                        <strong>PAID:</strong> This expense has been processed and paid directly.
+                    </div>
+                </xpath>
             </field>
         </record>
     </data>

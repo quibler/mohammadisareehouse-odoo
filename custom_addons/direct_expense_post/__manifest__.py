@@ -1,17 +1,28 @@
 {
-    'name': 'Direct Expense Posting',
-    'version': '1.0',
+    'name': 'Direct Expense Posting & Payment',
+    'version': '1.1',
     'category': 'Human Resources/Expenses',
-    'summary': 'Post expenses directly to accounting without approval workflow',
+    'summary': 'Mark expenses as paid in one click - bypass approval workflow',
     'description': """
-        This module allows retail shop owners and small businesses to post expenses 
-        directly to accounting without going through the standard approval workflow.
-        
+        Enhanced Direct Expense Posting for Small Businesses
+
+        This module allows retail shop owners and small businesses to process expenses 
+        instantly without going through the standard approval workflow.
+
         Features:
-        - Add "Post Directly" button on expense forms
-        - Bypass submit/approve workflow
-        - Direct journal entry creation
+        - "Mark as Paid" button on expense forms
+        - Complete workflow automation: Create Report → Submit → Approve → Post Journal Entry → Register Payment → Mark as Done
+        - Automatic journal entry creation and posting
+        - Automatic payment registration and reconciliation
+        - Support for both employee-paid and company-paid expenses
         - Simplified expense management for small businesses
+        - Visual indicators for paid expenses
+
+        Workflow:
+        Standard: Draft → Submit → Approve → Post → Pay → Done
+        Direct: Draft → Done (Paid) - All in one click!
+
+        Perfect for small businesses that need quick expense processing without approval bottlenecks.
     """,
     'depends': ['hr_expense', 'account'],
     'data': [
@@ -21,4 +32,5 @@
     'installable': True,
     'auto_install': False,
     'application': False,
+    'license': 'LGPL-3',
 }
