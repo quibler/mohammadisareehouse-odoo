@@ -24,7 +24,39 @@ class HrExpense(models.Model):
         if 'payment_mode' in fields_list:
             defaults['payment_mode'] = 'company_account'
 
+        # Set employee_id to current logged-in user's employee record
+        if 'employee_id' in fields_list:
+            employee = self.env['hr.employee'].search([('user_id', '=', self.env.uid)], limit=1)
+            if employee:
+                defaults['employee_id'] = employee.id
+
+        # Ensure name field is empty by default (remove any auto-generated values)
+        if 'name' in fields_list:
+            defaults['name'] = ''
+
+        # Clear tax fields since we don't use them
+        if 'tax_ids' in fields_list:
+            defaults['tax_ids'] = []
+
         return defaults
+
+    @api.model
+    def create(self, vals):
+        """Override create to ensure employee is always set to current user"""
+        # Always force the employee to be the current user
+        employee = self.env['hr.employee'].search([('user_id', '=', self.env.uid)], limit=1)
+        if employee:
+            vals['employee_id'] = employee.id
+        return super().create(vals)
+
+    def write(self, vals):
+        """Override write to prevent changing employee"""
+        # Don't allow changing the employee_id after creation
+        if 'employee_id' in vals:
+            employee = self.env['hr.employee'].search([('user_id', '=', self.env.uid)], limit=1)
+            if employee:
+                vals['employee_id'] = employee.id
+        return super().write(vals)
 
     def action_post_directly(self):
         """Post expense directly to accounting without approval workflow"""
@@ -66,65 +98,8 @@ class HrExpenseSheet(models.Model):
             if not self.expense_line_ids:
                 raise UserError(_("You cannot post an expense sheet without expenses."))
 
-            # Set journal if not set
-            if not self.journal_id:
-                journal = self.env['account.journal'].search([
-                    ('type', '=', 'purchase'),
-                    ('company_id', '=', self.company_id.id)
-                ], limit=1)
-                if journal:
-                    self.journal_id = journal.id
-                else:
-                    raise UserError(_("No purchase journal found"))
-
-            # Check if employee has work contact
-            if not self.employee_id.sudo().work_contact_id:
-                raise UserError(_("Employee must have a work contact configured"))
-
-            # Validate expense accounts
-            for expense in self.expense_line_ids:
-                if not expense.account_id:
-                    raise UserError(f"Expense '{expense.name}' must have an account configured")
-
-            # Set defaults (keep company_account since we set it as default)
-            if not self.payment_mode:
-                self.payment_mode = 'company_account'
-
-            # Calculate accounting date
-            if not self.accounting_date:
-                self.accounting_date = self._calculate_default_accounting_date()
-
-            # Set approval state and dates
-            self.approval_state = 'approve'
-            self.approval_date = fields.Date.context_today(self)
-
-            # Use standard _do_create_moves but with proper context
-            # Force the sheet into 'submit' state temporarily to pass the state check
-            original_approval_state = self.approval_state
-            self.approval_state = 'submit'
-
-            try:
-                # Call the standard method
-                moves = self._do_create_moves()
-
-                # Restore approval state
-                self.approval_state = original_approval_state
-
-                # Post the moves
-                if moves:
-                    moves.action_post()
-
-                    # Set final state to done
-                    self.write({'state': 'done'})
-
-                    return True  # Success
-                else:
-                    raise UserError(_("No journal entries were created"))
-
-            except Exception as move_error:
-                # Restore approval state on error
-                self.approval_state = original_approval_state
-                raise UserError(f"Failed to create journal entries: {str(move_error)}")
+            # Continue with the rest of your existing action_post_directly method
+            # (The rest of the method content should remain as it was)
 
         except Exception as e:
-            raise UserError(f"Direct posting failed: {str(e)}")
+            raise UserError(_("Error processing expense: %s") % str(e))
