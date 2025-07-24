@@ -136,24 +136,35 @@ class PosOrder(models.Model):
         """Custom email template for Mohammadi saree house - Kuwait Retail"""
         from markupsafe import Markup
 
-        # Custom message with the exact requirements
+        # Check if order is linked to a customer and construct greeting accordingly
+        if self.partner_id and self.partner_id.id != self.env.company.partner_id.id:
+            # Order is linked to a customer - start with "Dear {customer name}"
+            greeting = _("Dear %(customer_name)s, ") % {
+                'customer_name': self.partner_id.name
+            }
+        else:
+            # No customer linked - use generic "Dear Customer,"
+            greeting = _("Dear Customer, ")
+
+        # Custom message with conditional greeting
         message = Markup(
-            _("<p>Thank you for your order with Mohammadi saree house, "
+            _("%(greeting)s"
+              "Thank you for your order with Mohammadi saree house, "
               "Here is your receipt amounting %(amount)s.<br/><br/>"
-              "For more, contact us on WhatsApp - 94190213</p>")
+              "For more, contact us on WhatsApp - 94190213")
         ) % {
+                      'greeting': greeting,
                       'amount': self.currency_id.format(self.amount_total),
                   }
 
         return {
             'subject': _('Receipt'),
-            'body_html': message,
+            'body_html': f"<p>{message}</p>",
             'author_id': self.env.user.partner_id.id,
             'email_from': self.env.company.email or self.env.user.email_formatted,
             'email_to': email,
             'attachment_ids': self._add_mail_attachment(self.name, ticket, basic_ticket),
         }
-
 
 class ResConfigSettings(models.TransientModel):
     _inherit = 'res.config.settings'
