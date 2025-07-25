@@ -24,7 +24,6 @@ class HrExpense(models.Model):
         if 'payment_mode' in fields_list:
             defaults['payment_mode'] = 'company_account'
 
-
         # Ensure name field is empty by default (remove any auto-generated values)
         if 'name' in fields_list:
             defaults['name'] = ''
