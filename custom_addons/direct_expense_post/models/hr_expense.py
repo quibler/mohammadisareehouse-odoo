@@ -24,11 +24,6 @@ class HrExpense(models.Model):
         if 'payment_mode' in fields_list:
             defaults['payment_mode'] = 'company_account'
 
-        # Set employee_id to current logged-in user's employee record
-        if 'employee_id' in fields_list:
-            employee = self.env['hr.employee'].search([('user_id', '=', self.env.uid)], limit=1)
-            if employee:
-                defaults['employee_id'] = employee.id
 
         # Ensure name field is empty by default (remove any auto-generated values)
         if 'name' in fields_list:
@@ -42,20 +37,11 @@ class HrExpense(models.Model):
 
     @api.model
     def create(self, vals):
-        """Override create to ensure employee is always set to current user"""
-        # Always force the employee to be the current user
-        employee = self.env['hr.employee'].search([('user_id', '=', self.env.uid)], limit=1)
-        if employee:
-            vals['employee_id'] = employee.id
+        """Override create method"""
         return super().create(vals)
 
     def write(self, vals):
-        """Override write to prevent changing employee"""
-        # Don't allow changing the employee_id after creation
-        if 'employee_id' in vals:
-            employee = self.env['hr.employee'].search([('user_id', '=', self.env.uid)], limit=1)
-            if employee:
-                vals['employee_id'] = employee.id
+        """Override write method"""
         return super().write(vals)
 
     def action_post_directly(self):
