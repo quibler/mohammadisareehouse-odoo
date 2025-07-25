@@ -24,3 +24,7 @@ wheels/
 .installed.cfg
 *.egg
 /.claude/
+
+# Docker files (local development only)
+docker-compose.yml
+odoo.conf
