@@ -37,27 +37,6 @@ button.refund-button:hover {
     transition: background-color 0.2s ease !important;
 }
 
-/* Keyboard hints for selected lines */
-.orderline.selected::after {
-    content: "⚡ ↑↓ +/- | Ctrl+1,2,5,0 | Ctrl+Del";
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 9px;
-    color: #666;
-    background: rgba(255,255,255,0.9);
-    padding: 2px 6px;
-    border-radius: 3px;
-    z-index: 5;
-}
-
-/* Hide hints on mobile */
-@media (max-width: 768px) {
-    .orderline.selected::after {
-        display: none;
-    }
-}
 
 /* Smooth animations */
 .orderline:hover {

@@ -18,8 +18,6 @@
         ⚡ SUPER FAST ORDER PROCESSING
         • Lightning-fast keyboard shortcuts for quantity changes
         • Arrow keys ↑↓ or +/- for increment/decrement
-        • Ctrl+1,2,5,0 for quick quantity setting (1, 2, 5, 10 items)
-        • Ctrl+Del for instant line deletion
         • Price-focused numpad (default to Price vs Quantity)
         • One-click Refund button in numpad area
 

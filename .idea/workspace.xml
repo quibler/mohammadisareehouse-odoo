@@ -4,10 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="pos change - qty change hotkey - complete">
-      <change afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/pos_receipt_fix.css" afterDir="false" />
+    <list default="true" id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="receipt change">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/components/order_receipt/order_receipt.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/components/order_receipt/order_receipt.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/__manifest__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/__manifest__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/enahanced_refund.css" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/enahanced_refund.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/pos_refund_button.css" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/pos_refund_button.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/quick_qty_control.css" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/quick_qty_control.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/simple_pos_styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/simple_pos_styles.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/models/pos_store.js" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/models/pos_store.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -409,7 +413,15 @@
       <option name="project" value="LOCAL" />
       <updated>1753792258337</updated>
     </task>
-    <option name="localTasksCounter" value="42" />
+    <task id="LOCAL-00042" summary="receipt change">
+      <option name="closed" value="true" />
+      <created>1753816233718</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1753816233718</updated>
+    </task>
+    <option name="localTasksCounter" value="43" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -424,7 +436,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="refund section coherent with rest of the custom daily sales report layout" />
     <MESSAGE value="pos closing balance auto-fill expected amount" />
     <MESSAGE value="dymo label custom - in progress commit" />
     <MESSAGE value="dymo label custom - complete" />
@@ -449,6 +460,7 @@
     <MESSAGE value="pos change - price focus" />
     <MESSAGE value="pos change - qty change hotkey - in progress" />
     <MESSAGE value="pos change - qty change hotkey - complete" />
-    <option name="LAST_COMMIT_MESSAGE" value="pos change - qty change hotkey - complete" />
+    <MESSAGE value="receipt change" />
+    <option name="LAST_COMMIT_MESSAGE" value="receipt change" />
   </component>
 </project>
