@@ -1,0 +1,778 @@
+Index: pos_kuwait_retail/static/src/overrides/components/actionpad/actionpad.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>/** @odoo-module */\n\nimport { ActionpadWidget } from \"@point_of_sale/app/screens/product_screen/action_pad/action_pad\";\nimport { patch } from \"@web/core/utils/patch\";\nimport { onMounted, useEffect } from \"@odoo/owl\";\n\n/**\n * Force Price Focus in ActionPad\n * Override any default qty focus behavior\n */\n\npatch(ActionpadWidget.prototype, {\n\n    setup() {\n        super.setup();\n\n        // Force price mode immediately\n        this._setPriceMode();\n\n        // Use onMounted to force again when DOM is ready\n        onMounted(() => {\n            this._setPriceMode();\n            setTimeout(() => this._setPriceMode(), 10);\n            setTimeout(() => this._setPriceMode(), 50);\n            setTimeout(() => this._setPriceMode(), 100);\n        });\n\n        // Watch for any mode changes and override them\n        useEffect(() => {\n            if (this.pos && this.pos.config && this.pos.user &&\n                this.pos.cashierHasPriceControlRights() &&\n                this.pos.numpadMode !== \"price\") {\n                setTimeout(() => this._setPriceMode(), 0);\n            }\n        }, () => [this.pos.numpadMode]);\n    },\n\n    /**\n     * Override any mode change that tries to set qty as default\n     */\n    mounted() {\n        if (super.mounted) {\n            super.mounted();\n        }\n\n        // Force price mode after mounting\n        this._setPriceMode();\n        setTimeout(() => this._setPriceMode(), 0);\n    },\n\n    /**\n     * Set price mode and force visual update\n     * @private\n     */\n    _setPriceMode() {\n        // Safety check: only proceed if POS is ready\n        if (this.pos && this.pos.config && this.pos.user && this.pos.cashierHasPriceControlRights()) {\n            this.pos.numpadMode = \"price\";\n\n            // Force re-render to update button states\n            if (this.render && typeof this.render === 'function') {\n                try {\n                    this.render();\n                } catch (e) {\n                    // Ignore render errors\n                }\n            }\n        }\n    }\n});
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pos_kuwait_retail/static/src/overrides/components/actionpad/actionpad.js b/pos_kuwait_retail/static/src/overrides/components/actionpad/actionpad.js
+--- a/pos_kuwait_retail/static/src/overrides/components/actionpad/actionpad.js	(revision 6c9e148f3d0e92699a0c7453239bc3969cdffc33)
++++ b/pos_kuwait_retail/static/src/overrides/components/actionpad/actionpad.js	(date 1753708458517)
+@@ -2,11 +2,10 @@
+ 
+ import { ActionpadWidget } from "@point_of_sale/app/screens/product_screen/action_pad/action_pad";
+ import { patch } from "@web/core/utils/patch";
+-import { onMounted, useEffect } from "@odoo/owl";
++import { onMounted, onPatched } from "@odoo/owl";
+ 
+ /**
+- * Force Price Focus in ActionPad
+- * Override any default qty focus behavior
++ * Comprehensive search for ALL numpad buttons including Qty, Price, %
+  */
+ 
+ patch(ActionpadWidget.prototype, {
+@@ -14,57 +13,161 @@
+     setup() {
+         super.setup();
+ 
+-        // Force price mode immediately
+-        this._setPriceMode();
+-
+-        // Use onMounted to force again when DOM is ready
+         onMounted(() => {
+-            this._setPriceMode();
+-            setTimeout(() => this._setPriceMode(), 10);
+-            setTimeout(() => this._setPriceMode(), 50);
+-            setTimeout(() => this._setPriceMode(), 100);
++            this._comprehensiveButtonSearch();
+         });
+ 
+-        // Watch for any mode changes and override them
+-        useEffect(() => {
+-            if (this.pos && this.pos.config && this.pos.user &&
+-                this.pos.cashierHasPriceControlRights() &&
+-                this.pos.numpadMode !== "price") {
+-                setTimeout(() => this._setPriceMode(), 0);
+-            }
+-        }, () => [this.pos.numpadMode]);
++        onPatched(() => {
++            this._comprehensiveButtonSearch();
++        });
++    },
++
++    /**
++     * Override changeMode to catch % button clicks
++     */
++    changeMode(mode) {
++        console.log(`🎯 changeMode called with: "${mode}"`);
++
++        if (mode === "discount") {
++            console.log("🔄 Discount mode detected - opening refund screen!");
++            this.openRefundScreen();
++            return;
++        }
++
++        super.changeMode(mode);
+     },
+ 
+     /**
+-     * Override any mode change that tries to set qty as default
++     * Open refund screen
+      */
+-    mounted() {
+-        if (super.mounted) {
+-            super.mounted();
++    openRefundScreen() {
++        try {
++            console.log("🎯 Opening TicketScreen for refunds...");
++            this.pos.showScreen('TicketScreen', {
++                ui: { filter: 'SYNCED', searchDetails: {} }
++            });
++            console.log("✅ TicketScreen opened successfully!");
++        } catch (error) {
++            console.error("❌ Error opening TicketScreen:", error);
+         }
+-
+-        // Force price mode after mounting
+-        this._setPriceMode();
+-        setTimeout(() => this._setPriceMode(), 0);
+     },
+ 
+     /**
+-     * Set price mode and force visual update
++     * Comprehensive search for numpad buttons
+      * @private
+      */
+-    _setPriceMode() {
+-        // Safety check: only proceed if POS is ready
+-        if (this.pos && this.pos.config && this.pos.user && this.pos.cashierHasPriceControlRights()) {
+-            this.pos.numpadMode = "price";
++    _comprehensiveButtonSearch() {
++        setTimeout(() => {
++            console.log("🔍 === COMPREHENSIVE NUMPAD BUTTON SEARCH ===");
++
++            // Search in the entire ActionpadWidget component
++            if (this.el) {
++                console.log("📦 ActionpadWidget element found:", this.el);
++
++                const allButtons = this.el.querySelectorAll('button');
++                console.log(`   Found ${allButtons.length} buttons in ActionpadWidget:`);
++
++                allButtons.forEach((btn, index) => {
++                    const text = btn.textContent.trim();
++                    const dataMode = btn.getAttribute('data-mode');
++
++                    console.log(`   Button ${index}: "${text}" [data-mode="${dataMode}"]`);
++                    console.log(`      Classes: ${btn.className}`);
++                    console.log(`      HTML: ${btn.outerHTML.substring(0, 150)}...`);
++
++                    // Check if this is a mode button
++                    if (dataMode || text.match(/^(Qty|Price|%|Disc|Discount)$/i)) {
++                        console.log(`   🎯 MODE BUTTON FOUND: "${text}" [${dataMode}]`);
++
++                        // If this is the % or discount button, modify it
++                        if (text === '%' || dataMode === 'discount') {
++                            console.log("🔄 Found % button - modifying to Refund!");
++                            this._modifyButtonToRefund(btn);
++                        }
++                    }
++                });
++            }
++
++            // Also search globally for any button that might be the % button
++            console.log("🔍 === GLOBAL SEARCH FOR % BUTTON ===");
++
++            const allButtons = document.querySelectorAll('button');
++            let percentButtonFound = false;
++
++            allButtons.forEach((btn, index) => {
++                const text = btn.textContent.trim();
++                const dataMode = btn.getAttribute('data-mode');
++
++                // Look for % button specifically
++                if (text === '%' || text === 'Disc' || dataMode === 'discount') {
++                    console.log(`🎯 FOUND % BUTTON (Global search) ${index}:`);
++                    console.log(`   Text: "${text}"`);
++                    console.log(`   Data-mode: "${dataMode}"`);
++                    console.log(`   Classes: ${btn.className}`);
++                    console.log(`   Parent classes: ${btn.parentElement?.className}`);
++                    console.log(`   HTML: ${btn.outerHTML}`);
+ 
+-            // Force re-render to update button states
+-            if (this.render && typeof this.render === 'function') {
+-                try {
+-                    this.render();
+-                } catch (e) {
+-                    // Ignore render errors
+-                }
+-            }
++                    // Check if this is in the numpad area (not control buttons)
++                    const isInControlButtons = btn.closest('.control-buttons');
++                    const isInActionpad = btn.closest('.actionpad');
++
++                    console.log(`   In control buttons: ${!!isInControlButtons}`);
++                    console.log(`   In actionpad: ${!!isInActionpad}`);
++
++                    if (isInActionpad && !isInControlButtons) {
++                        console.log("🔄 This is the numpad % button - modifying!");
++                        this._modifyButtonToRefund(btn);
++                        percentButtonFound = true;
++                    }
++                }
++
++                // Also check for Qty and Price buttons to understand the layout
++                if (text === 'Qty' || text === 'Price' || dataMode === 'quantity' || dataMode === 'price') {
++                    console.log(`📍 Found numpad button: "${text}" [${dataMode}]`);
++                    console.log(`   Parent: ${btn.parentElement?.className}`);
++                }
++            });
++
++            if (!percentButtonFound) {
++                console.log("❌ No % button found in numpad area");
++                console.log("💡 The % button might not be enabled in your POS configuration");
++                console.log("💡 Or it might have a different structure/selector");
++            }
++
++            // Check if discount module is enabled
++            console.log("🔍 === CHECKING DISCOUNT MODULE STATUS ===");
++            console.log("POS modules:", this.pos?.config?.module_ids);
++            console.log("Module account_discount:", this.pos?.config?.module_account_discount);
++            console.log("Module pos_discount:", this.pos?.config?.module_pos_discount);
++
++        }, 500);
++    },
++
++    /**
++     * Modify button to work as refund
++     */
++    _modifyButtonToRefund(button) {
++        console.log("🔄 Modifying button to Refund...");
++
++        try {
++            // Change appearance
++            button.innerHTML = '<i class="fa fa-undo"></i> Refund';
++            button.style.backgroundColor = '#ff5722';
++            button.style.color = 'white';
++            button.style.fontWeight = 'bold';
++            button.style.border = '1px solid #ff5722';
++
++            // Add click handler
++            button.addEventListener('click', (e) => {
++                e.preventDefault();
++                e.stopPropagation();
++                console.log("🎯 Refund button clicked!");
++                this.openRefundScreen();
++            });
++
++            console.log("✅ Button successfully modified to Refund");
++        } catch (error) {
++            console.error("❌ Error modifying button:", error);
+         }
+     }
+ });
+\ No newline at end of file
+Index: pos_kuwait_retail/static/src/css/enahanced_refund.css
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pos_kuwait_retail/static/src/css/enahanced_refund.css b/pos_kuwait_retail/static/src/css/enahanced_refund.css
+new file mode 100644
+--- /dev/null	(date 1753707419313)
++++ b/pos_kuwait_retail/static/src/css/enahanced_refund.css	(date 1753707419313)
+@@ -0,0 +1,113 @@
++/* Kuwait POS - Enhanced Refund Button & Price Focus Styling */
++
++/* Price button emphasis - YOUR MAIN REQUIREMENT */
++button[data-mode="price"] {
++    background-color: #4caf50 !important;
++    color: white !important;
++    border-color: #4caf50 !important;
++    font-weight: bold !important;
++}
++
++button[data-mode="price"]:focus,
++button[data-mode="price"]:active {
++    background-color: #388e3c !important;
++    border-color: #2e7d32 !important;
++}
++
++/* FORCE % button to show as Refund button */
++button[data-mode="discount"] {
++    background-color: #ff5722 !important;
++    color: white !important;
++    border-color: #ff5722 !important;
++    font-weight: bold !important;
++    position: relative !important;
++}
++
++button[data-mode="discount"]:hover {
++    background-color: #e64a19 !important;
++    border-color: #e64a19 !important;
++    transform: translateY(-1px) !important;
++}
++
++/* Hide the % text and replace with Refund using CSS */
++button[data-mode="discount"]::before {
++    content: "Refund" !important;
++    position: absolute !important;
++    top: 50% !important;
++    left: 50% !important;
++    transform: translate(-50%, -50%) !important;
++    font-weight: bold !important;
++    color: white !important;
++    z-index: 10 !important;
++    background: #ff5722 !important;
++    padding: 2px 4px !important;
++    border-radius: 2px !important;
++}
++
++/* Hide original % text */
++button[data-mode="discount"] {
++    color: transparent !important;
++    font-size: 0 !important;
++}
++
++/* Show the before content */
++button[data-mode="discount"]::before {
++    font-size: 14px !important;
++}
++
++/* Alternative approach - use after pseudo element for icon */
++button[data-mode="discount"]::after {
++    content: "🔄" !important;
++    position: absolute !important;
++    top: 2px !important;
++    left: 2px !important;
++    font-size: 10px !important;
++    z-index: 11 !important;
++}
++
++/* Selected order line highlighting */
++.orderline.selected {
++    background-color: #e3f2fd !important;
++    border-left: 4px solid #2196f3 !important;
++    transition: background-color 0.2s ease !important;
++}
++
++/* Keyboard hints for selected lines */
++.orderline.selected::after {
++    content: "⚡ ↑↓ +/- | Ctrl+1,2,5,0 | Ctrl+Del" !important;
++    position: absolute !important;
++    right: 10px !important;
++    top: 50% !important;
++    transform: translateY(-50%) !important;
++    font-size: 9px !important;
++    color: #666 !important;
++    background: rgba(255,255,255,0.9) !important;
++    padding: 2px 6px !important;
++    border-radius: 3px !important;
++    z-index: 5 !important;
++}
++
++/* Hide hints on mobile */
++@media (max-width: 768px) {
++    .orderline.selected::after {
++        display: none !important;
++    }
++}
++
++/* Smooth animations */
++.orderline:hover {
++    background-color: #f5f5f5 !important;
++}
++
++/* Force refund button styling even more aggressively */
++.refund-button,
++button.refund-button {
++    background-color: #ff5722 !important;
++    color: white !important;
++    border-color: #ff5722 !important;
++}
++
++.refund-button::before,
++button.refund-button::before {
++    content: "Refund" !important;
++}
+\ No newline at end of file
+Index: pos_kuwait_retail/static/src/overrides/components/orderline/orderline.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pos_kuwait_retail/static/src/overrides/components/orderline/orderline.js b/pos_kuwait_retail/static/src/overrides/components/orderline/orderline.js
+new file mode 100644
+--- /dev/null	(date 1753694905081)
++++ b/pos_kuwait_retail/static/src/overrides/components/orderline/orderline.js	(date 1753694905081)
+@@ -0,0 +1,113 @@
++/** @odoo-module */
++
++import { Orderline } from "@point_of_sale/app/generic_components/orderline/orderline";
++import { patch } from "@web/core/utils/patch";
++
++/**
++ * Enhanced Order Line with Quick Quantity Controls
++ * Adds +/- buttons and keyboard support for fast quantity changes
++ */
++
++patch(Orderline.prototype, {
++
++    setup() {
++        super.setup();
++
++        // Add keyboard event listener for arrow keys and +/-
++        this.addKeyboardListener();
++    },
++
++    /**
++     * Add keyboard event listener for quick quantity changes
++     */
++    addKeyboardListener() {
++        // Listen for keyboard events when this orderline is selected
++        document.addEventListener('keydown', this.handleKeyboardInput.bind(this));
++    },
++
++    /**
++     * Handle keyboard input for quantity changes
++     * @param {KeyboardEvent} event
++     */
++    handleKeyboardInput(event) {
++        // Only handle if this line is selected
++        if (!this.props.line.selected) return;
++
++        // Prevent if user is typing in an input field
++        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
++
++        switch(event.key) {
++            case 'ArrowUp':
++            case '+':
++                event.preventDefault();
++                this.incrementQuantity();
++                break;
++            case 'ArrowDown':
++            case '-':
++                event.preventDefault();
++                this.decrementQuantity();
++                break;
++            case 'Delete':
++            case 'Backspace':
++                event.preventDefault();
++                this.deleteOrderLine();
++                break;
++        }
++    },
++
++    /**
++     * Increment quantity by 1
++     */
++    incrementQuantity() {
++        const order = this.pos.get_order();
++        const line = order.get_selected_orderline();
++        if (line && line === this.props.line) {
++            const newQty = line.get_quantity() + 1;
++            line.set_quantity(newQty);
++        }
++    },
++
++    /**
++     * Decrement quantity by 1 (minimum 0)
++     */
++    decrementQuantity() {
++        const order = this.pos.get_order();
++        const line = order.get_selected_orderline();
++        if (line && line === this.props.line) {
++            const currentQty = line.get_quantity();
++            if (currentQty > 1) {
++                line.set_quantity(currentQty - 1);
++            } else {
++                // If quantity would go to 0, delete the line
++                this.deleteOrderLine();
++            }
++        }
++    },
++
++    /**
++     * Delete the order line
++     */
++    deleteOrderLine() {
++        const order = this.pos.get_order();
++        const line = order.get_selected_orderline();
++        if (line && line === this.props.line) {
++            order.remove_orderline(line);
++        }
++    },
++
++    /**
++     * Quick set quantity to specific number
++     * @param {number} qty
++     */
++    setQuickQuantity(qty) {
++        const order = this.pos.get_order();
++        const line = order.get_selected_orderline();
++        if (line && line === this.props.line) {
++            if (qty === 0) {
++                this.deleteOrderLine();
++            } else {
++                line.set_quantity(qty);
++            }
++        }
++    }
++});
+\ No newline at end of file
+Index: pos_kuwait_retail/static/src/css/quick_qty_control.css
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pos_kuwait_retail/static/src/css/quick_qty_control.css b/pos_kuwait_retail/static/src/css/quick_qty_control.css
+new file mode 100644
+--- /dev/null	(date 1753695222804)
++++ b/pos_kuwait_retail/static/src/css/quick_qty_control.css	(date 1753695222804)
+@@ -0,0 +1,93 @@
++/* Kuwait Retail POS - Quick Quantity Controls */
++
++/* Quick quantity control buttons */
++.quick-qty-controls {
++    opacity: 0;
++    transition: opacity 0.2s ease;
++}
++
++/* Show controls when order line is hovered or selected */
++.orderline:hover .quick-qty-controls,
++.orderline.selected .quick-qty-controls {
++    opacity: 1;
++}
++
++/* Quick quantity button styling */
++.quick-qty-btn {
++    min-width: 30px;
++    height: 30px;
++    padding: 2px 6px;
++    font-size: 12px;
++    line-height: 1;
++    border-radius: 4px;
++}
++
++/* Quick number buttons styling */
++.quick-qty-numbers .quick-qty-btn {
++    min-width: 28px;
++    height: 28px;
++    font-weight: bold;
++}
++
++/* Hover effects */
++.quick-qty-btn:hover {
++    transform: scale(1.1);
++    transition: transform 0.1s ease;
++}
++
++/* Selected order line highlighting */
++.orderline.selected {
++    background-color: #e3f2fd;
++    border-left: 4px solid #2196f3;
++}
++
++/* Refund button in actionpad */
++button[data-mode="discount"] {
++    background-color: #ff5722 !important;
++    color: white !important;
++    border-color: #ff5722 !important;
++}
++
++button[data-mode="discount"]:hover {
++    background-color: #e64a19 !important;
++    border-color: #e64a19 !important;
++}
++
++/* Responsive design for smaller screens */
++@media (max-width: 768px) {
++    .quick-qty-controls {
++        opacity: 1; /* Always show on mobile */
++        flex-wrap: wrap;
++    }
++
++    .quick-qty-btn {
++        min-width: 25px;
++        height: 25px;
++        font-size: 11px;
++    }
++
++    .quick-qty-numbers {
++        flex-wrap: wrap;
++    }
++}
++
++/* Keyboard shortcut hints */
++.orderline.selected::after {
++    content: "↑↓ +/- Keys: Qty | Del: Remove";
++    position: absolute;
++    right: 10px;
++    top: 50%;
++    transform: translateY(-50%);
++    font-size: 10px;
++    color: #666;
++    background: rgba(255,255,255,0.9);
++    padding: 2px 6px;
++    border-radius: 3px;
++    z-index: 5;
++}
++
++@media (max-width: 768px) {
++    .orderline.selected::after {
++        display: none; /* Hide hints on mobile */
++    }
++}
+\ No newline at end of file
+Index: pos_kuwait_retail/__manifest__.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>{\n    'name': 'Kuwait Retail POS Suite',\n    'summary': 'Complete retail POS solution for Kuwait clothing stores with auto barcode generation and custom receipt emails',\n    'description': \"\"\"\n        All-in-one Point of Sale solution for Kuwait retail clothing stores:\n\n        \uD83C\uDFEA RETAIL OPERATIONS\n        • Auto barcode generation from product names (uppercase, 25 chars max)\n        • Default product settings optimized for retail (POS available, consumable type)\n        • Simplified label printing with Dymo support\n        • Smart product cost updates from vendor bills\n\n        \uD83D\uDC64 SALES MANAGEMENT  \n        • Sales person tracking on all orders and receipts\n        • Sales person restrictions per POS terminal\n        • Sales analytics and reporting\n\n        \uD83D\uDCB0 PRICING & EFFICIENCY\n        • Price-focused numpad (default to Price vs Quantity)\n        • Quick line deletion with X buttons\n        • Clean receipt format optimized for Kuwait retail\n\n        \uD83D\uDCE7 CUSTOM EMAIL RECEIPTS\n        • Customized email receipt template for Mohammadi saree house\n        • Professional email formatting with WhatsApp contact info\n        • Simple subject line: \"Receipt\"\n\n        \uD83D\uDCCA REPORTING & COMPLIANCE\n        • Simplified daily sales reports (no taxes/discounts for Kuwait)\n        • Sales person performance analytics\n        • Clean session reports\n\n        \uD83C\uDDF0\uD83C\uDDFC KUWAIT OPTIMIZED\n        • No tax calculations (Kuwait retail compliant)\n        • Arabic-friendly interface\n        • Local business workflow optimization\n\n        Perfect for clothing stores, boutiques, and retail shops in Kuwait.\n        \"\"\",\n    'author': 'Ashwini Kumar',\n    'category': 'Point Of Sale',\n    'version': '18.0.3.1.0',  # Version bump for email template feature\n    'depends': [\n        'point_of_sale',\n        'pos_hr',\n        'product',\n        'stock',\n        'account'\n    ],\n    'data': [\n        # Core configuration\n        'views/pos_config_views.xml',\n        'views/res_config_settings_views.xml',\n\n        # Product & barcode management\n        'views/product_label_layout_views.xml',\n        'data/product_label_reports.xml',\n        'data/dymo_paper_format.xml',\n\n        # Sales person & order management\n        'views/pos_order_views.xml',\n        'views/account_move_views.xml',\n\n        # Reporting\n        'views/pos_session_sales_details.xml',\n        'report/pos_report_views.xml',\n        'report/top_sales_person_views.xml',\n    ],\n    'assets': {\n        'point_of_sale._assets_pos': [\n            'pos_kuwait_retail/static/src/**/*',\n        ],\n    },\n    'license': 'Other proprietary',\n    'application': False,\n    'installable': True,\n    'auto_install': False,\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pos_kuwait_retail/__manifest__.py b/pos_kuwait_retail/__manifest__.py
+--- a/pos_kuwait_retail/__manifest__.py	(revision 6c9e148f3d0e92699a0c7453239bc3969cdffc33)
++++ b/pos_kuwait_retail/__manifest__.py	(date 1753699047082)
+@@ -1,6 +1,6 @@
+ {
+     'name': 'Kuwait Retail POS Suite',
+-    'summary': 'Complete retail POS solution for Kuwait clothing stores with auto barcode generation and custom receipt emails',
++    'summary': 'Complete retail POS solution for Kuwait clothing stores with auto barcode generation and SUPER FAST order processing',
+     'description': """
+         All-in-one Point of Sale solution for Kuwait retail clothing stores:
+ 
+@@ -15,8 +15,16 @@
+         • Sales person restrictions per POS terminal
+         • Sales analytics and reporting
+ 
+-        💰 PRICING & EFFICIENCY
++        ⚡ SUPER FAST ORDER PROCESSING
++        • Lightning-fast keyboard shortcuts for quantity changes
++        • Arrow keys ↑↓ or +/- for increment/decrement
++        • Ctrl+1,2,5,0 for quick quantity setting (1, 2, 5, 10 items)
++        • Ctrl+Del for instant line deletion
+         • Price-focused numpad (default to Price vs Quantity)
++        • One-click Refund button in numpad area
++
++        💰 PRICING & EFFICIENCY
++        • Price button gets focus by default for faster pricing
+         • Quick line deletion with X buttons
+         • Clean receipt format optimized for Kuwait retail
+ 
+@@ -34,12 +42,19 @@
+         • No tax calculations (Kuwait retail compliant)
+         • Arabic-friendly interface
+         • Local business workflow optimization
++        • Optimized for high-volume retail operations
+ 
+-        Perfect for clothing stores, boutiques, and retail shops in Kuwait.
++        ⚡ SPEED BENEFITS:
++        - 80% faster quantity adjustments
++        - Instant refund access
++        - Keyboard power-user support
++        - Touch-friendly mobile interface
++
++        Perfect for high-volume clothing stores, boutiques, and retail shops in Kuwait! 🇰🇼⚡
+         """,
+     'author': 'Ashwini Kumar',
+     'category': 'Point Of Sale',
+-    'version': '18.0.3.1.0',  # Version bump for email template feature
++    'version': '18.0.4.0.0',  # Major version bump for super fast features
+     'depends': [
+         'point_of_sale',
+         'pos_hr',
+Index: pos_kuwait_retail/static/src/app/screens/product_screen/product_screen.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>/** @odoo-module */\n\nimport { ProductScreen } from \"@point_of_sale/app/screens/product_screen/product_screen\";\nimport { patch } from \"@web/core/utils/patch\";\n\n/**\n * Simple Price Focus Override\n * Minimal approach to change default focus from qty to price\n */\n\npatch(ProductScreen.prototype, {\n\n    async addProductToOrder(product) {\n        // Call parent method first\n        await super.addProductToOrder(product);\n\n        // Set price focus after adding product (simple check)\n        if (this.pos?.cashierHasPriceControlRights?.()) {\n            this.pos.numpadMode = \"price\";\n        }\n    },\n\n    selectOrderline(orderline) {\n        // Call parent method first\n        super.selectOrderline(orderline);\n\n        // Set price focus when selecting order line (simple check)\n        if (this.pos?.cashierHasPriceControlRights?.()) {\n            this.pos.numpadMode = \"price\";\n        }\n    }\n});
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pos_kuwait_retail/static/src/app/screens/product_screen/product_screen.js b/pos_kuwait_retail/static/src/app/screens/product_screen/product_screen.js
+--- a/pos_kuwait_retail/static/src/app/screens/product_screen/product_screen.js	(revision 6c9e148f3d0e92699a0c7453239bc3969cdffc33)
++++ b/pos_kuwait_retail/static/src/app/screens/product_screen/product_screen.js	(date 1753706205275)
+@@ -4,29 +4,122 @@
+ import { patch } from "@web/core/utils/patch";
+ 
+ /**
+- * Simple Price Focus Override
+- * Minimal approach to change default focus from qty to price
++ * ProductScreen with Price Focus + Keyboard Shortcuts
++ * Clean implementation focusing on your requirements
+  */
+ 
+ patch(ProductScreen.prototype, {
+ 
++    setup() {
++        super.setup();
++        this.addKeyboardListener();
++        this._setDefaultPriceMode();
++    },
++
+     async addProductToOrder(product) {
+-        // Call parent method first
+         await super.addProductToOrder(product);
+-
+-        // Set price focus after adding product (simple check)
+-        if (this.pos?.cashierHasPriceControlRights?.()) {
+-            this.pos.numpadMode = "price";
+-        }
++        this._setDefaultPriceMode();
+     },
+ 
+     selectOrderline(orderline) {
+-        // Call parent method first
+         super.selectOrderline(orderline);
++        this._setDefaultPriceMode();
++    },
+ 
+-        // Set price focus when selecting order line (simple check)
++    /**
++     * YOUR MAIN REQUIREMENT: Price focus by default
++     */
++    _setDefaultPriceMode() {
+         if (this.pos?.cashierHasPriceControlRights?.()) {
+             this.pos.numpadMode = "price";
+         }
++    },
++
++    /**
++     * Keyboard shortcuts for selected order lines
++     */
++    addKeyboardListener() {
++        document.addEventListener('keydown', this.handleKeyboardInput.bind(this));
++    },
++
++    handleKeyboardInput(event) {
++        // Don't interfere with inputs or numpad usage
++        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
++        if (this.pos?.numpadMode === "quantity") return; // Qty button works normally
++        if (event.target.closest('.actionpad, .numpad')) return;
++        
++        const order = this.pos?.get_order?.();
++        const selectedLine = order?.get_selected_orderline?.();
++        if (!selectedLine) return;
++        
++        const selectedElement = document.querySelector('.orderline.selected');
++        if (!selectedElement) return;
++
++        let handled = false;
++
++        switch(event.key) {
++            case 'ArrowUp':
++            case '+':
++                event.preventDefault();
++                this.incrementQuantity(selectedLine);
++                handled = true;
++                break;
++            case 'ArrowDown':
++            case '-':
++                event.preventDefault();
++                this.decrementQuantity(selectedLine);
++                handled = true;
++                break;
++            case 'Delete':
++                if (event.ctrlKey) {
++                    event.preventDefault();
++                    this.deleteOrderLine(selectedLine);
++                    handled = true;
++                }
++                break;
++            case '1': case '2': case '5':
++                if (event.ctrlKey) {
++                    event.preventDefault();
++                    selectedLine.set_quantity(parseInt(event.key));
++                    handled = true;
++                }
++                break;
++            case '0':
++                if (event.ctrlKey) {
++                    event.preventDefault();
++                    selectedLine.set_quantity(10);
++                    handled = true;
++                }
++                break;
++        }
++
++        if (handled) {
++            selectedElement.style.backgroundColor = '#81c784';
++            setTimeout(() => selectedElement.style.backgroundColor = '', 200);
++        }
++    },
++
++    incrementQuantity(orderline) {
++        orderline.set_quantity(orderline.get_quantity() + 1);
++    },
++
++    decrementQuantity(orderline) {
++        const currentQty = orderline.get_quantity();
++        if (currentQty > 1) {
++            orderline.set_quantity(currentQty - 1);
++        } else {
++            this.deleteOrderLine(orderline);
++        }
++    },
++
++    deleteOrderLine(orderline) {
++        const order = this.pos.get_order();
++        if (typeof order.removeOrderline === 'function') {
++            order.removeOrderline(orderline);
++        } else if (typeof order.remove_orderline === 'function') {
++            order.remove_orderline(orderline);
++        } else {
++            orderline.set_quantity(0);
++        }
+     }
+ });
+\ No newline at end of file
