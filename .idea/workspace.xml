@@ -4,13 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="receipt change">
+    <list default="true" id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="arrow keys change qty in any mode">
+      <change afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/price_focus.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Changes.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Changes/shelved.patch" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Changes1.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Changes1/shelved.patch" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/__manifest__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/__manifest__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/enahanced_refund.css" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/enahanced_refund.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/pos_refund_button.css" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/pos_refund_button.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/quick_qty_control.css" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/quick_qty_control.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/simple_pos_styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/simple_pos_styles.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/models/pos_store.js" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/models/pos_store.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -44,6 +44,9 @@
   &quot;associatedIndex&quot;: 3
 }</component>
   <component name="ProjectId" id="2zzdkOIWjjvnTTC0hm6FVw2fTeY" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -421,7 +424,15 @@
       <option name="project" value="LOCAL" />
       <updated>1753816233718</updated>
     </task>
-    <option name="localTasksCounter" value="43" />
+    <task id="LOCAL-00043" summary="arrow keys change qty in any mode">
+      <option name="closed" value="true" />
+      <created>1753825667994</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1753825667994</updated>
+    </task>
+    <option name="localTasksCounter" value="44" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -436,7 +447,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="pos closing balance auto-fill expected amount" />
     <MESSAGE value="dymo label custom - in progress commit" />
     <MESSAGE value="dymo label custom - complete" />
     <MESSAGE value="fixed manual currency rate" />
@@ -461,6 +471,7 @@
     <MESSAGE value="pos change - qty change hotkey - in progress" />
     <MESSAGE value="pos change - qty change hotkey - complete" />
     <MESSAGE value="receipt change" />
-    <option name="LAST_COMMIT_MESSAGE" value="receipt change" />
+    <MESSAGE value="arrow keys change qty in any mode" />
+    <option name="LAST_COMMIT_MESSAGE" value="arrow keys change qty in any mode" />
   </component>
 </project>

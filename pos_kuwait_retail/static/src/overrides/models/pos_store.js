@@ -7,134 +7,267 @@ import { patch } from "@web/core/utils/patch";
 import { onMounted } from "@odoo/owl";
 
 /**
- * HIJACK STRATEGY: Replace all automatic qty mode with price mode
- * But respect manual user clicks on qty button
+ * SAFE NAVIGATION APPROACH: Simulate button clicks instead of calling showScreen directly
+ * This avoids the orderUuid issue by using the same methods the UI uses
  */
 
 // Global flags to track manual user interactions
 let isManualClick = false;
 let manualClickTime = 0;
 
-// 1. Override ActionPad to detect manual clicks
-patch(ActionpadWidget.prototype, {
-
-    setup() {
-        super.setup();
-
-        onMounted(() => {
-            this._interceptQtyButton();
-            this._observeButtonChanges();
-        });
-    },
-
-    /**
-     * Watch for DOM changes to catch qty button when it's added
-     */
-    _observeButtonChanges() {
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === 1) {
-                            const buttons = node.querySelectorAll ? node.querySelectorAll('button') : [];
-                            Array.from(buttons).forEach(btn => {
-                                const text = btn.textContent.trim().toLowerCase();
-                                if ((text === 'qty' || text === 'quantity') && !btn._qtyIntercepted) {
-                                    this._addQtyListener(btn);
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-
-        this._buttonObserver = observer;
-    },
-
-    /**
-     * Add click listener to qty button
-     */
-    _addQtyListener(qtyButton) {
-        qtyButton._qtyIntercepted = true;
-
-        qtyButton.addEventListener('click', (e) => {
-            isManualClick = true;
-            manualClickTime = Date.now();
-
-            if (this.pos) {
-                this.pos._numpadMode = "quantity";
-            }
-
-            setTimeout(() => {
-                isManualClick = false;
-            }, 3000);
-        });
-    },
-
-    /**
-     * Intercept qty button clicks
-     */
-    _interceptQtyButton() {
-        const searchAttempts = [100, 500, 1000, 2000, 3000];
-
-        searchAttempts.forEach(delay => {
-            setTimeout(() => {
-                this._findAndInterceptQtyButton();
-            }, delay);
-        });
-    },
-
-    /**
-     * Find qty button using multiple search strategies
-     */
-    _findAndInterceptQtyButton() {
-        let qtyButton = document.querySelector('button[data-mode="quantity"]');
-
-        if (!qtyButton) {
-            qtyButton = document.querySelector('button[value="Qty"]');
-        }
-
-        if (!qtyButton) {
-            qtyButton = document.querySelector('button.numpad-qty');
-        }
-
-        if (!qtyButton) {
-            const allButtons = document.querySelectorAll('button');
-            qtyButton = Array.from(allButtons).find(btn => {
-                const text = btn.textContent.trim().toLowerCase();
-                return text === 'qty' || text === 'quantity';
-            });
-        }
-
-        if (!qtyButton) {
-            const actionPad = document.querySelector('.actionpad, .action-pad, .numpad-buttons');
-            if (actionPad) {
-                const buttons = actionPad.querySelectorAll('button');
-                qtyButton = Array.from(buttons).find(btn => {
-                    const text = btn.textContent.trim().toLowerCase();
-                    return text === 'qty' || text === 'quantity';
-                });
-            }
-        }
-
-        if (qtyButton && !qtyButton._qtyIntercepted) {
-            this._addQtyListener(qtyButton);
-        }
-    },
-
-    /**
-     * Override changeMode
-     */
-    changeMode(mode) {
-        return super.changeMode(mode);
+// Global Navigation Manager using button simulation
+class SafeNavigationManager {
+    constructor() {
+        this.isActive = false;
+        this.handleKeydown = this.handleKeydown.bind(this);
     }
-});
+
+    activate() {
+        if (this.isActive) return;
+        document.addEventListener('keydown', this.handleKeydown, { capture: true, passive: false });
+        this.isActive = true;
+    }
+
+    deactivate() {
+        if (!this.isActive) return;
+        document.removeEventListener('keydown', this.handleKeydown, { capture: true });
+        this.isActive = false;
+    }
+
+    /**
+     * Get current screen using DOM detection
+     */
+    getCurrentScreen() {
+        const screenMappings = [
+            { selector: '.product-screen:not(.oe_hidden)', name: 'ProductScreen' },
+            { selector: '.payment-screen:not(.oe_hidden)', name: 'PaymentScreen' },
+            { selector: '.receipt-screen:not(.oe_hidden)', name: 'ReceiptScreen' }
+        ];
+
+        for (const mapping of screenMappings) {
+            const element = document.querySelector(mapping.selector);
+            if (element && element.offsetParent !== null) { // offsetParent is null for hidden elements
+                return mapping.name;
+            }
+        }
+
+        // Fallback: check visible screens by computed style
+        const screens = document.querySelectorAll('.screen');
+        for (const screen of screens) {
+            const style = window.getComputedStyle(screen);
+            if (style.display !== 'none' && style.visibility !== 'hidden') {
+                if (screen.classList.contains('product-screen')) return 'ProductScreen';
+                if (screen.classList.contains('payment-screen')) return 'PaymentScreen';
+                if (screen.classList.contains('receipt-screen')) return 'ReceiptScreen';
+            }
+        }
+
+        return 'Unknown';
+    }
+
+    /**
+     * Safe navigation using button clicks instead of direct API calls
+     */
+    navigateToPayment() {
+        // Look for the Payment button and click it
+        const paymentButton = document.querySelector('.control-button .button.pay-button, .control-button[name="payment"], .pay-button, [data-action="payment"]');
+        if (paymentButton) {
+            paymentButton.click();
+            return true;
+        }
+
+        // Fallback: look for any button with "pay" in text
+        const buttons = document.querySelectorAll('button, .button');
+        for (const button of buttons) {
+            const text = button.textContent?.toLowerCase() || '';
+            if (text.includes('pay') || text.includes('payment')) {
+                button.click();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    navigateToOrder() {
+        // Look for back button, close button, or order button
+        const backSelectors = [
+            '.button.back',
+            '.back-button',
+            '[data-action="back"]',
+            '.button.close',
+            '.close-button',
+            '.button.order',
+            '.order-button'
+        ];
+
+        for (const selector of backSelectors) {
+            const button = document.querySelector(selector);
+            if (button && button.offsetParent !== null) {
+                button.click();
+                return true;
+            }
+        }
+
+        // Fallback: look for buttons with back/close/order text
+        const buttons = document.querySelectorAll('button, .button');
+        for (const button of buttons) {
+            const text = button.textContent?.toLowerCase() || '';
+            if (text.includes('back') || text.includes('close') || text.includes('order')) {
+                button.click();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    validatePayment() {
+        // Look for validate button
+        const validateSelectors = [
+            '.button.next',
+            '.validate-button',
+            '.button.validate',
+            '[data-action="validate"]',
+            '.payment-validate',
+            '.button.confirm'
+        ];
+
+        for (const selector of validateSelectors) {
+            const button = document.querySelector(selector);
+            if (button && button.offsetParent !== null) {
+                button.click();
+                return true;
+            }
+        }
+
+        // Fallback: look for buttons with validate/confirm text
+        const buttons = document.querySelectorAll('button, .button');
+        for (const button of buttons) {
+            const text = button.textContent?.toLowerCase() || '';
+            if (text.includes('validate') || text.includes('confirm') || text.includes('finish')) {
+                button.click();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    createNewOrder() {
+        // Look for new order button
+        const newOrderSelectors = [
+            '.button.next',
+            '.new-order-button',
+            '.button.new-order',
+            '[data-action="new-order"]',
+            '.button.continue'
+        ];
+
+        for (const selector of newOrderSelectors) {
+            const button = document.querySelector(selector);
+            if (button && button.offsetParent !== null) {
+                button.click();
+                return true;
+            }
+        }
+
+        // Fallback: look for buttons with new order text
+        const buttons = document.querySelectorAll('button, .button');
+        for (const button of buttons) {
+            const text = button.textContent?.toLowerCase() || '';
+            if (text.includes('new order') || text.includes('continue') || text.includes('next')) {
+                button.click();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if order has items and payment is complete
+     */
+    canNavigateFromOrder() {
+        // Try to find orderlines in DOM
+        const orderlines = document.querySelectorAll('.orderline, .order-line, .product-line');
+        return orderlines.length > 0;
+    }
+
+    canNavigateFromPayment() {
+        // Check if there's a validate button (indicates payment is ready)
+        const validateButton = document.querySelector('.button.next, .validate-button, .button.validate');
+        return validateButton && !validateButton.disabled;
+    }
+
+    handleKeydown(event) {
+        // Skip if typing in inputs
+        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+            return;
+        }
+
+        // Skip if in popups
+        if (event.target.closest('.modal, .popup, .dialog, .dropdown-menu, .o_popover')) {
+            return;
+        }
+
+        // Skip modifier keys
+        if (event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) {
+            return;
+        }
+
+        const currentScreen = this.getCurrentScreen();
+
+        // Handle Enter key navigation
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            this.handleEnterKey(currentScreen);
+            return false;
+        }
+
+        // Handle Backspace key (only Payment -> Order)
+        if (event.key === 'Backspace' && currentScreen === 'PaymentScreen') {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            this.handleBackspaceKey();
+            return false;
+        }
+    }
+
+    handleEnterKey(currentScreen) {
+        switch (currentScreen) {
+            case 'ProductScreen':
+                if (this.canNavigateFromOrder()) {
+                    this.navigateToPayment();
+                }
+                break;
+
+            case 'PaymentScreen':
+                if (this.canNavigateFromPayment()) {
+                    this.validatePayment();
+                }
+                break;
+
+            case 'ReceiptScreen':
+                this.createNewOrder();
+                break;
+        }
+    }
+
+    handleBackspaceKey() {
+        this.navigateToOrder();
+    }
+}
+
+// Global navigation manager instance
+const safeNavigationManager = new SafeNavigationManager();
+
+// ============================================================================
+// RESTORE PRICE FOCUS FUNCTIONALITY
+// ============================================================================
 
 // 2. Override PosStore to hijack automatic quantity mode settings
 patch(PosStore.prototype, {
@@ -229,7 +362,158 @@ patch(PosStore.prototype, {
     }
 });
 
-// 3. ProductScreen with keyboard shortcuts
+// 1. Override ActionPad to detect manual clicks AND restore price focus
+patch(ActionpadWidget.prototype, {
+
+    setup() {
+        super.setup();
+
+        onMounted(() => {
+            this._interceptQtyButton();
+            this._observeButtonChanges();
+
+            // Initialize safe navigation
+            safeNavigationManager.activate();
+        });
+    },
+
+    /**
+     * Watch for DOM changes to catch qty button when it's added
+     */
+    _observeButtonChanges() {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === 1) {
+                            // Original qty button detection for price focus
+                            const buttons = node.querySelectorAll ?
+                                node.querySelectorAll('.mode-button[data-mode="quantity"]') : [];
+                            buttons.forEach(btn => this._interceptButton(btn));
+
+                            // Enhanced qty button detection
+                            const allButtons = node.querySelectorAll ? node.querySelectorAll('button') : [];
+                            Array.from(allButtons).forEach(btn => {
+                                const text = btn.textContent.trim().toLowerCase();
+                                if ((text === 'qty' || text === 'quantity') && !btn._qtyIntercepted) {
+                                    this._addQtyListener(btn);
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        this._buttonObserver = observer;
+    },
+
+    /**
+     * Add click listener to qty button (for price focus)
+     */
+    _addQtyListener(qtyButton) {
+        qtyButton._qtyIntercepted = true;
+
+        qtyButton.addEventListener('click', (e) => {
+            isManualClick = true;
+            manualClickTime = Date.now();
+
+            if (this.pos) {
+                this.pos._numpadMode = "quantity";
+            }
+
+            setTimeout(() => {
+                isManualClick = false;
+            }, 3000);
+        });
+    },
+
+    /**
+     * Find and intercept qty button clicks
+     */
+    _interceptQtyButton() {
+        const searchAttempts = [100, 500, 1000, 2000, 3000];
+
+        searchAttempts.forEach(delay => {
+            setTimeout(() => {
+                this._findAndInterceptQtyButton();
+            }, delay);
+        });
+    },
+
+    /**
+     * Find qty button using multiple search strategies
+     */
+    _findAndInterceptQtyButton() {
+        let qtyButton = document.querySelector('button[data-mode="quantity"]');
+
+        if (!qtyButton) {
+            qtyButton = document.querySelector('button[value="Qty"]');
+        }
+
+        if (!qtyButton) {
+            qtyButton = document.querySelector('button.numpad-qty');
+        }
+
+        if (!qtyButton) {
+            const allButtons = document.querySelectorAll('button');
+            qtyButton = Array.from(allButtons).find(btn => {
+                const text = btn.textContent.trim().toLowerCase();
+                return text === 'qty' || text === 'quantity';
+            });
+        }
+
+        if (!qtyButton) {
+            const actionPad = document.querySelector('.actionpad, .action-pad, .numpad-buttons');
+            if (actionPad) {
+                const buttons = actionPad.querySelectorAll('button');
+                qtyButton = Array.from(buttons).find(btn => {
+                    const text = btn.textContent.trim().toLowerCase();
+                    return text === 'qty' || text === 'quantity';
+                });
+            }
+        }
+
+        if (qtyButton && !qtyButton._qtyIntercepted) {
+            this._addQtyListener(qtyButton);
+        }
+    },
+
+    /**
+     * Find and intercept qty button clicks
+     */
+    _interceptQtyButton() {
+        const qtyButton = document.querySelector('.mode-button[data-mode="quantity"]');
+        if (qtyButton) {
+            this._interceptButton(qtyButton);
+        }
+    },
+
+    /**
+     * Add click interceptor to button
+     */
+    _interceptButton(button) {
+        if (button._posIntercepted) return;
+        button._posIntercepted = true;
+
+        button.addEventListener('click', () => {
+            isManualClick = true;
+            manualClickTime = Date.now();
+
+            // Clear the flag after a delay
+            setTimeout(() => {
+                isManualClick = false;
+            }, 2000);
+        }, { capture: true });
+    }
+});
+
+// ProductScreen with keyboard shortcuts (keeping existing quantity functionality)
 patch(ProductScreen.prototype, {
 
     setup() {
@@ -237,10 +521,9 @@ patch(ProductScreen.prototype, {
         this.addKeyboardListener();
     },
 
-
-
     /**
-     * Add keyboard shortcuts for quantity changes
+     * Add keyboard shortcuts for quantity changes ONLY
+     * Navigation is handled by the SafeNavigationManager
      */
     addKeyboardListener() {
         // Track last event to prevent duplicates
@@ -248,7 +531,7 @@ patch(ProductScreen.prototype, {
         let lastEventKey = '';
 
         const handleArrowKeys = (event) => {
-            // Only process arrow keys and +/-
+            // Only process arrow keys and +/- (let SafeNavigationManager handle Enter/Backspace)
             if (!['ArrowUp', 'ArrowDown', '+', '-'].includes(event.key)) {
                 return;
             }
@@ -311,8 +594,9 @@ patch(ProductScreen.prototype, {
             return false;
         };
 
+        // Use lower priority for arrow keys only
         document.addEventListener('keydown', handleArrowKeys, {
-            capture: true,
+            capture: false,
             passive: false
         });
 
@@ -325,7 +609,6 @@ patch(ProductScreen.prototype, {
      * Override Odoo's numpad-specific keyboard handling
      */
     _overrideOdooNumpadHandlers() {
-        // Look for numpad or actionpad elements and override their keyboard handling
         const numpadElement = document.querySelector('.numpad, .actionpad');
         if (numpadElement) {
             const originalKeydown = numpadElement.onkeydown;
@@ -333,7 +616,6 @@ patch(ProductScreen.prototype, {
 
             numpadElement.onkeydown = (event) => {
                 if (['ArrowUp', 'ArrowDown', '+', '-'].includes(event.key)) {
-                    // Let our handler deal with arrow keys
                     return false;
                 }
                 if (originalKeydown) {
@@ -343,7 +625,6 @@ patch(ProductScreen.prototype, {
 
             numpadElement.onkeyup = (event) => {
                 if (['ArrowUp', 'ArrowDown', '+', '-'].includes(event.key)) {
-                    // Let our handler deal with arrow keys
                     return false;
                 }
                 if (originalKeyup) {
@@ -351,139 +632,7 @@ patch(ProductScreen.prototype, {
                 }
             };
         }
-    },
-
-    /**
-     * Handle keyboard shortcuts for quantity changes
-     * Arrow keys ALWAYS change quantity regardless of current numpad mode
-     */
-    handleKeyboardInput(event) {
-        // Never interfere with input fields
-        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-            return;
-        }
-
-        // Never interfere when using numpad buttons
-        if (event.target.closest('.actionpad, .numpad, .control-buttons')) {
-            return;
-        }
-
-        // Only work when order line is selected
-        const order = this.pos?.get_order?.();
-        const selectedLine = order?.get_selected_orderline?.();
-
-        if (!selectedLine || !order) {
-            return;
-        }
-
-        // Arrow keys ALWAYS change quantity - FORCE this behavior
-        let handled = false;
-
-        switch(event.key) {
-            case 'ArrowUp':
-            case '+':
-                event.preventDefault();
-                event.stopPropagation();
-                event.stopImmediatePropagation();
-                this._adjustLineQuantity(selectedLine, 1);
-                handled = true;
-                break;
-
-            case 'ArrowDown':
-            case '-':
-                event.preventDefault();
-                event.stopPropagation();
-                event.stopImmediatePropagation();
-                this._adjustLineQuantity(selectedLine, -1);
-                handled = true;
-                break;
-        }
-
-        // Ctrl+number shortcuts for quick quantity (also force these)
-        if (event.ctrlKey && !handled) {
-            switch(event.key) {
-                case '1':
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.stopImmediatePropagation();
-                    this._setLineQuantity(selectedLine, 1);
-                    handled = true;
-                    break;
-                case '2':
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.stopImmediatePropagation();
-                    this._setLineQuantity(selectedLine, 2);
-                    handled = true;
-                    break;
-                case '5':
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.stopImmediatePropagation();
-                    this._setLineQuantity(selectedLine, 5);
-                    handled = true;
-                    break;
-                case '0':
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.stopImmediatePropagation();
-                    this._setLineQuantity(selectedLine, 10);
-                    handled = true;
-                    break;
-                case 'Delete':
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.stopImmediatePropagation();
-                    this._deleteLine(selectedLine, order);
-                    handled = true;
-                    break;
-            }
-        }
-
-        // If we handled the event, return false to ensure it doesn't bubble
-        if (handled) {
-            return false;
-        }
-    },
-
-    /**
-     * Adjust order line quantity - SAFE with line removal
-     */
-    _adjustLineQuantity(line, delta) {
-        const currentQty = line.get_quantity();
-        const newQty = currentQty + delta;
-
-        if (newQty < 0) {
-            // Don't allow negative quantities
-            return;
-        } else if (newQty === 0) {
-            // Set to 0 first
-            line.set_quantity(0);
-        } else if (currentQty === 0 && delta < 0) {
-            // If already at 0 and trying to decrease, remove the line
-            const order = this.pos?.get_order?.();
-            if (order && typeof order.remove_orderline === 'function') {
-                order.remove_orderline(line);
-            }
-        } else {
-            // Normal quantity change
-            line.set_quantity(newQty);
-        }
-    },
-
-    /**
-     * Set specific quantity
-     */
-    _setLineQuantity(line, qty) {
-        line.set_quantity(qty);
-    },
-
-    /**
-     * Delete order line
-     */
-    _deleteLine(line, order) {
-        if (order && typeof order.remove_orderline === 'function') {
-            order.remove_orderline(line);
-        }
     }
 });
+
+console.log('Kuwait Retail POS: Navigation + Price Focus loaded');

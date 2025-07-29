@@ -1,0 +1,139 @@
+/* ============================================================================
+   File: pos_kuwait_retail/static/src/css/price_focus.css
+   Kuwait POS - Price Focus Styling
+   ============================================================================ */
+
+/* YOUR MAIN REQUIREMENT: Price button emphasis */
+button[data-mode="price"] {
+    background-color: #4caf50 !important;
+    color: white !important;
+    border-color: #4caf50 !important;
+    font-weight: bold !important;
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3) !important;
+    font-size: 16px !important;
+}
+
+button[data-mode="price"]:focus,
+button[data-mode="price"]:active,
+button[data-mode="price"].active {
+    background-color: #388e3c !important;
+    border-color: #2e7d32 !important;
+    box-shadow: 0 0 0 0.25rem rgba(76, 175, 80, 0.25) !important;
+}
+
+button[data-mode="price"]:hover {
+    background-color: #45a049 !important;
+    border-color: #45a049 !important;
+    transform: translateY(-1px) !important;
+    transition: all 0.2s ease !important;
+}
+
+/* Price button gets focus by default */
+button[data-mode="price"].active {
+    background-color: #2e7d32 !important;
+    border-color: #1b5e20 !important;
+    box-shadow: 0 0 0 0.25rem rgba(76, 175, 80, 0.4) !important;
+}
+
+/* Qty button - ensure it looks normal when not active */
+button[data-mode="quantity"] {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+    border-color: #dee2e6 !important;
+}
+
+button[data-mode="quantity"]:focus,
+button[data-mode="quantity"]:active,
+button[data-mode="quantity"].active {
+    background-color: #e9ecef !important;
+    border-color: #adb5bd !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+
+button[data-mode="quantity"]:hover {
+    background-color: #e9ecef !important;
+    border-color: #adb5bd !important;
+    transform: translateY(-1px) !important;
+    transition: all 0.2s ease !important;
+}
+
+/* Visual feedback for automatic price mode */
+.numpad-mode-price .actionpad,
+.actionpad[data-current-mode="price"] {
+    border-left: 4px solid #4caf50 !important;
+}
+
+/* Selected order line highlighting */
+.orderline.selected {
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #2196f3 !important;
+    transition: background-color 0.2s ease !important;
+}
+
+/* Smooth hover effects */
+.orderline:hover {
+    background-color: #f5f5f5 !important;
+}
+
+/* Ensure numpad buttons look normal */
+.numpad-button,
+.actionpad button {
+    transition: all 0.2s ease !important;
+}
+
+.numpad-button:hover,
+.actionpad button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+/* Price mode indicator */
+.pos-content[data-numpad-mode="price"] .actionpad::before {
+    content: "💰 PRICE MODE ACTIVE";
+    position: absolute;
+    top: -30px;
+    left: 0;
+    background: #4caf50;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 1000;
+}
+
+/* Ensure price button stands out in actionpad */
+.actionpad button[data-mode="price"] {
+    border: 2px solid #4caf50 !important;
+    position: relative;
+}
+
+.actionpad button[data-mode="price"]::after {
+    content: "💰";
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 12px;
+    background: #388e3c;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    button[data-mode="price"] {
+        font-size: 14px !important;
+        padding: 8px 12px !important;
+    }
+
+    .actionpad button[data-mode="price"]::after {
+        font-size: 10px;
+        width: 16px;
+        height: 16px;
+    }
+}
