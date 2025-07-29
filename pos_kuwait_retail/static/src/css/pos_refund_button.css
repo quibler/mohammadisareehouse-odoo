@@ -1,0 +1,71 @@
+/* Kuwait POS - Refund Button & Price Focus Styling */
+
+/* Price button emphasis - YOUR MAIN REQUIREMENT */
+button[data-mode="price"] {
+    background-color: #4caf50 !important;
+    color: white !important;
+    border-color: #4caf50 !important;
+    font-weight: bold !important;
+}
+
+button[data-mode="price"]:focus,
+button[data-mode="price"]:active {
+    background-color: #388e3c !important;
+    border-color: #2e7d32 !important;
+}
+
+/* Refund button styling (was % button) */
+button[data-mode="discount"],
+button.refund-button {
+    background-color: #ff5722 !important;
+    color: white !important;
+    border-color: #ff5722 !important;
+    font-weight: bold !important;
+}
+
+button[data-mode="discount"]:hover,
+button.refund-button:hover {
+    background-color: #e64a19 !important;
+    border-color: #e64a19 !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Selected order line highlighting */
+.orderline.selected {
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #2196f3 !important;
+    transition: background-color 0.2s ease !important;
+}
+
+/* Keyboard hints for selected lines */
+.orderline.selected::after {
+    content: "⚡ ↑↓ +/- | Ctrl+1,2,5,0 | Ctrl+Del";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 9px;
+    color: #666;
+    background: rgba(255,255,255,0.9);
+    padding: 2px 6px;
+    border-radius: 3px;
+    z-index: 5;
+}
+
+/* Hide hints on mobile */
+@media (max-width: 768px) {
+    .orderline.selected::after {
+        display: none;
+    }
+}
+
+/* Smooth animations */
+.orderline:hover {
+    background-color: #f5f5f5 !important;
+}
+
+/* Numpad button hover effects */
+.numpad-button:hover {
+    transform: translateY(-1px) !important;
+    transition: all 0.2s ease !important;
+}

@@ -1,0 +1,93 @@
+/* Kuwait Retail POS - Quick Quantity Controls */
+
+/* Quick quantity control buttons */
+.quick-qty-controls {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* Show controls when order line is hovered or selected */
+.orderline:hover .quick-qty-controls,
+.orderline.selected .quick-qty-controls {
+    opacity: 1;
+}
+
+/* Quick quantity button styling */
+.quick-qty-btn {
+    min-width: 30px;
+    height: 30px;
+    padding: 2px 6px;
+    font-size: 12px;
+    line-height: 1;
+    border-radius: 4px;
+}
+
+/* Quick number buttons styling */
+.quick-qty-numbers .quick-qty-btn {
+    min-width: 28px;
+    height: 28px;
+    font-weight: bold;
+}
+
+/* Hover effects */
+.quick-qty-btn:hover {
+    transform: scale(1.1);
+    transition: transform 0.1s ease;
+}
+
+/* Selected order line highlighting */
+.orderline.selected {
+    background-color: #e3f2fd;
+    border-left: 4px solid #2196f3;
+}
+
+/* Refund button in actionpad */
+button[data-mode="discount"] {
+    background-color: #ff5722 !important;
+    color: white !important;
+    border-color: #ff5722 !important;
+}
+
+button[data-mode="discount"]:hover {
+    background-color: #e64a19 !important;
+    border-color: #e64a19 !important;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .quick-qty-controls {
+        opacity: 1; /* Always show on mobile */
+        flex-wrap: wrap;
+    }
+
+    .quick-qty-btn {
+        min-width: 25px;
+        height: 25px;
+        font-size: 11px;
+    }
+
+    .quick-qty-numbers {
+        flex-wrap: wrap;
+    }
+}
+
+/* Keyboard shortcut hints */
+.orderline.selected::after {
+    content: "↑↓ +/- Keys: Qty | Del: Remove";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: #666;
+    background: rgba(255,255,255,0.9);
+    padding: 2px 6px;
+    border-radius: 3px;
+    z-index: 5;
+}
+
+@media (max-width: 768px) {
+    .orderline.selected::after {
+        display: none; /* Hide hints on mobile */
+    }
+}
