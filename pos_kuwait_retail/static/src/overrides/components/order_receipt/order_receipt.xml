@@ -16,7 +16,7 @@
 
                 <!-- Company contact info (address, phone, email) - NO company name -->
                 <div class="d-flex flex-column align-items-center">
-                    <div class="pos-receipt-contact text-center" style="font-size: 10px; font-weight: 400;">
+                    <div class="pos-receipt-contact text-center" style="font-size: 13px; font-weight: 400;">
                         <!-- Company Address - Street 1 and Street 2 together -->
                         <div>
                             <span t-if="props.data.headerData.company.street" t-esc="props.data.headerData.company.street" />
@@ -46,10 +46,10 @@
                 </div>
 
                 <!-- Custom header text if available -->
-                <div t-if="props.data.headerData.header" class="text-center" style="white-space:pre-line; font-size: 10px;" t-esc="props.data.headerData.header" />
+                <div t-if="props.data.headerData.header" class="text-center" style="white-space:pre-line; font-size: 13px;" t-esc="props.data.headerData.header" />
 
                 <!-- Left aligned info section like the left receipt -->
-                <div style="font-size: 10px; text-align: left; margin: 10px 0; border-top: 1px dashed #000; padding-top: 5px;">
+                <div style="font-size: 13px; text-align: left; margin: 10px 0; border-top: 1px dashed #000; padding-top: 5px;">
                     <!-- Shop and Order on same line -->
                     <div t-if="props.data.pos_config_name or props.data.headerData.trackingNumber">
                         <span t-if="props.data.pos_config_name">Shop: <t t-esc="props.data.pos_config_name" /></span>
@@ -63,9 +63,9 @@
                     </div>
 
                     <!-- Receipt -->
-                    <div t-if="props.data.name">
-                        Receipt: <t t-esc="props.data.name" />
-                    </div>
+<!--                    <div t-if="props.data.name">-->
+<!--                        Receipt: <t t-esc="props.data.name" />-->
+<!--                    </div>-->
 
                     <!-- Date -->
                     <div t-if="props.data.date">
@@ -78,7 +78,7 @@
         <!-- Replace OrderWidget with custom compact table -->
         <xpath expr="//OrderWidget" position="replace">
             <!-- Order Items Table -->
-            <div t-if="props.data.orderlines?.length" class="order-items-table" style="font-size: 10px;">
+            <div t-if="props.data.orderlines?.length" class="order-items-table" style="font-size: 13px;">
                 <!-- Table Header -->
                 <div class="table-header" style="display: flex; border-bottom: 1px dashed #000; padding-bottom: 2px; margin-bottom: 4px; font-weight: bold;">
                     <div style="flex: 2; text-align: left;">Item</div>
@@ -92,10 +92,10 @@
                     <!-- Item name and details -->
                     <div style="flex: 2; text-align: left; padding-right: 4px;">
                         <div style="font-weight: bold;" t-esc="line.productName"/>
-                        <div t-if="line.discount and line.discount !== '0'" style="font-size: 9px; color: #666;">
+                        <div t-if="line.discount and line.discount !== '0'" style="font-size: 11px; color: #666;">
                             Discount: <t t-esc="line.discount"/>%
                         </div>
-                        <div t-if="line.customerNote" style="font-size: 9px; font-style: italic; color: #666;">
+                        <div t-if="line.customerNote" style="font-size: 11px; font-style: italic; color: #666;">
                             Note: <t t-esc="line.customerNote"/>
                         </div>
                     </div>
@@ -117,7 +117,7 @@
                 </div>
 
                 <!-- General Note if exists -->
-                <div t-if="props.data.generalNote" class="general-note" style="margin-top: 8px; font-style: italic; font-size: 9px; padding: 4px; border-top: 1px dashed #000;">
+                <div t-if="props.data.generalNote" class="general-note" style="margin-top: 8px; font-style: italic; font-size: 11px; padding: 4px; border-top: 1px dashed #000;">
                     <strong>Note:</strong> <t t-esc="props.data.generalNote"/>
                 </div>
             </div>
@@ -125,17 +125,17 @@
 
         <!-- Style the total section with larger font -->
         <xpath expr="//div[contains(@class, 'pos-receipt-amount')]" position="attributes">
-            <attribute name="style">font-size: 12px; font-weight: bold;</attribute>
+            <attribute name="style">font-size: 14px; font-weight: bold;</attribute>
         </xpath>
 
         <!-- Also target tax totals and payment lines for consistency -->
         <xpath expr="//div[contains(@class, 'pos-receipt-taxes')]" position="attributes">
-            <attribute name="style">font-size: 12px;</attribute>
+            <attribute name="style">font-size: 14px;</attribute>
         </xpath>
 
         <!-- Style payment lines with smaller font size -->
         <xpath expr="//div[contains(@class, 'paymentlines')]" position="attributes">
-            <attribute name="style">font-size: 10px;</attribute>
+            <attribute name="style">font-size: 13px;</attribute>
         </xpath>
 
         <!-- Remove the empty pos-receipt-order-data div that serves as placeholder -->
@@ -164,7 +164,7 @@
                 <img src="/pos_kuwait_retail/static/src/img/brand_qr_code.png"
                      alt="Brand QR Code"
                      style="width: 60px; height: 60px; display: inline-block;"/>
-                <div style="font-size: 10px; margin-top: 3px;">
+                <div style="font-size: 13px; margin-top: 3px;">
                     Scan to visit our brand page
                 </div>
             </div>
@@ -172,7 +172,7 @@
 
         <!-- Style the custom footer with larger base font -->
         <xpath expr="//div[@t-if='props.data.footer']" position="attributes">
-            <attribute name="style">white-space:pre-line; font-size: 10px;</attribute>
+            <attribute name="style">white-space:pre-line; font-size: 13px;</attribute>
         </xpath>
 
         <!-- Remove the after-footer div completely since we're not using it anymore -->

@@ -1,0 +1,90 @@
+/* FULL WIDTH RECEIPT FIX - Make receipt occupy entire page width */
+
+/* Remove the 58mm width restriction and use full page width */
+.receipt-screen .pos-receipt {
+    margin: 0 !important;
+    padding: 5px !important;
+    font-family: 'Courier New', monospace !important;
+    font-size: 11px !important;
+    line-height: 1.1 !important;
+    max-width: 100% !important;  /* Changed from 58mm to 100% */
+    width: 100% !important;
+    background-color: white !important;
+    color: #000000 !important;
+}
+
+/* Ensure all receipt content uses full width */
+.receipt-screen .pos-receipt *,
+.receipt-screen .receipt-header-custom,
+.receipt-screen .order-items-table,
+.receipt-screen .pos-receipt-contact,
+.receipt-screen .pos-receipt-company,
+.receipt-screen .pos-receipt-order-data,
+.receipt-screen .pos-receipt-amount,
+.receipt-screen .pos-receipt-taxes,
+.receipt-screen .paymentlines,
+.receipt-screen .pos-receipt-brand-qr {
+    color: #000000 !important;
+    max-width: 100% !important;
+}
+
+/* Make the order items table use full width */
+.receipt-screen .order-items-table {
+    width: 100% !important;
+    margin: 2px 0 !important;
+    padding: 0 !important;
+}
+
+/* Adjust table layout for full width */
+.receipt-screen .table-header,
+.receipt-screen .order-line {
+    display: flex !important;
+    width: 100% !important;
+    margin: 1px 0 !important;
+    padding: 0 !important;
+    color: #000000 !important;
+}
+
+/* Print-specific rules for full width */
+@media print {
+    @page {
+        margin: 5mm !important;  /* Small margin instead of 0 */
+        size: A4 !important;     /* Use A4 size instead of 58mm */
+    }
+
+    .pos-receipt {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;  /* Use full page width */
+        font-family: 'Courier New', monospace !important;
+        font-size: 12px !important;  /* Slightly larger for full page */
+        line-height: 1.1 !important;
+        color: #000000 !important;
+        background-color: white !important;
+    }
+
+    .pos-receipt * {
+        color: #000000 !important;
+        background-color: transparent !important;
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Full width table in print */
+    .order-items-table,
+    .table-header,
+    .order-line {
+        width: 100% !important;
+    }
+}
+
+/* Force black color for all elements */
+.receipt-screen .pos-receipt,
+.receipt-screen .pos-receipt * {
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
