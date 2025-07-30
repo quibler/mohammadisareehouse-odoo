@@ -89,6 +89,11 @@
                 <!-- Also hide the tax amount that appears in the total line -->
                 <xpath expr="//span[@class='d-flex'][field[@name='tax_amount']]" position="replace"/>
 
+                <!-- Hide vendor_id field in expense lines -->
+                <xpath expr="//field[@name='vendor_id']" position="attributes">
+                    <attribute name="column_invisible">1</attribute>
+                </xpath>
+
 
                 <!-- Add success indicator for individual expenses -->
                 <xpath expr="//sheet" position="before">
