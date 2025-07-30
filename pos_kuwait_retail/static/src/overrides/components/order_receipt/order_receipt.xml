@@ -50,10 +50,11 @@
 
                 <!-- Left aligned info section like the left receipt -->
                 <div style="font-size: 13px; text-align: left; margin: 10px 0; border-top: 1px dashed #000; padding-top: 5px;">
-                    <t t-esc="props.data.pos_config_name" />
-                    <!-- Order Number -->
-                    <div t-if="props.data.headerData.trackingNumber">
-                        Order: #<t t-esc="props.data.headerData.trackingNumber" />
+                    <!-- Shop and Order on same line -->
+                    <div t-if="props.data.pos_config_name or props.data.headerData.trackingNumber">
+                        <span t-if="props.data.pos_config_name">Shop: <t t-esc="props.data.pos_config_name" /></span>
+                        <span t-if="props.data.pos_config_name and props.data.headerData.trackingNumber">, </span>
+                        <span t-if="props.data.headerData.trackingNumber">Order: #<t t-esc="props.data.headerData.trackingNumber" /></span>
                     </div>
 
                     <!-- Sales Person -->
