@@ -43,11 +43,6 @@
                         <!-- Email -->
                         <div t-if="props.data.headerData.company.email" t-esc="props.data.headerData.company.email" />
                     </div>
-                    
-                    <!-- POS Configuration Name - centered below email -->
-                    <div t-if="props.data.pos_config_name" class="text-center" style="font-size: 16px; font-weight: bold; margin-top: 8px;">
-                        <t t-esc="props.data.pos_config_name" />
-                    </div>
                 </div>
 
                 <!-- Custom header text if available -->
@@ -55,6 +50,7 @@
 
                 <!-- Left aligned info section like the left receipt -->
                 <div style="font-size: 13px; text-align: left; margin: 10px 0; border-top: 1px dashed #000; padding-top: 5px;">
+                    <t t-esc="props.data.pos_config_name" />
                     <!-- Order Number -->
                     <div t-if="props.data.headerData.trackingNumber">
                         Order: #<t t-esc="props.data.headerData.trackingNumber" />
@@ -66,9 +62,9 @@
                     </div>
 
                     <!-- Receipt -->
-                    <div t-if="props.data.name">
-                        Receipt: <t t-esc="props.data.name" />
-                    </div>
+<!--                    <div t-if="props.data.name">-->
+<!--                        Receipt: <t t-esc="props.data.name" />-->
+<!--                    </div>-->
 
                     <!-- Date -->
                     <div t-if="props.data.date">

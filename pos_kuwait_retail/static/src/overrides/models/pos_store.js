@@ -15,6 +15,7 @@ import { onMounted } from "@odoo/owl";
 let isManualClick = false;
 let manualClickTime = 0;
 let lastManualMode = null; // Track which mode was manually selected
+let lastUserInteractionTime = 0; // Track ANY user interaction
 
 // Global Navigation Manager using button simulation
 class SafeNavigationManager {
@@ -306,45 +307,37 @@ const safeNavigationManager = new SafeNavigationManager();
 patch(PosStore.prototype, {
 
     /**
-     * Add POS config name to receipt data
-     */
-    orderExportForPrinting(order) {
-        const result = super.orderExportForPrinting(order);
-        // Add POS config name to the receipt data
-        result.pos_config_name = this.config.name;
-        return result;
-    },
-
-    /**
-     * HIJACK: Replace all automatic qty mode with price mode
-     * EXCEPT when user manually clicks mode buttons (FIXED VERSION)
+     * HIJACK: Replace automatic qty mode with price mode
+     * COMPLETELY RESPECT user interactions - track ALL user activity
      */
     set numpadMode(mode) {
         const timeSinceManualClick = Date.now() - manualClickTime;
-        const isRecentManualClick = isManualClick && timeSinceManualClick < 3000;
+        const timeSinceUserInteraction = Date.now() - lastUserInteractionTime;
+        const isRecentManualClick = isManualClick && timeSinceManualClick < 15000; // 15 seconds
+        const isRecentUserActivity = timeSinceUserInteraction < 3000; // 3 seconds since ANY user action
 
-        if (mode === "quantity") {
-            if (isRecentManualClick && lastManualMode === "quantity") {
-                // User manually clicked qty button - respect it
-                this._numpadMode = "quantity";
-            } else if (this._canUsePriceMode()) {
-                // Automatic qty mode - hijack to price mode
-                this._numpadMode = "price";
-            } else {
-                this._numpadMode = "quantity";
-            }
-        } else if (mode === "price") {
-            // Always allow price mode (manual or automatic)
+        // If user manually selected a mode recently, ALWAYS respect it
+        if (isRecentManualClick && lastManualMode) {
+            this._numpadMode = lastManualMode;
+            setTimeout(() => {
+                this._updateModeVisuals();
+            }, 50);
+            return;
+        }
+
+        // If there's been recent user activity (clicking order lines, etc.), don't hijack
+        if (isRecentUserActivity) {
+            this._numpadMode = mode;
+            setTimeout(() => {
+                this._updateModeVisuals();
+            }, 50);
+            return;
+        }
+
+        // Only hijack if it's truly an automatic system change with no recent user activity
+        if (mode === "quantity" && this._canUsePriceMode()) {
             this._numpadMode = "price";
         } else {
-            // Other modes (discount, etc.)
-            if (isRecentManualClick && lastManualMode && lastManualMode !== mode) {
-                // Don't change if user recently made a different manual choice
-                // unless this is also a manual click for the same mode
-                if (!(isRecentManualClick && lastManualMode === mode)) {
-                    return; // Keep current mode
-                }
-            }
             this._numpadMode = mode;
         }
 
@@ -354,12 +347,29 @@ patch(PosStore.prototype, {
     },
 
     /**
-     * Override getter to default to price
+     * Override getter to prefer price mode but respect user activity
      */
     get numpadMode() {
-        if (!this._numpadMode && this._canUsePriceMode()) {
-            this._numpadMode = "price";
+        const timeSinceManualClick = Date.now() - manualClickTime;
+        const timeSinceUserInteraction = Date.now() - lastUserInteractionTime;
+        const isRecentManualClick = isManualClick && timeSinceManualClick < 15000;
+        const isRecentUserActivity = timeSinceUserInteraction < 3000;
+
+        // If user recently chose a mode, respect it
+        if (isRecentManualClick && lastManualMode) {
+            return lastManualMode;
         }
+
+        // If there's recent user activity, return current mode without changing
+        if (isRecentUserActivity && this._numpadMode) {
+            return this._numpadMode;
+        }
+
+        // Otherwise prefer price mode if available
+        if (this._canUsePriceMode() && !this._numpadMode) {
+            return "price";
+        }
+
         return this._numpadMode || "quantity";
     },
 
@@ -424,6 +434,7 @@ patch(ActionpadWidget.prototype, {
             this._interceptQtyButton();
             this._interceptPriceButton(); // Also intercept price button
             this._observeButtonChanges();
+            this._trackAllUserInteractions(); // Track ALL user interactions
 
             // Initialize safe navigation
             safeNavigationManager.activate();
@@ -449,6 +460,8 @@ patch(ActionpadWidget.prototype, {
                                     this._addPriceListener(btn);
                                 }
                             });
+
+                            // No need to track order line clicks anymore - we're using a different approach
                         }
                     });
                 }
@@ -480,7 +493,8 @@ patch(ActionpadWidget.prototype, {
 
             setTimeout(() => {
                 isManualClick = false;
-            }, 3000);
+                lastManualMode = null;
+            }, 15000); // Extended to 15 seconds for better user experience
         });
     },
 
@@ -501,7 +515,8 @@ patch(ActionpadWidget.prototype, {
 
             setTimeout(() => {
                 isManualClick = false;
-            }, 3000);
+                lastManualMode = null;
+            }, 15000); // Extended to 15 seconds for better user experience
         });
     },
 
@@ -590,6 +605,35 @@ patch(ActionpadWidget.prototype, {
         if (priceButton && !priceButton._priceIntercepted) {
             this._addPriceListener(priceButton);
         }
+    },
+
+    /**
+     * Track ALL user interactions to prevent mode hijacking during any user activity
+     */
+    _trackAllUserInteractions() {
+        // Track clicks on the entire document
+        document.addEventListener('click', () => {
+            lastUserInteractionTime = Date.now();
+        }, { capture: true });
+
+        // Track keyboard activity
+        document.addEventListener('keydown', () => {
+            lastUserInteractionTime = Date.now();
+        }, { capture: true });
+
+        // Track touch events for mobile
+        document.addEventListener('touchstart', () => {
+            lastUserInteractionTime = Date.now();
+        }, { capture: true });
+
+        // Track mouse movement (less aggressive, only when actually moving)
+        let mouseTimer;
+        document.addEventListener('mousemove', () => {
+            clearTimeout(mouseTimer);
+            mouseTimer = setTimeout(() => {
+                lastUserInteractionTime = Date.now();
+            }, 100); // Debounce mouse movement
+        });
     }
 });
 
