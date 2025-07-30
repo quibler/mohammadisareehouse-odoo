@@ -155,6 +155,38 @@ class SafeNavigationManager {
         return false;
     }
 
+    printReceipt() {
+        // Look for print button first
+        const printSelectors = [
+            '.button.print',
+            '.print-button',
+            '.button.print-receipt',
+            '[data-action="print"]',
+            '.print-receipt-button',
+            '.receipt-print'
+        ];
+
+        for (const selector of printSelectors) {
+            const button = document.querySelector(selector);
+            if (button && button.offsetParent !== null) {
+                button.click();
+                return true;
+            }
+        }
+
+        // Fallback: look for buttons with print text
+        const buttons = document.querySelectorAll('button, .button');
+        for (const button of buttons) {
+            const text = button.textContent?.toLowerCase() || '';
+            if (text.includes('print') && !text.includes('reprint')) {
+                button.click();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     createNewOrder() {
         // Look for new order button
         const newOrderSelectors = [
@@ -253,7 +285,7 @@ class SafeNavigationManager {
                 break;
 
             case 'ReceiptScreen':
-                this.createNewOrder();
+                this.printReceipt();
                 break;
         }
     }
@@ -272,6 +304,16 @@ const safeNavigationManager = new SafeNavigationManager();
 
 // 2. Override PosStore to hijack automatic quantity mode settings
 patch(PosStore.prototype, {
+
+    /**
+     * Add POS config name to receipt data
+     */
+    orderExportForPrinting(order) {
+        const result = super.orderExportForPrinting(order);
+        // Add POS config name to the receipt data
+        result.pos_config_name = this.config.name;
+        return result;
+    },
 
     /**
      * HIJACK: Replace all automatic qty mode with price mode
