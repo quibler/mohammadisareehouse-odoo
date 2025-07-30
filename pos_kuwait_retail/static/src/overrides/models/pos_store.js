@@ -14,6 +14,7 @@ import { onMounted } from "@odoo/owl";
 // Global flags to track manual user interactions
 let isManualClick = false;
 let manualClickTime = 0;
+let lastManualMode = null; // Track which mode was manually selected
 
 // Global Navigation Manager using button simulation
 class SafeNavigationManager {
@@ -266,7 +267,7 @@ class SafeNavigationManager {
 const safeNavigationManager = new SafeNavigationManager();
 
 // ============================================================================
-// RESTORE PRICE FOCUS FUNCTIONALITY
+// PRICE FOCUS FUNCTIONALITY WITH FIXED MODE SWITCHING
 // ============================================================================
 
 // 2. Override PosStore to hijack automatic quantity mode settings
@@ -274,26 +275,35 @@ patch(PosStore.prototype, {
 
     /**
      * HIJACK: Replace all automatic qty mode with price mode
-     * EXCEPT when user manually clicks qty button
+     * EXCEPT when user manually clicks mode buttons (FIXED VERSION)
      */
     set numpadMode(mode) {
         const timeSinceManualClick = Date.now() - manualClickTime;
         const isRecentManualClick = isManualClick && timeSinceManualClick < 3000;
 
         if (mode === "quantity") {
-            if (isRecentManualClick) {
+            if (isRecentManualClick && lastManualMode === "quantity") {
+                // User manually clicked qty button - respect it
                 this._numpadMode = "quantity";
             } else if (this._canUsePriceMode()) {
+                // Automatic qty mode - hijack to price mode
                 this._numpadMode = "price";
             } else {
                 this._numpadMode = "quantity";
             }
+        } else if (mode === "price") {
+            // Always allow price mode (manual or automatic)
+            this._numpadMode = "price";
         } else {
-            if (isRecentManualClick && this._numpadMode === "quantity") {
-                // Don't change from quantity if user just clicked qty button
-            } else {
-                this._numpadMode = mode;
+            // Other modes (discount, etc.)
+            if (isRecentManualClick && lastManualMode && lastManualMode !== mode) {
+                // Don't change if user recently made a different manual choice
+                // unless this is also a manual click for the same mode
+                if (!(isRecentManualClick && lastManualMode === mode)) {
+                    return; // Keep current mode
+                }
             }
+            this._numpadMode = mode;
         }
 
         setTimeout(() => {
@@ -362,7 +372,7 @@ patch(PosStore.prototype, {
     }
 });
 
-// 1. Override ActionPad to detect manual clicks AND restore price focus
+// 1. Override ActionPad to detect manual clicks
 patch(ActionpadWidget.prototype, {
 
     setup() {
@@ -370,6 +380,7 @@ patch(ActionpadWidget.prototype, {
 
         onMounted(() => {
             this._interceptQtyButton();
+            this._interceptPriceButton(); // Also intercept price button
             this._observeButtonChanges();
 
             // Initialize safe navigation
@@ -378,7 +389,7 @@ patch(ActionpadWidget.prototype, {
     },
 
     /**
-     * Watch for DOM changes to catch qty button when it's added
+     * Watch for DOM changes to catch buttons when they're added
      */
     _observeButtonChanges() {
         const observer = new MutationObserver((mutations) => {
@@ -386,17 +397,14 @@ patch(ActionpadWidget.prototype, {
                 if (mutation.type === 'childList') {
                     mutation.addedNodes.forEach((node) => {
                         if (node.nodeType === 1) {
-                            // Original qty button detection for price focus
-                            const buttons = node.querySelectorAll ?
-                                node.querySelectorAll('.mode-button[data-mode="quantity"]') : [];
-                            buttons.forEach(btn => this._interceptButton(btn));
-
-                            // Enhanced qty button detection
                             const allButtons = node.querySelectorAll ? node.querySelectorAll('button') : [];
                             Array.from(allButtons).forEach(btn => {
                                 const text = btn.textContent.trim().toLowerCase();
                                 if ((text === 'qty' || text === 'quantity') && !btn._qtyIntercepted) {
                                     this._addQtyListener(btn);
+                                }
+                                if (text === 'price' && !btn._priceIntercepted) {
+                                    this._addPriceListener(btn);
                                 }
                             });
                         }
@@ -414,7 +422,7 @@ patch(ActionpadWidget.prototype, {
     },
 
     /**
-     * Add click listener to qty button (for price focus)
+     * Add click listener to qty button
      */
     _addQtyListener(qtyButton) {
         qtyButton._qtyIntercepted = true;
@@ -422,9 +430,31 @@ patch(ActionpadWidget.prototype, {
         qtyButton.addEventListener('click', (e) => {
             isManualClick = true;
             manualClickTime = Date.now();
+            lastManualMode = "quantity";
 
             if (this.pos) {
                 this.pos._numpadMode = "quantity";
+            }
+
+            setTimeout(() => {
+                isManualClick = false;
+            }, 3000);
+        });
+    },
+
+    /**
+     * Add click listener to price button
+     */
+    _addPriceListener(priceButton) {
+        priceButton._priceIntercepted = true;
+
+        priceButton.addEventListener('click', (e) => {
+            isManualClick = true;
+            manualClickTime = Date.now();
+            lastManualMode = "price";
+
+            if (this.pos) {
+                this.pos._numpadMode = "price";
             }
 
             setTimeout(() => {
@@ -442,6 +472,19 @@ patch(ActionpadWidget.prototype, {
         searchAttempts.forEach(delay => {
             setTimeout(() => {
                 this._findAndInterceptQtyButton();
+            }, delay);
+        });
+    },
+
+    /**
+     * Find and intercept price button clicks
+     */
+    _interceptPriceButton() {
+        const searchAttempts = [100, 500, 1000, 2000, 3000];
+
+        searchAttempts.forEach(delay => {
+            setTimeout(() => {
+                this._findAndInterceptPriceButton();
             }, delay);
         });
     },
@@ -485,35 +528,30 @@ patch(ActionpadWidget.prototype, {
     },
 
     /**
-     * Find and intercept qty button clicks
+     * Find and intercept price button
      */
-    _interceptQtyButton() {
-        const qtyButton = document.querySelector('.mode-button[data-mode="quantity"]');
-        if (qtyButton) {
-            this._interceptButton(qtyButton);
+    _findAndInterceptPriceButton() {
+        let priceButton = document.querySelector('button[data-mode="price"]');
+
+        if (!priceButton) {
+            priceButton = document.querySelector('button[value="Price"]');
         }
-    },
 
-    /**
-     * Add click interceptor to button
-     */
-    _interceptButton(button) {
-        if (button._posIntercepted) return;
-        button._posIntercepted = true;
+        if (!priceButton) {
+            const allButtons = document.querySelectorAll('button');
+            priceButton = Array.from(allButtons).find(btn => {
+                const text = btn.textContent.trim().toLowerCase();
+                return text === 'price';
+            });
+        }
 
-        button.addEventListener('click', () => {
-            isManualClick = true;
-            manualClickTime = Date.now();
-
-            // Clear the flag after a delay
-            setTimeout(() => {
-                isManualClick = false;
-            }, 2000);
-        }, { capture: true });
+        if (priceButton && !priceButton._priceIntercepted) {
+            this._addPriceListener(priceButton);
+        }
     }
 });
 
-// ProductScreen with keyboard shortcuts (keeping existing quantity functionality)
+// ProductScreen with keyboard shortcuts
 patch(ProductScreen.prototype, {
 
     setup() {
@@ -522,8 +560,7 @@ patch(ProductScreen.prototype, {
     },
 
     /**
-     * Add keyboard shortcuts for quantity changes ONLY
-     * Navigation is handled by the SafeNavigationManager
+     * Add keyboard shortcuts for quantity changes
      */
     addKeyboardListener() {
         // Track last event to prevent duplicates
@@ -531,7 +568,7 @@ patch(ProductScreen.prototype, {
         let lastEventKey = '';
 
         const handleArrowKeys = (event) => {
-            // Only process arrow keys and +/- (let SafeNavigationManager handle Enter/Backspace)
+            // Only process arrow keys and +/-
             if (!['ArrowUp', 'ArrowDown', '+', '-'].includes(event.key)) {
                 return;
             }
@@ -594,9 +631,8 @@ patch(ProductScreen.prototype, {
             return false;
         };
 
-        // Use lower priority for arrow keys only
         document.addEventListener('keydown', handleArrowKeys, {
-            capture: false,
+            capture: true,
             passive: false
         });
 
