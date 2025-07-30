@@ -1,19 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
+
+    <!-- Product Info Popup (Modal Dialog) Customizations -->
     <t t-name="point_of_sale.ProductInfoPopup" t-inherit="point_of_sale.ProductInfoPopup" t-inherit-mode="extension">
         <!-- Remove the entire financials-order section -->
         <xpath expr="//div[hasclass('financials-order')]" position="replace">
-            <!-- Add optional products section here instead of trying to add it before -->
-            <div class="section-optional-product mt-3 mb-4 pb-4 border-bottom text-start" t-if="props.info.productInfo.optional_products and props.info.productInfo.optional_products.length > 0">
-                <h3 class="section-title">Optional Products:</h3>
-                <div class="section-optional-product-body" t-foreach="props.info.productInfo.optional_products" t-as="optional" t-key="optional.name">
-                    <span>
-                        <a class="text-primary text-decoration-underline" t-esc="optional.name" t-on-click="() => this.searchProduct(optional.name)"/>
-                        from
-                        <t t-esc="env.utils.formatCurrency(optional.price)"/>
-                    </span>
-                </div>
-            </div>
+            <!-- This removes the entire financials table and order section -->
         </xpath>
 
         <!-- Remove the entire replenishment section -->
@@ -31,4 +23,13 @@
             <!-- This completely removes the Edit button from the product info popup -->
         </xpath>
     </t>
+
+    <!-- Product Info Banner (Hover/Selection Banner) Customizations -->
+    <t t-name="point_of_sale.ProductInfoBanner" t-inherit="point_of_sale.ProductInfoBanner" t-inherit-mode="extension">
+        <!-- Remove the VAT line from product banner -->
+        <xpath expr="//div[contains(text(), 'VAT:')]" position="replace">
+            <!-- This removes the VAT information line -->
+        </xpath>
+    </t>
+
 </templates>

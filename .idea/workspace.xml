@@ -4,9 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="enter and backspace between screens">
+    <list default="true" id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="prodcut info error fix">
+      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/xml/product_info_popup.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/xml/product_info_popup.xml" afterDir="false" />
+    </list>
+    <list id="2ce76ac7-019d-4eeb-8373-e6687b8566a6" name="local" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/screens/ticket_screen/ticket_screen.js" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/screens/ticket_screen/ticket_screen.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -78,6 +80,7 @@
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="" />
+      <changelist id="2ce76ac7-019d-4eeb-8373-e6687b8566a6" name="local" comment="" />
       <created>1752737977975</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
@@ -90,14 +93,6 @@
       <option name="presentableId" value="LOCAL-00001" />
       <option name="project" value="LOCAL" />
       <updated>1752738559940</updated>
-    </task>
-    <task id="LOCAL-00002" summary="fresh commit - update product cost as per unit price in vendor bill">
-      <option name="closed" value="true" />
-      <created>1752739608179</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1752739608179</updated>
     </task>
     <task id="LOCAL-00003" summary="print labels from vendor bill">
       <option name="closed" value="true" />
@@ -435,7 +430,63 @@
       <option name="project" value="LOCAL" />
       <updated>1753829305797</updated>
     </task>
-    <option name="localTasksCounter" value="45" />
+    <task id="LOCAL-00045" summary="paid filter by default on orders screen">
+      <option name="closed" value="true" />
+      <created>1753856122914</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1753856122915</updated>
+    </task>
+    <task id="LOCAL-00046" summary="search by amount in pos orders">
+      <option name="closed" value="true" />
+      <created>1753859702639</created>
+      <option name="number" value="00046" />
+      <option name="presentableId" value="LOCAL-00046" />
+      <option name="project" value="LOCAL" />
+      <updated>1753859702639</updated>
+    </task>
+    <task id="LOCAL-00047" summary="fixed direct expense post">
+      <option name="closed" value="true" />
+      <created>1753860266281</created>
+      <option name="number" value="00047" />
+      <option name="presentableId" value="LOCAL-00047" />
+      <option name="project" value="LOCAL" />
+      <updated>1753860266281</updated>
+    </task>
+    <task id="LOCAL-00048" summary="fixed qty to price mode change">
+      <option name="closed" value="true" />
+      <created>1753885600184</created>
+      <option name="number" value="00048" />
+      <option name="presentableId" value="LOCAL-00048" />
+      <option name="project" value="LOCAL" />
+      <updated>1753885600184</updated>
+    </task>
+    <task id="LOCAL-00049" summary="receipt fix - brought back shop config name">
+      <option name="closed" value="true" />
+      <created>1753887576038</created>
+      <option name="number" value="00049" />
+      <option name="presentableId" value="LOCAL-00049" />
+      <option name="project" value="LOCAL" />
+      <updated>1753887576038</updated>
+    </task>
+    <task id="LOCAL-00050" summary="receipt fix - brought back shop config name to left aligned section">
+      <option name="closed" value="true" />
+      <created>1753914639686</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1753914639687</updated>
+    </task>
+    <task id="LOCAL-00051" summary="prodcut info error fix">
+      <option name="closed" value="true" />
+      <created>1753915101801</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1753915101801</updated>
+    </task>
+    <option name="localTasksCounter" value="52" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -450,13 +501,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="dymo label custom - complete" />
-    <MESSAGE value="fixed manual currency rate" />
-    <MESSAGE value="removed tax, asset category, fields from views and added ammount due to account move list view" />
-    <MESSAGE value="bill date in vendor bill defaults to today again" />
-    <MESSAGE value=" Restore currency rate, view customizations, and bill date defaults&#10;&#10;  - Add manual currency rate functionality for vendor bills with editable exchange rates&#10;  - Hide tax/asset category fields and show amount due in invoice list view&#10;  - Set vendor bill dates to default to today's date&#10;  - Include currency rate display in vendor bill tree view&#10;  - Add company currency totals for better visibility" />
-    <MESSAGE value="moved pnl menu item to accounting and archived reporting menu" />
-    <MESSAGE value="custom expense" />
     <MESSAGE value="removed unused addons" />
     <MESSAGE value="brought back exchnge currency module and removed the feature from vendor bill enhancements" />
     <MESSAGE value="- removed opening control customizations&#10;- closing register now auto posts all cash out for &quot;cash collection&quot;" />
@@ -475,6 +519,13 @@
     <MESSAGE value="receipt change" />
     <MESSAGE value="arrow keys change qty in any mode" />
     <MESSAGE value="enter and backspace between screens" />
-    <option name="LAST_COMMIT_MESSAGE" value="enter and backspace between screens" />
+    <MESSAGE value="paid filter by default on orders screen" />
+    <MESSAGE value="search by amount in pos orders" />
+    <MESSAGE value="fixed direct expense post" />
+    <MESSAGE value="fixed qty to price mode change" />
+    <MESSAGE value="receipt fix - brought back shop config name" />
+    <MESSAGE value="receipt fix - brought back shop config name to left aligned section" />
+    <MESSAGE value="prodcut info error fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="prodcut info error fix" />
   </component>
 </project>

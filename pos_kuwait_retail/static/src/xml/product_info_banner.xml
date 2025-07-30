@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<templates id="template" xml:space="preserve">
-    <t t-name="point_of_sale.ProductInfoBanner" t-inherit="point_of_sale.ProductInfoBanner" t-inherit-mode="extension">
-        <!-- Remove the VAT line from product banner -->
-        <xpath expr="//div[contains(text(), 'VAT:')]" position="replace">
-            <!-- This removes the VAT information line -->
-        </xpath>
-    </t>
-</templates>
