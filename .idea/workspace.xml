@@ -4,14 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="arrow keys change qty in any mode">
-      <change afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/css/price_focus.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Changes.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Changes/shelved.patch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Changes1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Changes1/shelved.patch" beforeDir="false" />
+    <list default="true" id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="enter and backspace between screens">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/models/pos_store.js" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/models/pos_store.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/screens/ticket_screen/ticket_screen.js" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/screens/ticket_screen/ticket_screen.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -432,7 +427,15 @@
       <option name="project" value="LOCAL" />
       <updated>1753825667994</updated>
     </task>
-    <option name="localTasksCounter" value="44" />
+    <task id="LOCAL-00044" summary="enter and backspace between screens">
+      <option name="closed" value="true" />
+      <created>1753829305797</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1753829305797</updated>
+    </task>
+    <option name="localTasksCounter" value="45" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -447,7 +450,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="dymo label custom - in progress commit" />
     <MESSAGE value="dymo label custom - complete" />
     <MESSAGE value="fixed manual currency rate" />
     <MESSAGE value="removed tax, asset category, fields from views and added ammount due to account move list view" />
@@ -472,6 +474,7 @@
     <MESSAGE value="pos change - qty change hotkey - complete" />
     <MESSAGE value="receipt change" />
     <MESSAGE value="arrow keys change qty in any mode" />
-    <option name="LAST_COMMIT_MESSAGE" value="arrow keys change qty in any mode" />
+    <MESSAGE value="enter and backspace between screens" />
+    <option name="LAST_COMMIT_MESSAGE" value="enter and backspace between screens" />
   </component>
 </project>
