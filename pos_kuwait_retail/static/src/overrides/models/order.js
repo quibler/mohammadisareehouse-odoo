@@ -13,6 +13,7 @@ patch(PosOrder.prototype, {
     export_for_printing() {
         const order = super.export_for_printing(...arguments);
         order.sales_person = this.sales_person_id ? this.sales_person_id.name : false;
+        order.pos_config_name = this.pos.config.name;
         return order;
     },
 });

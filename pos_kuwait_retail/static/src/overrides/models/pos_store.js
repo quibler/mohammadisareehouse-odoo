@@ -141,11 +141,11 @@ class SafeNavigationManager {
             }
         }
 
-        // Fallback: look for buttons with back/close/order text
+        // Fallback: look for buttons with back text
         const buttons = document.querySelectorAll('button, .button');
         for (const button of buttons) {
             const text = button.textContent?.toLowerCase() || '';
-            if (text.includes('back') || text.includes('close') || text.includes('order')) {
+            if (text.includes('back') && !text.includes('reprint')) {
                 button.click();
                 return true;
             }
@@ -160,14 +160,12 @@ class SafeNavigationManager {
             '.button.next',
             '.validate-button',
             '.button.validate',
-            '[data-action="validate"]',
-            '.payment-validate',
-            '.button.confirm'
+            '[data-action="validate"]'
         ];
 
         for (const selector of validateSelectors) {
             const button = document.querySelector(selector);
-            if (button && button.offsetParent !== null) {
+            if (button && button.offsetParent !== null && !button.disabled) {
                 button.click();
                 return true;
             }
@@ -177,7 +175,8 @@ class SafeNavigationManager {
         const buttons = document.querySelectorAll('button, .button');
         for (const button of buttons) {
             const text = button.textContent?.toLowerCase() || '';
-            if (text.includes('validate') || text.includes('confirm') || text.includes('finish')) {
+            if ((text.includes('validate') || text.includes('confirm'))
+                && !text.includes('reprint')) {
                 button.click();
                 return true;
             }
@@ -187,14 +186,12 @@ class SafeNavigationManager {
     }
 
     printReceipt() {
-        // Look for print button first
+        // Look for print button
         const printSelectors = [
-            '.button.print',
+            '.button.next',
             '.print-button',
-            '.button.print-receipt',
-            '[data-action="print"]',
-            '.print-receipt-button',
-            '.receipt-print'
+            '.button.print',
+            '[data-action="print"]'
         ];
 
         for (const selector of printSelectors) {
@@ -498,7 +495,7 @@ patch(ActionpadWidget.prototype, {
 });
 
 // ============================================================================
-// PRODUCT SCREEN - KEEPING EXISTING KEYBOARD SHORTCUTS
+// PRODUCT SCREEN - ARROW KEYS RESTRICTED TO ORDER SCREEN ONLY
 // ============================================================================
 
 patch(ProductScreen.prototype, {
@@ -508,13 +505,27 @@ patch(ProductScreen.prototype, {
     },
 
     /**
-     * Add keyboard shortcuts for quantity changes (keeping existing functionality)
+     * Check if we're currently on the ProductScreen (order screen)
+     */
+    isOnOrderScreen() {
+        // Check if we're on the product screen (order screen)
+        const productScreen = document.querySelector('.product-screen:not(.oe_hidden)');
+        return productScreen && productScreen.offsetParent !== null;
+    },
+
+    /**
+     * Add keyboard shortcuts for quantity changes - ONLY ON ORDER SCREEN
      */
     addKeyboardListener() {
         let lastEventTime = 0;
         let lastEventKey = '';
 
         const handleArrowKeys = (event) => {
+            // CRITICAL FIX: Only handle arrow keys on ProductScreen (order screen)
+            if (!this.isOnOrderScreen()) {
+                return;
+            }
+
             if (!['ArrowUp', 'ArrowDown', '+', '-'].includes(event.key)) {
                 return;
             }

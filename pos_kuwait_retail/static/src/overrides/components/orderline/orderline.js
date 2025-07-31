@@ -6,6 +6,7 @@ import { patch } from "@web/core/utils/patch";
 /**
  * Enhanced Order Line with Quick Quantity Controls
  * Adds +/- buttons and keyboard support for fast quantity changes
+ * FIXED: Arrow keys only work on ProductScreen (order screen), not payment page
  */
 
 patch(Orderline.prototype, {
@@ -26,10 +27,24 @@ patch(Orderline.prototype, {
     },
 
     /**
+     * Check if we're currently on the ProductScreen (order screen)
+     */
+    isOnOrderScreen() {
+        // Check if we're on the product screen (order screen)
+        const productScreen = document.querySelector('.product-screen:not(.oe_hidden)');
+        return productScreen && productScreen.offsetParent !== null;
+    },
+
+    /**
      * Handle keyboard input for quantity changes
      * @param {KeyboardEvent} event
      */
     handleKeyboardInput(event) {
+        // CRITICAL FIX: Only work on ProductScreen (order screen), not payment page
+        if (!this.isOnOrderScreen()) {
+            return;
+        }
+
         // Only handle if this line is selected
         if (!this.props.line.selected) return;
 
@@ -74,40 +89,23 @@ patch(Orderline.prototype, {
         const order = this.pos.get_order();
         const line = order.get_selected_orderline();
         if (line && line === this.props.line) {
-            const currentQty = line.get_quantity();
-            if (currentQty > 1) {
-                line.set_quantity(currentQty - 1);
-            } else {
-                // If quantity would go to 0, delete the line
+            const newQty = Math.max(0, line.get_quantity() - 1);
+            if (newQty === 0) {
                 this.deleteOrderLine();
+            } else {
+                line.set_quantity(newQty);
             }
         }
     },
 
     /**
-     * Delete the order line
+     * Delete the current order line
      */
     deleteOrderLine() {
         const order = this.pos.get_order();
         const line = order.get_selected_orderline();
         if (line && line === this.props.line) {
-            order.remove_orderline(line);
-        }
-    },
-
-    /**
-     * Quick set quantity to specific number
-     * @param {number} qty
-     */
-    setQuickQuantity(qty) {
-        const order = this.pos.get_order();
-        const line = order.get_selected_orderline();
-        if (line && line === this.props.line) {
-            if (qty === 0) {
-                this.deleteOrderLine();
-            } else {
-                line.set_quantity(qty);
-            }
+            order.removeOrderline(line);
         }
     }
 });
