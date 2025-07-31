@@ -4,8 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="prodcut info error fix">
-      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/xml/product_info_popup.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/xml/product_info_popup.xml" afterDir="false" />
+    <list default="true" id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="fixed unpredictable button behaviour in pos">
+      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/models/pos_store.js" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/models/pos_store.js" afterDir="false" />
     </list>
     <list id="2ce76ac7-019d-4eeb-8373-e6687b8566a6" name="local" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />

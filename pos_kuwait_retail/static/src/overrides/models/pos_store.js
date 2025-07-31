@@ -89,45 +89,48 @@ class SafeNavigationManager {
     }
 
     canNavigateFromOrder() {
-        try {
-            const orderWidget = document.querySelector('.order-summary, .orderlines');
-            const hasLines = orderWidget && orderWidget.children.length > 0;
-            const paymentButton = document.querySelector('.button.next, .pay-button, [data-action="payment"]');
-            return hasLines && paymentButton && paymentButton.offsetParent !== null;
-        } catch (e) {
-            return false;
-        }
+        // Try to find orderlines in DOM
+        const orderlines = document.querySelectorAll('.orderline, .order-line, .product-line');
+        return orderlines.length > 0;
     }
 
     canNavigateFromPayment() {
-        try {
-            const validateButton = document.querySelector('.button.next, .validate-button, [data-action="validate"]');
-            return validateButton && validateButton.offsetParent !== null && !validateButton.disabled;
-        } catch (e) {
-            return false;
-        }
+        // Check if there's a validate button (indicates payment is ready)
+        const validateButton = document.querySelector('.button.next, .validate-button, .button.validate');
+        return validateButton && !validateButton.disabled;
     }
 
     navigateToPayment() {
-        const paymentSelectors = [
-            '.button.next', '.pay-button', '[data-action="payment"]',
-            '.payment-button', '.button.payment'
-        ];
+        // Look for the Payment button and click it
+        const paymentButton = document.querySelector('.control-button .button.pay-button, .control-button[name="payment"], .pay-button, [data-action="payment"]');
+        if (paymentButton) {
+            paymentButton.click();
+            return true;
+        }
 
-        for (const selector of paymentSelectors) {
-            const button = document.querySelector(selector);
-            if (button && button.offsetParent !== null) {
+        // Fallback: look for any button with "pay" in text
+        const buttons = document.querySelectorAll('button, .button');
+        for (const button of buttons) {
+            const text = button.textContent?.toLowerCase() || '';
+            if (text.includes('pay') || text.includes('payment')) {
                 button.click();
                 return true;
             }
         }
+
         return false;
     }
 
     navigateToOrder() {
+        // Look for back button, close button, or order button
         const backSelectors = [
-            '.button.back', '.back-button', '[data-action="back"]',
-            '.order-button', '.button.order'
+            '.button.back',
+            '.back-button',
+            '[data-action="back"]',
+            '.button.close',
+            '.close-button',
+            '.button.order',
+            '.order-button'
         ];
 
         for (const selector of backSelectors) {
@@ -137,13 +140,29 @@ class SafeNavigationManager {
                 return true;
             }
         }
+
+        // Fallback: look for buttons with back/close/order text
+        const buttons = document.querySelectorAll('button, .button');
+        for (const button of buttons) {
+            const text = button.textContent?.toLowerCase() || '';
+            if (text.includes('back') || text.includes('close') || text.includes('order')) {
+                button.click();
+                return true;
+            }
+        }
+
         return false;
     }
 
     validatePayment() {
+        // Look for validate button
         const validateSelectors = [
-            '.button.next', '.validate-button', '.button.validate',
-            '[data-action="validate"]', '.payment-validate', '.button.confirm'
+            '.button.next',
+            '.validate-button',
+            '.button.validate',
+            '[data-action="validate"]',
+            '.payment-validate',
+            '.button.confirm'
         ];
 
         for (const selector of validateSelectors) {
@@ -153,13 +172,29 @@ class SafeNavigationManager {
                 return true;
             }
         }
+
+        // Fallback: look for buttons with validate/confirm text
+        const buttons = document.querySelectorAll('button, .button');
+        for (const button of buttons) {
+            const text = button.textContent?.toLowerCase() || '';
+            if (text.includes('validate') || text.includes('confirm') || text.includes('finish')) {
+                button.click();
+                return true;
+            }
+        }
+
         return false;
     }
 
     printReceipt() {
+        // Look for print button first
         const printSelectors = [
-            '.button.print', '.print-button', '.button.print-receipt',
-            '[data-action="print"]', '.print-receipt-button', '.receipt-print'
+            '.button.print',
+            '.print-button',
+            '.button.print-receipt',
+            '[data-action="print"]',
+            '.print-receipt-button',
+            '.receipt-print'
         ];
 
         for (const selector of printSelectors) {
@@ -169,6 +204,48 @@ class SafeNavigationManager {
                 return true;
             }
         }
+
+        // Fallback: look for buttons with print text
+        const buttons = document.querySelectorAll('button, .button');
+        for (const button of buttons) {
+            const text = button.textContent?.toLowerCase() || '';
+            if (text.includes('print') && !text.includes('reprint')) {
+                button.click();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    createNewOrder() {
+        // Look for new order button
+        const newOrderSelectors = [
+            '.button.next',
+            '.new-order-button',
+            '.button.new-order',
+            '[data-action="new-order"]',
+            '.button.continue'
+        ];
+
+        for (const selector of newOrderSelectors) {
+            const button = document.querySelector(selector);
+            if (button && button.offsetParent !== null) {
+                button.click();
+                return true;
+            }
+        }
+
+        // Fallback: look for buttons with new order text
+        const buttons = document.querySelectorAll('button, .button');
+        for (const button of buttons) {
+            const text = button.textContent?.toLowerCase() || '';
+            if (text.includes('new order') || text.includes('continue') || text.includes('next')) {
+                button.click();
+                return true;
+            }
+        }
+
         return false;
     }
 
