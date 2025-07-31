@@ -7,17 +7,52 @@ import { patch } from "@web/core/utils/patch";
 import { onMounted } from "@odoo/owl";
 
 /**
- * SAFE NAVIGATION APPROACH: Simulate button clicks instead of calling showScreen directly
- * This avoids the orderUuid issue by using the same methods the UI uses
+ * SIMPLIFIED MODE MANAGEMENT FOR pos_kuwait_retail
+ *
+ * Core principle: Once user manually selects a mode, respect it completely
+ * Default to price mode when no manual selection has been made
+ *
+ * This replaces the complex timing-based logic with a simple, predictable approach
  */
 
-// Global flags to track manual user interactions
-let isManualClick = false;
-let manualClickTime = 0;
-let lastManualMode = null; // Track which mode was manually selected
-let lastUserInteractionTime = 0; // Track ANY user interaction
+// Simple state management - only track what we need
+class ModeManager {
+    constructor() {
+        this.userSelectedMode = null;  // null = no manual selection, "price"|"quantity"|"discount" = user choice
+    }
 
-// Global Navigation Manager using button simulation
+    setManualMode(mode) {
+        this.userSelectedMode = mode;
+        console.log(`User manually selected mode: ${mode}`);
+    }
+
+    getDesiredMode(systemRequestedMode, canUsePrice) {
+        // If user has manually selected a mode, always use it
+        if (this.userSelectedMode) {
+            return this.userSelectedMode;
+        }
+
+        // If no manual selection and price mode is available, default to price
+        if (canUsePrice) {
+            return "price";
+        }
+
+        // Fallback to system requested mode or quantity
+        return systemRequestedMode || "quantity";
+    }
+
+    reset() {
+        this.userSelectedMode = null;
+    }
+}
+
+// Global instance
+const modeManager = new ModeManager();
+
+// ============================================================================
+// SAFE NAVIGATION FUNCTIONALITY (keeping existing keyboard shortcuts)
+// ============================================================================
+
 class SafeNavigationManager {
     constructor() {
         this.isActive = false;
@@ -36,9 +71,6 @@ class SafeNavigationManager {
         this.isActive = false;
     }
 
-    /**
-     * Get current screen using DOM detection
-     */
     getCurrentScreen() {
         const screenMappings = [
             { selector: '.product-screen:not(.oe_hidden)', name: 'ProductScreen' },
@@ -48,59 +80,54 @@ class SafeNavigationManager {
 
         for (const mapping of screenMappings) {
             const element = document.querySelector(mapping.selector);
-            if (element && element.offsetParent !== null) { // offsetParent is null for hidden elements
+            if (element && element.offsetParent !== null) {
                 return mapping.name;
             }
         }
 
-        // Fallback: check visible screens by computed style
-        const screens = document.querySelectorAll('.screen');
-        for (const screen of screens) {
-            const style = window.getComputedStyle(screen);
-            if (style.display !== 'none' && style.visibility !== 'hidden') {
-                if (screen.classList.contains('product-screen')) return 'ProductScreen';
-                if (screen.classList.contains('payment-screen')) return 'PaymentScreen';
-                if (screen.classList.contains('receipt-screen')) return 'ReceiptScreen';
-            }
-        }
-
-        return 'Unknown';
+        return 'ProductScreen'; // Default fallback
     }
 
-    /**
-     * Safe navigation using button clicks instead of direct API calls
-     */
-    navigateToPayment() {
-        // Look for the Payment button and click it
-        const paymentButton = document.querySelector('.control-button .button.pay-button, .control-button[name="payment"], .pay-button, [data-action="payment"]');
-        if (paymentButton) {
-            paymentButton.click();
-            return true;
+    canNavigateFromOrder() {
+        try {
+            const orderWidget = document.querySelector('.order-summary, .orderlines');
+            const hasLines = orderWidget && orderWidget.children.length > 0;
+            const paymentButton = document.querySelector('.button.next, .pay-button, [data-action="payment"]');
+            return hasLines && paymentButton && paymentButton.offsetParent !== null;
+        } catch (e) {
+            return false;
         }
+    }
 
-        // Fallback: look for any button with "pay" in text
-        const buttons = document.querySelectorAll('button, .button');
-        for (const button of buttons) {
-            const text = button.textContent?.toLowerCase() || '';
-            if (text.includes('pay') || text.includes('payment')) {
+    canNavigateFromPayment() {
+        try {
+            const validateButton = document.querySelector('.button.next, .validate-button, [data-action="validate"]');
+            return validateButton && validateButton.offsetParent !== null && !validateButton.disabled;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    navigateToPayment() {
+        const paymentSelectors = [
+            '.button.next', '.pay-button', '[data-action="payment"]',
+            '.payment-button', '.button.payment'
+        ];
+
+        for (const selector of paymentSelectors) {
+            const button = document.querySelector(selector);
+            if (button && button.offsetParent !== null) {
                 button.click();
                 return true;
             }
         }
-
         return false;
     }
 
     navigateToOrder() {
-        // Look for back button, close button, or order button
         const backSelectors = [
-            '.button.back',
-            '.back-button',
-            '[data-action="back"]',
-            '.button.close',
-            '.close-button',
-            '.button.order',
-            '.order-button'
+            '.button.back', '.back-button', '[data-action="back"]',
+            '.order-button', '.button.order'
         ];
 
         for (const selector of backSelectors) {
@@ -110,29 +137,13 @@ class SafeNavigationManager {
                 return true;
             }
         }
-
-        // Fallback: look for buttons with back/close/order text
-        const buttons = document.querySelectorAll('button, .button');
-        for (const button of buttons) {
-            const text = button.textContent?.toLowerCase() || '';
-            if (text.includes('back') || text.includes('close') || text.includes('order')) {
-                button.click();
-                return true;
-            }
-        }
-
         return false;
     }
 
     validatePayment() {
-        // Look for validate button
         const validateSelectors = [
-            '.button.next',
-            '.validate-button',
-            '.button.validate',
-            '[data-action="validate"]',
-            '.payment-validate',
-            '.button.confirm'
+            '.button.next', '.validate-button', '.button.validate',
+            '[data-action="validate"]', '.payment-validate', '.button.confirm'
         ];
 
         for (const selector of validateSelectors) {
@@ -142,29 +153,13 @@ class SafeNavigationManager {
                 return true;
             }
         }
-
-        // Fallback: look for buttons with validate/confirm text
-        const buttons = document.querySelectorAll('button, .button');
-        for (const button of buttons) {
-            const text = button.textContent?.toLowerCase() || '';
-            if (text.includes('validate') || text.includes('confirm') || text.includes('finish')) {
-                button.click();
-                return true;
-            }
-        }
-
         return false;
     }
 
     printReceipt() {
-        // Look for print button first
         const printSelectors = [
-            '.button.print',
-            '.print-button',
-            '.button.print-receipt',
-            '[data-action="print"]',
-            '.print-receipt-button',
-            '.receipt-print'
+            '.button.print', '.print-button', '.button.print-receipt',
+            '[data-action="print"]', '.print-receipt-button', '.receipt-print'
         ];
 
         for (const selector of printSelectors) {
@@ -174,64 +169,7 @@ class SafeNavigationManager {
                 return true;
             }
         }
-
-        // Fallback: look for buttons with print text
-        const buttons = document.querySelectorAll('button, .button');
-        for (const button of buttons) {
-            const text = button.textContent?.toLowerCase() || '';
-            if (text.includes('print') && !text.includes('reprint')) {
-                button.click();
-                return true;
-            }
-        }
-
         return false;
-    }
-
-    createNewOrder() {
-        // Look for new order button
-        const newOrderSelectors = [
-            '.button.next',
-            '.new-order-button',
-            '.button.new-order',
-            '[data-action="new-order"]',
-            '.button.continue'
-        ];
-
-        for (const selector of newOrderSelectors) {
-            const button = document.querySelector(selector);
-            if (button && button.offsetParent !== null) {
-                button.click();
-                return true;
-            }
-        }
-
-        // Fallback: look for buttons with new order text
-        const buttons = document.querySelectorAll('button, .button');
-        for (const button of buttons) {
-            const text = button.textContent?.toLowerCase() || '';
-            if (text.includes('new order') || text.includes('continue') || text.includes('next')) {
-                button.click();
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if order has items and payment is complete
-     */
-    canNavigateFromOrder() {
-        // Try to find orderlines in DOM
-        const orderlines = document.querySelectorAll('.orderline, .order-line, .product-line');
-        return orderlines.length > 0;
-    }
-
-    canNavigateFromPayment() {
-        // Check if there's a validate button (indicates payment is ready)
-        const validateButton = document.querySelector('.button.next, .validate-button, .button.validate');
-        return validateButton && !validateButton.disabled;
     }
 
     handleKeydown(event) {
@@ -278,13 +216,11 @@ class SafeNavigationManager {
                     this.navigateToPayment();
                 }
                 break;
-
             case 'PaymentScreen':
                 if (this.canNavigateFromPayment()) {
                     this.validatePayment();
                 }
                 break;
-
             case 'ReceiptScreen':
                 this.printReceipt();
                 break;
@@ -300,77 +236,35 @@ class SafeNavigationManager {
 const safeNavigationManager = new SafeNavigationManager();
 
 // ============================================================================
-// PRICE FOCUS FUNCTIONALITY WITH FIXED MODE SWITCHING
+// SIMPLIFIED MODE MANAGEMENT - CORE FUNCTIONALITY
 // ============================================================================
 
-// 2. Override PosStore to hijack automatic quantity mode settings
+// Override PosStore with simplified, predictable logic
 patch(PosStore.prototype, {
 
-    /**
-     * HIJACK: Replace automatic qty mode with price mode
-     * COMPLETELY RESPECT user interactions - track ALL user activity
-     */
     set numpadMode(mode) {
-        const timeSinceManualClick = Date.now() - manualClickTime;
-        const timeSinceUserInteraction = Date.now() - lastUserInteractionTime;
-        const isRecentManualClick = isManualClick && timeSinceManualClick < 15000; // 15 seconds
-        const isRecentUserActivity = timeSinceUserInteraction < 3000; // 3 seconds since ANY user action
+        const desiredMode = modeManager.getDesiredMode(mode, this._canUsePriceMode());
+        this._numpadMode = desiredMode;
 
-        // If user manually selected a mode recently, ALWAYS respect it
-        if (isRecentManualClick && lastManualMode) {
-            this._numpadMode = lastManualMode;
-            setTimeout(() => {
-                this._updateModeVisuals();
-            }, 50);
-            return;
-        }
-
-        // If there's been recent user activity (clicking order lines, etc.), don't hijack
-        if (isRecentUserActivity) {
-            this._numpadMode = mode;
-            setTimeout(() => {
-                this._updateModeVisuals();
-            }, 50);
-            return;
-        }
-
-        // Only hijack if it's truly an automatic system change with no recent user activity
-        if (mode === "quantity" && this._canUsePriceMode()) {
-            this._numpadMode = "price";
-        } else {
-            this._numpadMode = mode;
-        }
-
+        // Update UI to reflect the actual mode
         setTimeout(() => {
             this._updateModeVisuals();
         }, 50);
     },
 
-    /**
-     * Override getter to prefer price mode but respect user activity
-     */
     get numpadMode() {
-        const timeSinceManualClick = Date.now() - manualClickTime;
-        const timeSinceUserInteraction = Date.now() - lastUserInteractionTime;
-        const isRecentManualClick = isManualClick && timeSinceManualClick < 15000;
-        const isRecentUserActivity = timeSinceUserInteraction < 3000;
+        // Always return the current mode, but ensure it matches user preference
+        const desiredMode = modeManager.getDesiredMode(this._numpadMode, this._canUsePriceMode());
 
-        // If user recently chose a mode, respect it
-        if (isRecentManualClick && lastManualMode) {
-            return lastManualMode;
+        // If desired mode differs from current, update it
+        if (this._numpadMode !== desiredMode) {
+            this._numpadMode = desiredMode;
+            setTimeout(() => {
+                this._updateModeVisuals();
+            }, 50);
         }
 
-        // If there's recent user activity, return current mode without changing
-        if (isRecentUserActivity && this._numpadMode) {
-            return this._numpadMode;
-        }
-
-        // Otherwise prefer price mode if available
-        if (this._canUsePriceMode() && !this._numpadMode) {
-            return "price";
-        }
-
-        return this._numpadMode || "quantity";
+        return this._numpadMode;
     },
 
     /**
@@ -379,33 +273,51 @@ patch(PosStore.prototype, {
     _updateModeVisuals() {
         const currentMode = this._numpadMode;
 
-        const qtyBtn = document.querySelector('button[data-mode="quantity"]') ||
-                      document.querySelector('button[value="Qty"]') ||
-                      Array.from(document.querySelectorAll('button')).find(btn =>
-                          btn.textContent.trim().toLowerCase() === 'qty'
-                      );
-
-        const priceBtn = document.querySelector('button[data-mode="price"]') ||
-                        document.querySelector('button[value="Price"]') ||
-                        Array.from(document.querySelectorAll('button')).find(btn =>
-                            btn.textContent.trim().toLowerCase() === 'price'
-                        );
-
+        // Update quantity button
+        const qtyBtn = this._findButton(["quantity", "qty"]);
         if (qtyBtn) {
-            if (currentMode === "quantity") {
-                qtyBtn.classList.add('active');
-            } else {
-                qtyBtn.classList.remove('active');
+            qtyBtn.classList.toggle('active', currentMode === "quantity");
+        }
+
+        // Update price button
+        const priceBtn = this._findButton(["price"]);
+        if (priceBtn) {
+            priceBtn.classList.toggle('active', currentMode === "price");
+        }
+
+        // Update discount button
+        const discountBtn = this._findButton(["discount", "%"]);
+        if (discountBtn) {
+            discountBtn.classList.toggle('active', currentMode === "discount");
+        }
+    },
+
+    /**
+     * Simplified button finder - searches all common patterns
+     */
+    _findButton(textOptions) {
+        // Try data-mode first
+        for (let option of textOptions) {
+            let btn = document.querySelector(`button[data-mode="${option}"]`);
+            if (btn) return btn;
+        }
+
+        // Try value attribute
+        for (let option of textOptions) {
+            let btn = document.querySelector(`button[value="${option}"]`);
+            if (btn) return btn;
+        }
+
+        // Try text content (case insensitive)
+        const allButtons = document.querySelectorAll('button');
+        for (let btn of allButtons) {
+            const text = btn.textContent.trim().toLowerCase();
+            if (textOptions.some(option => text === option.toLowerCase())) {
+                return btn;
             }
         }
 
-        if (priceBtn) {
-            if (currentMode === "price") {
-                priceBtn.classList.add('active');
-            } else {
-                priceBtn.classList.remove('active');
-            }
-        }
+        return null;
     },
 
     /**
@@ -424,242 +336,112 @@ patch(PosStore.prototype, {
     }
 });
 
-// 1. Override ActionPad to detect manual clicks
-patch(ActionpadWidget.prototype, {
+// ============================================================================
+// ACTIONPAD PATCH - SIMPLIFIED BUTTON HANDLING
+// ============================================================================
 
+patch(ActionpadWidget.prototype, {
     setup() {
         super.setup();
 
         onMounted(() => {
-            this._interceptQtyButton();
-            this._interceptPriceButton(); // Also intercept price button
-            this._observeButtonChanges();
-            this._trackAllUserInteractions(); // Track ALL user interactions
-
+            this._setupModeButtons();
             // Initialize safe navigation
             safeNavigationManager.activate();
         });
     },
 
     /**
-     * Watch for DOM changes to catch buttons when they're added
+     * Set up event listeners for all mode buttons
      */
-    _observeButtonChanges() {
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === 1) {
-                            const allButtons = node.querySelectorAll ? node.querySelectorAll('button') : [];
-                            Array.from(allButtons).forEach(btn => {
-                                const text = btn.textContent.trim().toLowerCase();
-                                if ((text === 'qty' || text === 'quantity') && !btn._qtyIntercepted) {
-                                    this._addQtyListener(btn);
-                                }
-                                if (text === 'price' && !btn._priceIntercepted) {
-                                    this._addPriceListener(btn);
-                                }
-                            });
+    _setupModeButtons() {
+        // Setup with retries to handle dynamic button creation
+        const setupAttempts = [0, 100, 500, 1000, 2000];
 
-                            // No need to track order line clicks anymore - we're using a different approach
-                        }
-                    });
-                }
-            });
+        setupAttempts.forEach(delay => {
+            setTimeout(() => {
+                this._attachButtonListeners();
+            }, delay);
+        });
+
+        // Also watch for DOM changes to catch dynamically added buttons
+        const observer = new MutationObserver(() => {
+            this._attachButtonListeners();
         });
 
         observer.observe(document.body, {
             childList: true,
             subtree: true
         });
-
-        this._buttonObserver = observer;
     },
 
     /**
-     * Add click listener to qty button
+     * Attach click listeners to mode buttons - SINGLE CLICK GUARANTEED
      */
-    _addQtyListener(qtyButton) {
-        qtyButton._qtyIntercepted = true;
-
-        qtyButton.addEventListener('click', (e) => {
-            isManualClick = true;
-            manualClickTime = Date.now();
-            lastManualMode = "quantity";
-
-            if (this.pos) {
+    _attachButtonListeners() {
+        // Quantity button
+        const qtyBtn = this.pos._findButton(["quantity", "qty"]);
+        if (qtyBtn && !qtyBtn._modeListenerAttached) {
+            qtyBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                modeManager.setManualMode("quantity");
                 this.pos._numpadMode = "quantity";
-            }
+                this.pos._updateModeVisuals();
+            });
+            qtyBtn._modeListenerAttached = true;
+        }
 
-            setTimeout(() => {
-                isManualClick = false;
-                lastManualMode = null;
-            }, 15000); // Extended to 15 seconds for better user experience
-        });
-    },
-
-    /**
-     * Add click listener to price button
-     */
-    _addPriceListener(priceButton) {
-        priceButton._priceIntercepted = true;
-
-        priceButton.addEventListener('click', (e) => {
-            isManualClick = true;
-            manualClickTime = Date.now();
-            lastManualMode = "price";
-
-            if (this.pos) {
+        // Price button
+        const priceBtn = this.pos._findButton(["price"]);
+        if (priceBtn && !priceBtn._modeListenerAttached) {
+            priceBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                modeManager.setManualMode("price");
                 this.pos._numpadMode = "price";
-            }
-
-            setTimeout(() => {
-                isManualClick = false;
-                lastManualMode = null;
-            }, 15000); // Extended to 15 seconds for better user experience
-        });
-    },
-
-    /**
-     * Find and intercept qty button clicks
-     */
-    _interceptQtyButton() {
-        const searchAttempts = [100, 500, 1000, 2000, 3000];
-
-        searchAttempts.forEach(delay => {
-            setTimeout(() => {
-                this._findAndInterceptQtyButton();
-            }, delay);
-        });
-    },
-
-    /**
-     * Find and intercept price button clicks
-     */
-    _interceptPriceButton() {
-        const searchAttempts = [100, 500, 1000, 2000, 3000];
-
-        searchAttempts.forEach(delay => {
-            setTimeout(() => {
-                this._findAndInterceptPriceButton();
-            }, delay);
-        });
-    },
-
-    /**
-     * Find qty button using multiple search strategies
-     */
-    _findAndInterceptQtyButton() {
-        let qtyButton = document.querySelector('button[data-mode="quantity"]');
-
-        if (!qtyButton) {
-            qtyButton = document.querySelector('button[value="Qty"]');
-        }
-
-        if (!qtyButton) {
-            qtyButton = document.querySelector('button.numpad-qty');
-        }
-
-        if (!qtyButton) {
-            const allButtons = document.querySelectorAll('button');
-            qtyButton = Array.from(allButtons).find(btn => {
-                const text = btn.textContent.trim().toLowerCase();
-                return text === 'qty' || text === 'quantity';
+                this.pos._updateModeVisuals();
             });
+            priceBtn._modeListenerAttached = true;
         }
 
-        if (!qtyButton) {
-            const actionPad = document.querySelector('.actionpad, .action-pad, .numpad-buttons');
-            if (actionPad) {
-                const buttons = actionPad.querySelectorAll('button');
-                qtyButton = Array.from(buttons).find(btn => {
-                    const text = btn.textContent.trim().toLowerCase();
-                    return text === 'qty' || text === 'quantity';
-                });
-            }
-        }
-
-        if (qtyButton && !qtyButton._qtyIntercepted) {
-            this._addQtyListener(qtyButton);
-        }
-    },
-
-    /**
-     * Find and intercept price button
-     */
-    _findAndInterceptPriceButton() {
-        let priceButton = document.querySelector('button[data-mode="price"]');
-
-        if (!priceButton) {
-            priceButton = document.querySelector('button[value="Price"]');
-        }
-
-        if (!priceButton) {
-            const allButtons = document.querySelectorAll('button');
-            priceButton = Array.from(allButtons).find(btn => {
-                const text = btn.textContent.trim().toLowerCase();
-                return text === 'price';
+        // Discount button (% button)
+        const discountBtn = this.pos._findButton(["discount", "%"]);
+        if (discountBtn && !discountBtn._modeListenerAttached) {
+            discountBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                modeManager.setManualMode("discount");
+                this.pos._numpadMode = "discount";
+                this.pos._updateModeVisuals();
             });
+            discountBtn._modeListenerAttached = true;
         }
-
-        if (priceButton && !priceButton._priceIntercepted) {
-            this._addPriceListener(priceButton);
-        }
-    },
-
-    /**
-     * Track ALL user interactions to prevent mode hijacking during any user activity
-     */
-    _trackAllUserInteractions() {
-        // Track clicks on the entire document
-        document.addEventListener('click', () => {
-            lastUserInteractionTime = Date.now();
-        }, { capture: true });
-
-        // Track keyboard activity
-        document.addEventListener('keydown', () => {
-            lastUserInteractionTime = Date.now();
-        }, { capture: true });
-
-        // Track touch events for mobile
-        document.addEventListener('touchstart', () => {
-            lastUserInteractionTime = Date.now();
-        }, { capture: true });
-
-        // Track mouse movement (less aggressive, only when actually moving)
-        let mouseTimer;
-        document.addEventListener('mousemove', () => {
-            clearTimeout(mouseTimer);
-            mouseTimer = setTimeout(() => {
-                lastUserInteractionTime = Date.now();
-            }, 100); // Debounce mouse movement
-        });
     }
 });
 
-// ProductScreen with keyboard shortcuts
-patch(ProductScreen.prototype, {
+// ============================================================================
+// PRODUCT SCREEN - KEEPING EXISTING KEYBOARD SHORTCUTS
+// ============================================================================
 
+patch(ProductScreen.prototype, {
     setup() {
         super.setup();
         this.addKeyboardListener();
     },
 
     /**
-     * Add keyboard shortcuts for quantity changes
+     * Add keyboard shortcuts for quantity changes (keeping existing functionality)
      */
     addKeyboardListener() {
-        // Track last event to prevent duplicates
         let lastEventTime = 0;
         let lastEventKey = '';
 
         const handleArrowKeys = (event) => {
-            // Only process arrow keys and +/-
             if (!['ArrowUp', 'ArrowDown', '+', '-'].includes(event.key)) {
                 return;
             }
 
-            // Debounce: prevent duplicate events within 100ms
             const now = Date.now();
             if (now - lastEventTime < 100 && lastEventKey === event.key) {
                 event.preventDefault();
@@ -670,91 +452,60 @@ patch(ProductScreen.prototype, {
             lastEventTime = now;
             lastEventKey = event.key;
 
-            // Skip if typing in inputs
             if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
                 return;
             }
 
-            // Get the current order and find selected line or use the last line
             const order = this.pos?.get_order?.();
             if (!order) return;
 
-            let targetLine = order.get_selected_orderline();
-
-            // If no line is selected, use the last/newest line
-            if (!targetLine) {
-                const orderlines = order.get_orderlines();
-                if (orderlines && orderlines.length > 0) {
-                    targetLine = orderlines[orderlines.length - 1];
-                    order.select_orderline(targetLine);
-                }
-            }
+            const selectedLine = order.get_selected_orderline();
+            const orderlines = order.get_orderlines();
+            const targetLine = selectedLine || orderlines[orderlines.length - 1];
 
             if (!targetLine) return;
 
-            // Block other handlers
             event.preventDefault();
             event.stopPropagation();
             event.stopImmediatePropagation();
 
-            // Calculate new quantity
             const currentQty = targetLine.get_quantity();
-            let newQty;
+            let newQty = currentQty;
 
-            if (event.key === 'ArrowUp' || event.key === '+') {
-                newQty = currentQty + 1;
-            } else if (event.key === 'ArrowDown' || event.key === '-') {
-                newQty = Math.max(0, currentQty - 1);
+            switch (event.key) {
+                case 'ArrowUp':
+                case '+':
+                    newQty = currentQty + 1;
+                    break;
+                case 'ArrowDown':
+                case '-':
+                    newQty = Math.max(0, currentQty - 1);
+                    break;
             }
 
-            // Set quantity
-            try {
-                targetLine.set_quantity(newQty);
-            } catch (error) {
-                // Silently handle errors
+            if (newQty !== currentQty) {
+                if (newQty === 0) {
+                    order.removeOrderline(targetLine);
+                } else {
+                    targetLine.set_quantity(newQty);
+                }
             }
 
             return false;
         };
 
-        document.addEventListener('keydown', handleArrowKeys, {
-            capture: true,
-            passive: false
-        });
-
-        setTimeout(() => {
-            this._overrideOdooNumpadHandlers();
-        }, 1000);
-    },
-
-    /**
-     * Override Odoo's numpad-specific keyboard handling
-     */
-    _overrideOdooNumpadHandlers() {
-        const numpadElement = document.querySelector('.numpad, .actionpad');
-        if (numpadElement) {
-            const originalKeydown = numpadElement.onkeydown;
-            const originalKeyup = numpadElement.onkeyup;
-
-            numpadElement.onkeydown = (event) => {
-                if (['ArrowUp', 'ArrowDown', '+', '-'].includes(event.key)) {
-                    return false;
-                }
-                if (originalKeydown) {
-                    return originalKeydown.call(numpadElement, event);
-                }
-            };
-
-            numpadElement.onkeyup = (event) => {
-                if (['ArrowUp', 'ArrowDown', '+', '-'].includes(event.key)) {
-                    return false;
-                }
-                if (originalKeyup) {
-                    return originalKeyup.call(numpadElement, event);
-                }
-            };
-        }
+        document.addEventListener('keydown', handleArrowKeys, { capture: true, passive: false });
     }
 });
 
-console.log('Kuwait Retail POS: Navigation + Price Focus loaded');
+// Optional: Reset mode selection when starting a new order
+patch(PosStore.prototype, {
+    add_new_order() {
+        const result = super.add_new_order();
+
+        // Uncomment the next line if you want mode to reset for each new order
+        // modeManager.reset();
+
+        return result;
+    }
+});
