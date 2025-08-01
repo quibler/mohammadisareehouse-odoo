@@ -505,15 +505,6 @@ patch(ProductScreen.prototype, {
     },
 
     /**
-     * Check if we're currently on the ProductScreen (order screen)
-     */
-    isOnOrderScreen() {
-        // Check if we're on the product screen (order screen)
-        const productScreen = document.querySelector('.product-screen:not(.oe_hidden)');
-        return productScreen && productScreen.offsetParent !== null;
-    },
-
-    /**
      * Add keyboard shortcuts for quantity changes - ONLY ON ORDER SCREEN
      */
     addKeyboardListener() {
@@ -522,7 +513,8 @@ patch(ProductScreen.prototype, {
 
         const handleArrowKeys = (event) => {
             // CRITICAL FIX: Only handle arrow keys on ProductScreen (order screen)
-            if (!this.isOnOrderScreen()) {
+            const productScreen = document.querySelector('.product-screen:not(.oe_hidden)');
+            if (!productScreen || productScreen.offsetParent === null) {
                 return;
             }
 

@@ -41,7 +41,8 @@ patch(Orderline.prototype, {
      */
     handleKeyboardInput(event) {
         // CRITICAL FIX: Only work on ProductScreen (order screen), not payment page
-        if (!this.isOnOrderScreen()) {
+        const productScreen = document.querySelector('.product-screen:not(.oe_hidden)');
+        if (!productScreen || productScreen.offsetParent === null) {
             return;
         }
 

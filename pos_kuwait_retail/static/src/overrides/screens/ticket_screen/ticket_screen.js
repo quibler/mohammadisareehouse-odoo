@@ -43,8 +43,6 @@ patch(TicketScreen.prototype, {
         const searchInfo = this.searchDetails || this.state?.search || this.search || {};
         const searchBarConfig = this.getSearchBarConfig ? this.getSearchBarConfig() : {};
 
-        console.log('Search info:', searchInfo);
-
         // Try to find search text and field from various sources - FIXED: use searchTerm instead of searchText
         let searchText = '';
         let fieldName = '';

@@ -12,8 +12,11 @@ patch(PosOrder.prototype, {
 
     export_for_printing() {
         const order = super.export_for_printing(...arguments);
+        // Add sales person info
         order.sales_person = this.sales_person_id ? this.sales_person_id.name : false;
-        order.pos_config_name = this.pos.config.name;
+
+        // Add POS config name for receipt printing
+        order.pos_config_name = this.config_id ? this.config_id.name : false;
         return order;
     },
 });
