@@ -3,6 +3,7 @@
 import { PosStore } from "@point_of_sale/app/store/pos_store";
 import { ProductScreen } from "@point_of_sale/app/screens/product_screen/product_screen";
 import { ActionpadWidget } from "@point_of_sale/app/screens/product_screen/action_pad/action_pad";
+import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt_screen";
 import { patch } from "@web/core/utils/patch";
 import { onMounted } from "@odoo/owl";
 
@@ -186,12 +187,14 @@ class SafeNavigationManager {
     }
 
     printReceipt() {
-        // Look for print button
+        // Look for specific print receipt buttons first (avoid generic .button.next)
         const printSelectors = [
-            '.button.next',
             '.print-button',
             '.button.print',
-            '[data-action="print"]'
+            '.button.print-receipt',
+            '[data-action="print"]',
+            '.print-receipt-button',
+            '.receipt-print'
         ];
 
         for (const selector of printSelectors) {
@@ -202,14 +205,28 @@ class SafeNavigationManager {
             }
         }
 
-        // Fallback: look for buttons with print text
+        // Look for buttons with "print" text but prioritize "full receipt" over generic print
         const buttons = document.querySelectorAll('button, .button');
+        let printButton = null;
+        let fullReceiptButton = null;
+        
         for (const button of buttons) {
             const text = button.textContent?.toLowerCase() || '';
-            if (text.includes('print') && !text.includes('reprint')) {
-                button.click();
-                return true;
+            if (text.includes('print full receipt') || text.includes('full receipt')) {
+                fullReceiptButton = button;
+                break; // Prioritize full receipt button
+            } else if (text.includes('print') && !text.includes('reprint') && !text.includes('new order')) {
+                printButton = button;
             }
+        }
+
+        // Click full receipt button if found, otherwise click any print button
+        if (fullReceiptButton) {
+            fullReceiptButton.click();
+            return true;
+        } else if (printButton) {
+            printButton.click();
+            return true;
         }
 
         return false;
@@ -575,6 +592,74 @@ patch(ProductScreen.prototype, {
         };
 
         document.addEventListener('keydown', handleArrowKeys, { capture: true, passive: false });
+    }
+});
+
+// ============================================================================
+// RECEIPT SCREEN - AUTO PRINT FUNCTIONALITY
+// ============================================================================
+
+patch(ReceiptScreen.prototype, {
+    setup() {
+        super.setup();
+        
+        onMounted(() => {
+            // Auto-print receipt when screen is mounted/rendered
+            this.autoPrintReceipt();
+        });
+    },
+
+    /**
+     * Auto-print receipt when receipt screen is rendered
+     */
+    autoPrintReceipt() {
+        // Wait a brief moment for the screen to fully render
+        setTimeout(() => {
+            // Use the same print logic as the navigation manager
+            const printSelectors = [
+                '.print-button',
+                '.button.print',
+                '.button.print-receipt',
+                '[data-action="print"]',
+                '.print-receipt-button',
+                '.receipt-print'
+            ];
+
+            for (const selector of printSelectors) {
+                const button = document.querySelector(selector);
+                if (button && button.offsetParent !== null) {
+                    console.log(`Auto-printing receipt using selector: ${selector}`);
+                    button.click();
+                    return;
+                }
+            }
+
+            // Fallback: look for buttons with "print" text, prioritize "full receipt"
+            const buttons = document.querySelectorAll('button, .button');
+            let printButton = null;
+            let fullReceiptButton = null;
+            
+            for (const button of buttons) {
+                const text = button.textContent?.toLowerCase() || '';
+                if (text.includes('print full receipt') || text.includes('full receipt')) {
+                    fullReceiptButton = button;
+                    break; // Prioritize full receipt button
+                } else if (text.includes('print') && !text.includes('reprint') && !text.includes('new order')) {
+                    printButton = button;
+                }
+            }
+
+            // Click full receipt button if found, otherwise click any print button
+            if (fullReceiptButton) {
+                console.log('Auto-printing receipt using full receipt button');
+                fullReceiptButton.click();
+            } else if (printButton) {
+                console.log('Auto-printing receipt using print button');
+                printButton.click();
+            } else {
+                console.log('No print button found for auto-printing');
+            }
+        }, 500); // 500ms delay to ensure screen is fully rendered
     }
 });
 
