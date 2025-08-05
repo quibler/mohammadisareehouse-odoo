@@ -63,9 +63,9 @@
                     </div>
 
                     <!-- Receipt -->
-<!--                    <div t-if="props.data.name">-->
-<!--                        Receipt: <t t-esc="props.data.name" />-->
-<!--                    </div>-->
+                    <!-- <div t-if="props.data.name">
+                        Receipt: <t t-esc="props.data.name" />
+                    </div> -->
 
                     <!-- Date -->
                     <div t-if="props.data.date">
@@ -123,19 +123,40 @@
             </div>
         </xpath>
 
-        <!-- Style the total section with larger font -->
-        <xpath expr="//div[contains(@class, 'pos-receipt-amount')]" position="attributes">
+        <!-- Style ONLY the TOTAL section with larger font (exclude CHANGE) -->
+        <xpath expr="//div[contains(@class, 'pos-receipt-amount') and contains(@class, 'receipt-total')]" position="attributes">
             <attribute name="style">font-size: 14px; font-weight: bold;</attribute>
         </xpath>
 
-        <!-- Also target tax totals and payment lines for consistency -->
+        <!-- Style tax totals for consistency -->
         <xpath expr="//div[contains(@class, 'pos-receipt-taxes')]" position="attributes">
             <attribute name="style">font-size: 14px;</attribute>
         </xpath>
 
-        <!-- Style payment lines with smaller font size -->
+        <!-- Style payment lines: 13px -->
         <xpath expr="//div[contains(@class, 'paymentlines')]" position="attributes">
             <attribute name="style">font-size: 13px;</attribute>
+        </xpath>
+
+        <!-- Style CHANGE section: 12px (smaller than Cash) -->
+        <xpath expr="//div[contains(@class, 'receipt-change')]" position="attributes">
+            <attribute name="style">font-size: 12px; font-weight: 600;</attribute>
+        </xpath>
+
+        <!-- ADD CUSTOM CHANGE SECTION after paymentlines -->
+        <xpath expr="//div[contains(@class, 'paymentlines')]" position="after">
+            <!-- Custom CHANGE section with 12px font size -->
+            <t t-if="props.data.change">
+                <div class="pos-receipt-amount custom-change-section" style="font-size: 12px; font-weight: 600;">
+                    CHANGE
+                    <span t-esc="env.pos.format_currency(props.data.change)" class="pos-receipt-right-align"/>
+                </div>
+            </t>
+        </xpath>
+
+        <!-- HIDE/REMOVE the original CHANGE section -->
+        <xpath expr="//div[contains(@class, 'pos-receipt-amount') and text()[normalize-space()='CHANGE']]" position="replace">
+            <!-- Remove original CHANGE to avoid duplicates -->
         </xpath>
 
         <!-- Remove the empty pos-receipt-order-data div that serves as placeholder -->
