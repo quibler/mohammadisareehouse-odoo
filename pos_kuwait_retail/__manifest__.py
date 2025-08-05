@@ -48,11 +48,17 @@
         - Keyboard power-user support
         - Touch-friendly mobile interface
 
-        Perfect for high-volume clothing stores, boutiques, and retail shops in Kuwait! 🇰🇼⚡
+        Perfect for high-volume clothing stores, boutiques, and retail shops in Kuwait!
+
+        🏷️ LABEL PRINTING FEATURES:
+        • Custom price input for labels - override default pricing
+        • All standard layout options restored (2x7, 4x7, 4x12, etc.)
+        • Smart quantity calculation from vendor bills
+        🇰🇼⚡
         """,
     'author': 'Ashwini Kumar',
     'category': 'Point Of Sale',
-    'version': '18.0.4.0.0',  # Major version bump for super fast features
+    'version': '18.0.5.0.0',  # Version bump for custom price feature
     'depends': [
         'point_of_sale',
         'pos_hr',
@@ -67,6 +73,7 @@
 
         # Product & barcode management
         'views/product_label_layout_views.xml',
+        'views/product_label_templates.xml',  # NEW: Custom price templates
         'data/product_label_reports.xml',
         'data/dymo_paper_format.xml',
 
@@ -82,6 +89,9 @@
     'assets': {
         'point_of_sale._assets_pos': [
             'pos_kuwait_retail/static/src/**/*',
+        ],
+        'web.assets_common': [
+            'pos_kuwait_retail/static/src/css/label_print_fix.css',  # Fix faded label fonts
         ],
     },
     'license': 'Other proprietary',

@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Override the product label layout form view -->
+        <!-- REMOVED: Override that was hiding the layout options -->
+        <!-- The original customization below has been commented out to restore all default layouts -->
+
+        <!--
         <record id="product_label_layout_form_view" model="ir.ui.view">
             <field name="name">product.label.layout.form.inherit</field>
             <field name="model">product.label.layout</field>
@@ -11,6 +14,19 @@
                     <field name="print_format" widget="radio" required="1">
                         <option value="dymo">Dymo</option>
                     </field>
+                </field>
+            </field>
+        </record>
+        -->
+
+        <!-- ADD: Simple custom price input field to the wizard -->
+        <record id="product_label_layout_form_view_custom_price" model="ir.ui.view">
+            <field name="name">product.label.layout.form.inherit.custom.price</field>
+            <field name="model">product.label.layout</field>
+            <field name="inherit_id" ref="product.product_label_layout_form"/>
+            <field name="arch" type="xml">
+                <field name="custom_quantity" position="after">
+                    <field name="custom_price" placeholder="Enter custom price (optional)"/>
                 </field>
             </field>
         </record>

@@ -4,8 +4,12 @@ from odoo import models, fields, api
 class ProductLabelLayout(models.TransientModel):
     _inherit = 'product.label.layout'
 
+    # REMOVED: Custom print format restriction that was hiding layout options
+    # The field override below has been commented out to restore all default layouts
+
+    """
     def _get_print_format_selection(self):
-        """Return only the standard Dymo option"""
+        # Return only the standard Dymo option
         return [
             ('dymo', 'Dymo'),
         ]
@@ -17,14 +21,25 @@ class ProductLabelLayout(models.TransientModel):
         default='dymo',
         required=True
     )
+    """
+
+    # ADD: Simple custom price input field
+    custom_price = fields.Float(
+        'Custom Price',
+        digits='Product Price',
+        help="Optional custom price for labels. Leave empty to use product's default price."
+    )
 
     @api.model
     def default_get(self, fields_list):
-        """Override to set default quantity from latest vendor bill"""
+        """Override to set default quantity from latest vendor bill and use standard default format"""
         import logging
         _logger = logging.getLogger(__name__)
 
         res = super().default_get(fields_list)
+
+        # Let the standard default format (2x7xprice) be used instead of forcing dymo
+        # No need to override print_format default here
 
         # Get the products from context
         product_tmpl_ids = self.env.context.get('default_product_tmpl_ids', [])
@@ -79,32 +94,41 @@ class ProductLabelLayout(models.TransientModel):
 
         total_quantity = 0
 
-        for product in products:
-            _logger.info(f"--- Processing product: {product.name} (ID: {product.id}) ---")
+        try:
+            # Get all purchase order lines for these products
+            purchase_lines = self.env['purchase.order.line'].search([
+                ('product_id', 'in', products.ids),
+                ('order_id.state', 'in', ['purchase', 'done']),
+                ('order_id.invoice_status', 'in', ['invoiced', 'to invoice'])
+            ], order='order_id.date_order desc')
 
-            # Search for posted vendor bills first, then get lines
-            posted_moves = self.env['account.move'].search([
-                ('move_type', '=', 'in_invoice'),
-                ('state', '=', 'posted'),
-            ], order='date desc, id desc')
+            _logger.info(f"Found {len(purchase_lines)} purchase lines")
 
-            _logger.info(f"Found {len(posted_moves)} posted vendor bills")
+            # Group by product and get latest bill line for each
+            processed_products = set()
 
-            # Find the latest bill containing this product
-            latest_quantity = 0
-            for move in posted_moves:
-                move_lines = move.invoice_line_ids.filtered(
-                    lambda l: l.product_id.id == product.id and l.quantity > 0
-                )
-                if move_lines:
-                    latest_quantity = int(move_lines[0].quantity)
-                    _logger.info(f"SUCCESS: Found {product.name} in bill {move.name}: qty={latest_quantity}")
-                    break
+            for line in purchase_lines:
+                if line.product_id.id not in processed_products:
+                    quantity = int(line.product_qty) if line.product_qty else 0
+                    total_quantity += quantity
+                    processed_products.add(line.product_id.id)
+                    _logger.info(f"Product {line.product_id.name}: {quantity} units")
 
-            if latest_quantity > 0:
-                total_quantity += latest_quantity
-            else:
-                _logger.info(f"WARNING: No posted bill lines found for {product.name}")
+            _logger.info(f"Total calculated quantity: {total_quantity}")
 
-        _logger.info(f"TOTAL QUANTITY: {total_quantity}")
+        except Exception as e:
+            _logger.error(f"Error calculating quantity: {e}")
+            return 0
+
         return total_quantity
+
+    def _prepare_report_data(self):
+        """Override to include custom price in report data"""
+        result = super()._prepare_report_data()
+        xml_id, data = result
+
+        # Add custom price to the data
+        if self.custom_price:
+            data['custom_price'] = self.custom_price
+
+        return xml_id, data

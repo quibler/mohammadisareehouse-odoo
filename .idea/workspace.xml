@@ -4,11 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="fixed shop not visible on receipt">
+    <list default="true" id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="cleanup">
+      <change afterPath="$PROJECT_DIR$/pos_kuwait_retail/views/product_label_templates.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/models/pos_store.js" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/static/src/overrides/models/pos_store.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/__manifest__.py" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/__manifest__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/models/label_layout.py" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/models/label_layout.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pos_kuwait_retail/views/product_label_layout_views.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pos_kuwait_retail/views/product_label_layout_views.xml" afterDir="false" />
     </list>
-    <list id="2ce76ac7-019d-4eeb-8373-e6687b8566a6" name="local" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -80,27 +82,11 @@
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="c084dccb-0a36-4c4e-9982-ca8eca936267" name="Changes" comment="" />
-      <changelist id="2ce76ac7-019d-4eeb-8373-e6687b8566a6" name="local" comment="" />
+      <changelist id="" name="local" comment="" />
       <created>1752737977975</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1752737977975</updated>
-    </task>
-    <task id="LOCAL-00004" summary="rename and overhaul auto_stock_update to vendor_bill_enhancement">
-      <option name="closed" value="true" />
-      <created>1752742749036</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1752742749036</updated>
-    </task>
-    <task id="LOCAL-00005" summary="added one-click delete button for order lines in pos along with delete key press">
-      <option name="closed" value="true" />
-      <created>1752748043749</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1752748043749</updated>
     </task>
     <task id="LOCAL-00006" summary="new product defaults - available in pos, track inventory, sale_price=0">
       <option name="closed" value="true" />
@@ -478,7 +464,23 @@
       <option name="project" value="LOCAL" />
       <updated>1754059179345</updated>
     </task>
-    <option name="localTasksCounter" value="53" />
+    <task id="LOCAL-00053" summary="fixed change font size issue and boldened font for better print">
+      <option name="closed" value="true" />
+      <created>1754388521631</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1754388521632</updated>
+    </task>
+    <task id="LOCAL-00054" summary="cleanup">
+      <option name="closed" value="true" />
+      <created>1754389231249</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1754389231249</updated>
+    </task>
+    <option name="localTasksCounter" value="55" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -493,8 +495,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="brought back exchnge currency module and removed the feature from vendor bill enhancements" />
-    <MESSAGE value="- removed opening control customizations&#10;- closing register now auto posts all cash out for &quot;cash collection&quot;" />
     <MESSAGE value="meaningful stock move refernece linking to bill" />
     <MESSAGE value="cleanup dependencies and one-click installer for all modules" />
     <MESSAGE value="auto stock moves from vendor bill post are now idempotent" />
@@ -518,6 +518,8 @@
     <MESSAGE value="receipt fix - brought back shop config name to left aligned section" />
     <MESSAGE value="prodcut info error fix" />
     <MESSAGE value="fixed shop not visible on receipt" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixed shop not visible on receipt" />
+    <MESSAGE value="fixed change font size issue and boldened font for better print" />
+    <MESSAGE value="cleanup" />
+    <option name="LAST_COMMIT_MESSAGE" value="cleanup" />
   </component>
 </project>
