@@ -58,7 +58,7 @@
         """,
     'author': 'Ashwini Kumar',
     'category': 'Point Of Sale',
-    'version': '18.0.5.0.0',  # Version bump for custom price feature
+    'version': '18.0.5.1.0',  # Version bump to fix XPath receipt template errors
     'depends': [
         'point_of_sale',
         'pos_hr',

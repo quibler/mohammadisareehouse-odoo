@@ -159,19 +159,9 @@
             <!-- Remove original CHANGE to avoid duplicates -->
         </xpath>
 
-        <!-- Remove the empty pos-receipt-order-data div that serves as placeholder -->
-        <xpath expr="//div[@class='pos-receipt-order-data'][not(node())]" position="replace">
-            <!-- Remove empty order data placeholder -->
-        </xpath>
-
         <!-- Remove shipping date section completely -->
         <xpath expr="//t[@t-if='props.data.shippingDate']" position="replace">
             <!-- Remove shipping date section -->
-        </xpath>
-
-        <!-- Remove the BR tag before the final pos-receipt-order-data -->
-        <xpath expr="//br[following-sibling::div[@class='pos-receipt-order-data']]" position="replace">
-            <!-- Remove BR before order data -->
         </xpath>
 
         <!-- Remove the final pos-receipt-order-data section with Powered by Odoo -->
@@ -196,9 +186,9 @@
             <attribute name="style">white-space:pre-line; font-size: 13px;</attribute>
         </xpath>
 
-        <!-- Remove the after-footer div completely since we're not using it anymore -->
-        <xpath expr="//div[@class='after-footer']" position="replace">
-            <!-- Remove after-footer section completely -->
+        <!-- Hide the after-footer div instead of removing it -->
+        <xpath expr="//div[@class='after-footer']" position="attributes">
+            <attribute name="style">display: none;</attribute>
         </xpath>
 
     </t>
