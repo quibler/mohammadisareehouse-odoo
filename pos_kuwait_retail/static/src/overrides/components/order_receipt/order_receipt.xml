@@ -174,7 +174,7 @@
             <div class="pos-receipt-brand-qr" style="text-align: center; margin-top: 10px; margin-bottom: 10px;">
                 <img src="/pos_kuwait_retail/static/src/img/brand_qr_code.png"
                      alt="Brand QR Code"
-                     style="width: 60px; height: 60px; display: inline-block;"/>
+                     style="width: 100px; height: 100px; display: inline-block;"/>
                 <div style="font-size: 13px; margin-top: 3px;">
                     Scan to visit our brand page
                 </div>
