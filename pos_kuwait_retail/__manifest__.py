@@ -71,6 +71,7 @@
 
         # Product & barcode management - ONLY custom price field
         'views/product_label_layout_views.xml',
+        'views/product_label_templates.xml',
 
         # Sales person & order management
         'views/pos_order_views.xml',

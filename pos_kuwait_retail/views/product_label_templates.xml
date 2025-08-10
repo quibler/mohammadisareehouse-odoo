@@ -1,15 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Override Dymo template to add custom price support -->
-        <template id="report_simple_label_dymo_custom_price" inherit_id="product.report_simple_label_dymo">
-            <!-- Add price after the barcode when custom price is provided -->
-            <xpath expr="//div[@class='o_label_name']" position="after">
-                <t t-if="custom_price">
-                    <div class="text-center" style="margin-top: 2px; font-size: 1.2em;">
-                        <strong t-out="custom_price" t-options="{'widget': 'monetary', 'display_currency': product.currency_id, 'label_price': True}"/>
+        <!-- Complete override of Dymo template to hide barcode text and make all text bold -->
+        <template id="report_simple_label_dymo_kuwait" inherit_id="product.report_simple_label_dymo">
+            <!-- Replace the entire content with customized version -->
+            <xpath expr="//div[@class='o_label_sheet o_label_dymo']" position="replace">
+                <div class="o_label_sheet o_label_dymo" t-att-style="padding_page">
+                    <div class="o_label_full" t-att-style="table_style">
+                        <div class= "text-start o_label_small_barcode">
+                            <t t-if="barcode">
+                                <!-- Keep barcode image with full width and increased height -->
+                                <div t-out="barcode" style="padding:0;width:100%;" t-options="{'widget': 'barcode', 'quiet': 0, 'symbology': 'auto', 'img_style': 'width:100%;height:10mm'}"/>
+                                <!-- REMOVED: The barcode text div that was originally here -->
+                            </t>
+                        </div>
+                        <!-- Make product name bold with larger font -->
+                        <div class="o_label_name" style="line-height: 100%;background-color: transparent;font-size: 1.2em;">
+                            <strong t-if="product.is_product_variant" t-field="product.display_name"/>
+                            <strong t-else="" t-field="product.name"/>
+                        </div>
+                        <!-- Make product code bold with larger font -->
+                        <div class="o_label_left_column">
+                            <strong class="text-nowrap" t-field="product.default_code" style="font-size: 1.5em;"/>
+                        </div>
+                        <!-- Keep price bold with larger font and add custom price support -->
+                        <div class="text-end" style="padding: 0 1px 0 4px;">
+                            <t t-if="custom_price">
+                                <strong class="o_label_price_small" t-out="custom_price" style="font-size: 1.3em;"
+                                        t-options="{'widget': 'monetary', 'display_currency': product.currency_id, 'label_price': True}"/>
+                            </t>
+                            <t t-else="">
+                                <strong class="o_label_price_small" t-out="pricelist._get_product_price(product, 1, pricelist.currency_id or product.currency_id)" style="font-size: 1.3em;"
+                                        t-options="{'widget': 'monetary', 'display_currency': pricelist.currency_id or product.currency_id, 'label_price': True}"/>
+                            </t>
+                        </div>
                     </div>
-                </t>
+                </div>
             </xpath>
         </template>
     </data>
