@@ -7,7 +7,6 @@
         🏪 RETAIL OPERATIONS
         • Auto barcode generation from product names (uppercase, 25 chars max)
         • Default product settings optimized for retail (POS available, consumable type)
-        • Simplified label printing with Dymo support
         • Smart product cost updates from vendor bills
 
         👤 SALES MANAGEMENT  
@@ -52,13 +51,12 @@
 
         🏷️ LABEL PRINTING FEATURES:
         • Custom price input for labels - override default pricing
-        • All standard layout options restored (2x7, 4x7, 4x12, etc.)
         • Smart quantity calculation from vendor bills
         🇰🇼⚡
         """,
     'author': 'Ashwini Kumar',
     'category': 'Point Of Sale',
-    'version': '18.0.5.1.1',  # Version bump to fix XPath receipt template errors
+    'version': '18.0.5.1.2',  # Version bump to fix XPath receipt template errors
     'depends': [
         'point_of_sale',
         'pos_hr',
@@ -71,11 +69,8 @@
         'views/pos_config_views.xml',
         'views/res_config_settings_views.xml',
 
-        # Product & barcode management
+        # Product & barcode management - ONLY custom price field
         'views/product_label_layout_views.xml',
-        'views/product_label_templates.xml',  # NEW: Custom price templates
-        'data/product_label_reports.xml',
-        'data/dymo_paper_format.xml',
 
         # Sales person & order management
         'views/pos_order_views.xml',
@@ -89,9 +84,6 @@
     'assets': {
         'point_of_sale._assets_pos': [
             'pos_kuwait_retail/static/src/**/*',
-        ],
-        'web.assets_common': [
-            'pos_kuwait_retail/static/src/css/label_print_fix.css',  # Fix faded label fonts
         ],
     },
     'license': 'Other proprietary',

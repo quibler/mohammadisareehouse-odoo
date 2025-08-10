@@ -24,6 +24,7 @@ wheels/
 .installed.cfg
 *.egg
 /.claude/
+.idea
 
 # Docker files (local development only)
 docker-compose.yml

@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- REMOVED: Override that was hiding the layout options -->
-        <!-- The original customization below has been commented out to restore all default layouts -->
-
-        <!--
+        <!-- ONLY add the custom price input field to the wizard UI -->
         <record id="product_label_layout_form_view" model="ir.ui.view">
             <field name="name">product.label.layout.form.inherit</field>
             <field name="model">product.label.layout</field>
@@ -17,7 +14,6 @@
                 </field>
             </field>
         </record>
-        -->
 
         <!-- ADD: Simple custom price input field to the wizard -->
         <record id="product_label_layout_form_view_custom_price" model="ir.ui.view">

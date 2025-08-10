@@ -1,53 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Simple template overrides to use custom price when provided -->
-
-        <!-- Override 2x7 template for custom price -->
-        <template id="report_simple_label2x7_custom_price" inherit_id="product.report_simple_label2x7">
-            <xpath expr="//strong[@class='o_label_price']" position="replace">
-                <strong class="o_label_price">
-                    <t t-if="custom_price">
-                        <t t-out="custom_price" t-options="{'widget': 'monetary', 'display_currency': product.currency_id, 'label_price': True}"/>
-                    </t>
-                    <t t-else="">
-                        <t t-out="pricelist._get_product_price(product, 1, pricelist.currency_id or product.currency_id)"
-                           t-options="{'widget': 'monetary', 'display_currency': pricelist.currency_id or product.currency_id, 'label_price': True}"/>
-                    </t>
-                </strong>
-            </xpath>
-        </template>
-
-        <!-- Override 4x7 template for custom price -->
-        <template id="report_simple_label4x7_custom_price" inherit_id="product.report_simple_label4x7">
-            <xpath expr="//div[@class='text-end']//strong[@class='o_label_price_medium']" position="replace">
-                <strong class="o_label_price_medium">
-                    <t t-if="custom_price">
-                        <t t-out="custom_price" t-options="{'widget': 'monetary', 'display_currency': product.currency_id, 'label_price': True}"/>
-                    </t>
-                    <t t-else="">
-                        <t t-out="pricelist._get_product_price(product, 1, pricelist.currency_id or product.currency_id)"
-                           t-options="{'widget': 'monetary', 'display_currency': pricelist.currency_id or product.currency_id, 'label_price': True}"/>
-                    </t>
-                </strong>
-            </xpath>
-        </template>
-
-        <!-- Override 4x12 template for custom price -->
-        <template id="report_simple_label4x12_custom_price" inherit_id="product.report_simple_label4x12">
-            <xpath expr="//div[@class='o_label_price_medium text-end']//strong" position="replace">
-                <strong>
-                    <t t-if="custom_price">
-                        <t t-out="custom_price" t-options="{'widget': 'monetary', 'display_currency': product.currency_id, 'label_price': True}"/>
-                    </t>
-                    <t t-else="">
-                        <t t-out="pricelist._get_product_price(product, 1, pricelist.currency_id or product.currency_id)"
-                           t-options="{'widget': 'monetary', 'display_currency': pricelist.currency_id or product.currency_id, 'label_price': True}"/>
-                    </t>
-                </strong>
-            </xpath>
-        </template>
-
         <!-- Override Dymo template to add custom price support -->
         <template id="report_simple_label_dymo_custom_price" inherit_id="product.report_simple_label_dymo">
             <!-- Add price after the barcode when custom price is provided -->
@@ -59,6 +12,5 @@
                 </t>
             </xpath>
         </template>
-
     </data>
 </odoo>
