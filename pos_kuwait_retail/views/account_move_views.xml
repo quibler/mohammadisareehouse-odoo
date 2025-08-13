@@ -1,5 +1,7 @@
 <odoo>
     <data>
+        <!-- Commented out the list view inheritance that adds pos_sales_person_id field -->
+        <!--
         <record id="invoice_tree_inherit_sales_person" model="ir.ui.view">
             <field name="name">account.invoice.tree.sales_person.inherit</field>
             <field name="model">account.move</field>
@@ -10,7 +12,9 @@
                 </field>
             </field>
         </record>
+        -->
 
+        <!-- Keep the form view inheritance for pos_sales_person_id field (if needed) -->
         <record id="invoice_form_inherit_sales_person" model="ir.ui.view">
             <field name="name">account.invoice.form.sales_person.inherit</field>
             <field name="model">account.move</field>

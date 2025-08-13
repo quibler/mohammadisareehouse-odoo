@@ -14,6 +14,13 @@
             <field name="amount_residual_signed" position="attributes">
                 <attribute name="optional">show</attribute>
             </field>
+            <!-- Add total quantity column for vendor bills -->
+            <field name="amount_total_in_currency_signed" position="after">
+                <field name="total_product_quantity"
+                       string="Total Qty"
+                       optional="show"
+                       invisible="move_type != 'in_invoice'"/>
+            </field>
         </field>
     </record>
 
@@ -39,30 +46,29 @@
             <xpath expr="//field[@name='line_ids']/list/field[@name='tax_ids']" position="attributes">
                 <attribute name="optional">hide</attribute>
             </xpath>
-        </field>
-    </record>
 
-    <record id="view_move_form_inherit_auto_stock" model="ir.ui.view">
-        <field name="name">account.move.form.inherit.auto.stock</field>
-        <field name="model">account.move</field>
-        <field name="inherit_id" ref="account.view_move_form"/>
-        <field name="arch" type="xml">
-            <!-- Auto Stock Picking Button -->
-            <xpath expr="//div[@name='button_box']" position="inside">
-                <button type="object"
-                        name="action_view_auto_stock_picking"
-                        class="oe_stat_button"
-                        icon="fa-truck"
-                        invisible="auto_stock_picking_count == 0">
-                    <field name="auto_stock_picking_count" widget="statinfo" string="Stock Picking"/>
-                </button>
+            <!-- Add line numbers - only shown after save -->
+            <xpath expr="//field[@name='invoice_line_ids']/list/field[@name='product_id']" position="before">
+                <field name="line_number"
+                       string="#"
+                       width="40px"
+                       readonly="1"
+                       column_invisible="parent.move_type != 'in_invoice'"
+                       invisible="display_type != 'product' or line_number == 0"/>
             </xpath>
 
-            <!-- Hidden fields -->
-            <xpath expr="//field[@name='payment_reference']" position="after">
-                <field name="auto_stock_picking_id" invisible="1"/>
+            <!-- Add total quantity display after invoice lines -->
+            <xpath expr="//field[@name='invoice_line_ids']" position="after">
+                <div class="row" invisible="move_type != 'in_invoice'">
+                    <div class="col-12">
+                        <div class="alert alert-info" role="alert" style="margin-top: 10px; padding: 10px;">
+                            <strong>📦 Total Product Quantity: </strong>
+                            <field name="total_product_quantity" nolabel="1" readonly="1" class="oe_inline"/>
+                            <span> units</span>
+                        </div>
+                    </div>
+                </div>
             </xpath>
-
         </field>
     </record>
 

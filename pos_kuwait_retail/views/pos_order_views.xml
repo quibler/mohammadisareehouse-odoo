@@ -6,8 +6,17 @@
             <field name="model">pos.order</field>
             <field name="inherit_id" ref="point_of_sale.view_pos_order_tree"/>
             <field name="arch" type="xml">
+                <!-- Add sales person field before amount_total -->
                 <field name="amount_total" position="before">
                     <field name="sales_person_id"/>
+                </field>
+                <!-- Hide the cashier/employee field -->
+                <field name="employee_id" position="attributes">
+                    <attribute name="column_invisible">True</attribute>
+                </field>
+                <!-- Show the tracking number field -->
+                <field name="tracking_number" position="attributes">
+                    <attribute name="optional">show</attribute>
                 </field>
             </field>
         </record>

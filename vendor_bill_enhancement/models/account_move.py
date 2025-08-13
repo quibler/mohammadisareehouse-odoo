@@ -6,6 +6,39 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
+class AccountMoveLine(models.Model):
+    _inherit = 'account.move.line'
+
+    # Simple line number - only shown after save
+    line_number = fields.Integer(
+        string='Line #',
+        compute='_compute_line_number',
+        help="Sequential line number for invoice lines"
+    )
+
+    def _compute_line_number(self):
+        """Simple line numbering - only for saved records"""
+        for line in self:
+            # Only show numbers if the move is saved (has ID) and is a product line
+            if (line.move_id and line.move_id.id and
+                    line.display_type == 'product'):
+
+                # Get all saved product lines, ordered by sequence
+                product_lines = line.move_id.invoice_line_ids.filtered(
+                    lambda l: l.display_type == 'product' and l.id
+                ).sorted('sequence')
+
+                # Find position and set number
+                for index, product_line in enumerate(product_lines, 1):
+                    if product_line.id == line.id:
+                        line.line_number = index
+                        break
+                else:
+                    line.line_number = 0
+            else:
+                line.line_number = 0
+
+
 class AccountMove(models.Model):
     _inherit = 'account.move'
 
@@ -32,10 +65,30 @@ class AccountMove(models.Model):
         help="Indicates if automatic stock moves have been created for this bill"
     )
 
+    # Total quantity of all products in the bill
+    total_product_quantity = fields.Float(
+        string='Total Product Quantity',
+        compute='_compute_total_product_quantity',
+        help="Total quantity of all products in this vendor bill"
+    )
+
     @api.depends('auto_stock_picking_id')
     def _compute_auto_stock_picking_count(self):
         for record in self:
             record.auto_stock_picking_count = 1 if record.auto_stock_picking_id else 0
+
+    @api.depends('invoice_line_ids.quantity')
+    def _compute_total_product_quantity(self):
+        """Compute total quantity of all products"""
+        for move in self:
+            total_qty = 0
+            for line in move.invoice_line_ids:
+                if (line.product_id and
+                        line.product_id.type in ['product', 'consu'] and
+                        line.quantity > 0 and
+                        line.display_type == 'product'):
+                    total_qty += line.quantity
+            move.total_product_quantity = total_qty
 
     @api.model
     def default_get(self, fields_list):
@@ -73,8 +126,10 @@ class AccountMove(models.Model):
 
         # Create a string representation of the relevant bill data (no vendor name)
         hash_data = f"{self.name}|"
-        for line in stockable_lines.sorted('id'):
-            hash_data += f"{line.product_id.id}:{line.quantity}:{line.price_unit}|"
+        for line in stockable_lines:
+            # Use a safe way to get line id for hash
+            line_id = line.id if line.id else hash(line)
+            hash_data += f"{line.product_id.id}:{line.quantity}:{line.price_unit}:{line_id}|"
 
         import hashlib
         return hashlib.md5(hash_data.encode()).hexdigest()
@@ -284,31 +339,19 @@ class AccountMove(models.Model):
             new_qty = quantity
             _logger.info(f"No existing quant. Creating new with qty: {new_qty}")
 
-        # Create meaningful reference name for the inventory adjustment
-        adjustment_reference = f"Auto Stock from Bill {self.name}"
+        # Use _update_available_quantity to properly update stock
+        self.env['stock.quant']._update_available_quantity(
+            product,
+            location,
+            quantity=quantity,
+            in_date=fields.Datetime.now()
+        )
 
-        _logger.info(f"Using inventory adjustment reference: {adjustment_reference}")
-
-        # Create inventory adjustment using the proper method with custom reference
-        quant = self.env['stock.quant'].with_context(
-            inventory_mode=True,
-            inventory_name=adjustment_reference
-        ).create({
-            'product_id': product.id,
-            'location_id': location.id,
-            'inventory_quantity': new_qty,
-        })
-
-        # Apply the inventory adjustment with custom reference
-        quant.with_context(inventory_name=adjustment_reference).action_apply_inventory()
-        _logger.info(f"Inventory adjustment applied for {product.name} with reference: {adjustment_reference}")
+        _logger.info(f"Stock updated successfully for {product.name}")
 
     def _create_reference_picking(self, stockable_lines, location):
-        """Create a reference picking for traceability"""
-        _logger.info("Creating reference picking for traceability")
-
+        """Create stock picking and moves from vendor bill for reference"""
         try:
-            # Get incoming picking type
             picking_type = self.env['stock.picking.type'].search([
                 ('code', '=', 'incoming'),
                 ('warehouse_id.company_id', '=', self.company_id.id)
@@ -318,13 +361,13 @@ class AccountMove(models.Model):
                 _logger.warning("No incoming picking type found, skipping reference picking")
                 return
 
-            # Create picking for reference only
             picking_vals = {
-                'partner_id': self.partner_id.id,
                 'picking_type_id': picking_type.id,
                 'location_id': self.partner_id.property_stock_supplier.id,
                 'location_dest_id': location.id,
-                'origin': f"{self.name} (Auto Stock Update)",
+                'origin': f"Vendor Bill: {self.name}",
+                'state': 'done',
+                'move_type': 'direct',
                 'company_id': self.company_id.id,
             }
 
@@ -372,92 +415,26 @@ class AccountMove(models.Model):
             lambda line: line.product_id
                          and line.product_id.type in ['product', 'consu']
                          and line.quantity > 0
+                         and line.price_unit > 0
                          and (line.display_type == 'product' or not line.display_type)
-                         and line.product_id.categ_id.auto_update_cost_from_bill
         )
 
-        _logger.info(f"Found {len(cost_lines)} lines for cost update")
+        _logger.info(f"Found {len(cost_lines)} cost lines to process")
 
         for line in cost_lines:
             try:
-                self._update_product_cost_from_line(line)
+                product = line.product_id
+                new_cost = line.price_unit
+
+                _logger.info(f"Updating cost for {product.name}: {product.standard_price} -> {new_cost}")
+
+                # Update the product cost
+                product.with_context(disable_auto_svl=True).write({
+                    'standard_price': new_cost
+                })
+
+                _logger.info(f"Successfully updated cost for {product.name}")
+
             except Exception as e:
                 _logger.error(f"Failed to update cost for product {line.product_id.name}: {str(e)}")
-
-    def _update_product_cost_from_line(self, line):
-        """Update individual product cost from bill line"""
-        product = line.product_id
-        _logger.info(f"Updating cost for product: {product.name}")
-
-        # Calculate unit price in company currency
-        if self.currency_id != self.company_id.currency_id:
-            unit_price_company_currency = self.currency_id._convert(
-                line.price_unit,
-                self.company_id.currency_id,
-                self.company_id,
-                self.date or fields.Date.today()
-            )
-        else:
-            unit_price_company_currency = line.price_unit
-
-        _logger.info(f"Unit price in company currency: {unit_price_company_currency}")
-
-        # Get current cost and strategy
-        current_cost = product.standard_price
-        cost_update_strategy = product.categ_id.cost_update_strategy
-
-        # Apply cost update strategy
-        new_cost = current_cost
-        min_cost_difference = float(
-            self.env['ir.config_parameter'].sudo().get_param(
-                'auto_stock_update.min_cost_difference', '0.01'
-            )
-        )
-
-        if cost_update_strategy == 'always':
-            new_cost = unit_price_company_currency
-        elif cost_update_strategy == 'if_higher' and unit_price_company_currency > current_cost + min_cost_difference:
-            new_cost = unit_price_company_currency
-        elif cost_update_strategy == 'if_lower' and unit_price_company_currency < current_cost - min_cost_difference:
-            new_cost = unit_price_company_currency
-        elif cost_update_strategy == 'weighted_average':
-            # Get current stock quantity
-            stock_qty = sum(product.stock_quant_ids.mapped('quantity'))
-            if stock_qty > 0:
-                # Calculate weighted average: (current_cost * stock_qty + new_cost * bill_qty) / total_qty
-                total_qty = stock_qty + line.quantity
-                new_cost = ((current_cost * stock_qty) + (unit_price_company_currency * line.quantity)) / total_qty
-            else:
-                new_cost = unit_price_company_currency
-
-        # Only update if there's a meaningful difference
-        if abs(new_cost - current_cost) < min_cost_difference:
-            _logger.info(f"Cost difference too small, skipping update for {product.name}")
-            return
-
-        # Update the product cost
-        product.write({
-            'standard_price': new_cost
-        })
-
-        _logger.info(
-            f"Updated cost for product {product.name} "
-            f"from {current_cost} to {new_cost} "
-            f"based on vendor bill {self.name}"
-        )
-
-        # Add message to product
-        product.message_post(
-            body=_(
-                "Cost price updated from %s to %s based on vendor bill %s (Strategy: %s)"
-            ) % (current_cost, new_cost, self.name, cost_update_strategy),
-            message_type='comment'
-        )
-
-        # Add message to vendor bill
-        self.message_post(
-            body=_(
-                "Updated cost price for product %s from %s to %s (Strategy: %s)"
-            ) % (product.name, current_cost, new_cost, cost_update_strategy),
-            message_type='comment'
-        )
+                continue

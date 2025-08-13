@@ -13,5 +13,22 @@
                 </field>
             </field>
         </record>
+
+        <!-- Remove tax_id field from sale order lines in main form view -->
+        <record id="view_order_form_inherit_remove_tax_id" model="ir.ui.view">
+            <field name="name">sale.order.form.remove.tax.id</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
+                <!-- Hide tax_id field in the form view of order lines -->
+                <xpath expr="//field[@name='order_line']//form//field[@name='tax_id']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+                <!-- Hide tax_id field in the list view of order lines by making it column_invisible -->
+                <xpath expr="//field[@name='order_line']//list//field[@name='tax_id']" position="attributes">
+                    <attribute name="column_invisible">1</attribute>
+                </xpath>
+            </field>
+        </record>
     </data>
 </odoo>
