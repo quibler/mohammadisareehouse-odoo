@@ -14,6 +14,10 @@
             <field name="amount_residual_signed" position="attributes">
                 <attribute name="optional">show</attribute>
             </field>
+            <!-- Show Payment Reference field by default in ALL views -->
+            <field name="payment_reference" position="replace">
+                <field name="payment_reference" optional="show"/>
+            </field>
             <!-- Add total quantity column for vendor bills -->
             <field name="amount_total_in_currency_signed" position="after">
                 <field name="total_product_quantity"
@@ -45,29 +49,6 @@
             <!-- Hide tax_ids in journal items -->
             <xpath expr="//field[@name='line_ids']/list/field[@name='tax_ids']" position="attributes">
                 <attribute name="optional">hide</attribute>
-            </xpath>
-
-            <!-- Add line numbers - only shown after save -->
-            <xpath expr="//field[@name='invoice_line_ids']/list/field[@name='product_id']" position="before">
-                <field name="line_number"
-                       string="#"
-                       width="40px"
-                       readonly="1"
-                       column_invisible="parent.move_type != 'in_invoice'"
-                       invisible="display_type != 'product' or line_number == 0"/>
-            </xpath>
-
-            <!-- Add total quantity display after invoice lines -->
-            <xpath expr="//field[@name='invoice_line_ids']" position="after">
-                <div class="row" invisible="move_type != 'in_invoice'">
-                    <div class="col-12">
-                        <div class="alert alert-info" role="alert" style="margin-top: 10px; padding: 10px;">
-                            <strong>📦 Total Product Quantity: </strong>
-                            <field name="total_product_quantity" nolabel="1" readonly="1" class="oe_inline"/>
-                            <span> units</span>
-                        </div>
-                    </div>
-                </div>
             </xpath>
         </field>
     </record>

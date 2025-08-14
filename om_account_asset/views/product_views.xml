@@ -57,4 +57,37 @@
         <field name="view_mode">list,kanban,form,activity</field>
     </record>
 
+    <!-- Customize Product Template List View - Show Barcode, Hide Tags -->
+    <record id="product_template_tree_view_inherit" model="ir.ui.view">
+        <field name="name">Product Template List - Show Barcode Hide Tags</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_tree_view"/>
+        <field name="arch" type="xml">
+            <field name="barcode" position="attributes">
+                <attribute name="optional">show</attribute>
+            </field>
+            <field name="product_tag_ids" position="attributes">
+                <attribute name="optional">hide</attribute>
+            </field>
+        </field>
+    </record>
+
+    <!-- Customize Product Variant List View - Show Barcode, Hide Tags -->
+    <record id="product_product_tree_view_inherit" model="ir.ui.view">
+        <field name="name">Product Variant List - Show Barcode Hide Tags</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_product_tree_view"/>
+        <field name="arch" type="xml">
+            <field name="barcode" position="attributes">
+                <attribute name="optional">show</attribute>
+            </field>
+            <field name="product_tag_ids" position="attributes">
+                <attribute name="optional">hide</attribute>
+            </field>
+            <field name="additional_product_tag_ids" position="attributes">
+                <attribute name="optional">hide</attribute>
+            </field>
+        </field>
+    </record>
+
 </odoo>
