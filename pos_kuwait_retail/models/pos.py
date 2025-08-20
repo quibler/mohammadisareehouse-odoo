@@ -64,8 +64,8 @@ class PosSession(models.Model):
         if not session.cash_journal_id or amount <= 0:
             return False
 
-        # Create a bank statement line for cash out
-        cash_out_line = self.env['account.bank.statement.line'].create({
+        # Create a bank statement line for cash out using sudo() to bypass user permissions
+        cash_out_line = self.env['account.bank.statement.line'].sudo().create({
             'journal_id': session.cash_journal_id.id,
             'payment_ref': reason,
             'amount': -amount,  # Negative for cash out
@@ -82,7 +82,6 @@ class PosSession(models.Model):
         )
 
         return cash_out_line.id
-
     def post_closing_cash_details(self, counted_cash):
         """Override to handle automatic cash out before normal closing"""
 
