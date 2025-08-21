@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Kuwait Retail Working Receipt Template -->
+    <record id="pos_receipt_kuwait_retail_working" model="pos.receipt">
+        <field name="name">Kuwait Retail - Working</field>
+        <field name="design_receipt"><![CDATA[
+        <!-- Debug: Show available data structure -->
+        <!-- <div style="font-size: 10px; color: red; white-space: pre-wrap;" t-esc="JSON.stringify(Object.keys(props), null, 2)"></div> -->
+
+        <div class="pos-receipt" style="margin: 0; padding: 8px; font-family: 'Roboto', Arial, sans-serif; font-size: 12px; line-height: 1.3; color: #000; background: white;">
+
+            <!-- COMPANY LOGO AND INFO -->
+            <div style="text-align: center; margin-bottom: 10px;">
+                <!-- Logo - Multiple possible paths -->
+                <t t-if="props.order and props.order.pos and props.order.pos.company and props.order.pos.company.logo">
+                    <img t-att-src="'data:image/png;base64,' + props.order.pos.company.logo"
+                         style="max-width: 200px; max-height: 80px; margin-bottom: 5px;" alt="Logo"/>
+                </t>
+                <t t-elif="props.data and props.data.headerData and props.data.headerData.company and props.data.headerData.company.logo">
+                    <img t-att-src="'data:image/png;base64,' + props.data.headerData.company.logo"
+                         style="max-width: 200px; max-height: 80px; margin-bottom: 5px;" alt="Logo"/>
+                </t>
+
+                <!-- Company Info -->
+                <div style="font-size: 13px; font-weight: 400;">
+                    <!-- Try multiple paths for company data -->
+                    <t t-set="company" t-value="props.order.pos.company if props.order and props.order.pos and props.order.pos.company else (props.data.headerData.company if props.data and props.data.headerData and props.data.headerData.company else False)"/>
+
+                    <div t-if="company and company.street" t-esc="company.street"/>
+                    <div t-if="company and company.city">
+                        <span t-esc="company.city"/>
+                        <span t-if="company.zip"> <t t-esc="company.zip"/></span>
+                    </div>
+                    <div t-if="company and company.phone" t-esc="company.phone"/>
+                    <div t-if="company and company.email" t-esc="company.email"/>
+                </div>
+            </div>
+
+            <!-- ORDER HEADER INFO -->
+            <div style="border-top: 1px dashed #000; padding-top: 5px; margin-bottom: 10px; font-size: 13px;">
+                <!-- Shop Name -->
+                <div t-if="props.order and props.order.pos and props.order.pos.config and props.order.pos.config.name">
+                    Shop: <t t-esc="props.order.pos.config.name"/>
+                </div>
+
+                <!-- Order Number - Try multiple paths -->
+                <div>
+                    Order: #<span t-if="props.order and props.order.name" t-esc="props.order.name"/>
+                    <span t-elif="props.data and props.data.name" t-esc="props.data.name"/>
+                    <span t-else="">N/A</span>
+                </div>
+
+                <!-- Date -->
+                <div>
+                    Date: <span t-if="props.order and props.order.date_order" t-esc="props.order.date_order"/>
+                    <span t-elif="props.data and props.data.date" t-esc="props.data.date"/>
+                    <span t-else="">N/A</span>
+                </div>
+
+                <!-- Sales Person -->
+                <div t-if="props.order and props.order.sales_person">
+                    Sales Person: <t t-esc="props.order.sales_person"/>
+                </div>
+            </div>
+
+            <!-- ORDER ITEMS TABLE -->
+            <div style="margin-bottom: 10px;">
+                <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px dashed #000; font-weight: bold;">
+                            <th style="text-align: left; padding: 2px;">Item</th>
+                            <th style="text-align: center; padding: 2px;">Qty</th>
+                            <th style="text-align: right; padding: 2px;">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- PRIMARY: Try props.order.orderlines -->
+                        <t t-if="props.order and props.order.orderlines and props.order.orderlines.length">
+                            <tr t-foreach="props.order.orderlines" t-as="line" t-key="line_index">
+                                <td style="text-align: left; padding: 2px;">
+                                    <div style="font-weight: 600;" t-esc="line.product.display_name or line.product_name or 'Product'"/>
+                                    <div t-if="line.discount and line.discount > 0" style="font-size: 11px; color: #666;">
+                                        Discount: <t t-esc="line.discount"/>%
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 2px;" t-esc="line.qty or line.quantity or '1'"/>
+                                <td style="text-align: right; padding: 2px;" t-esc="line.get_display_price ? line.get_display_price() : (line.price || '0.00')"/>
+                            </tr>
+                        </t>
+
+                        <!-- FALLBACK 1: Try the complex path from custom_receipts_for_pos -->
+                        <t t-elif="props.order and props.order.pos and props.order.pos.mainScreen and props.order.pos.mainScreen.props and props.order.pos.mainScreen.props.order and props.order.pos.mainScreen.props.order.orderlines and props.order.pos.mainScreen.props.order.orderlines.length">
+                            <tr t-foreach="props.order.pos.mainScreen.props.order.orderlines" t-as="line" t-key="line_index">
+                                <td style="text-align: left; padding: 2px;">
+                                    <div style="font-weight: 600;" t-esc="line.productName"/>
+                                    <div t-if="line.get_discount and line.get_discount() > 0" style="font-size: 11px; color: #666;">
+                                        Discount: <t t-esc="line.get_discount()"/>%
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 2px;" t-esc="line.qty"/>
+                                <td style="text-align: right; padding: 2px;" t-esc="line.get_display_price ? line.get_display_price() : line.price"/>
+                            </tr>
+                        </t>
+
+                        <!-- FALLBACK 2: Try props.data.orderlines -->
+                        <t t-elif="props.data and props.data.orderlines and props.data.orderlines.length">
+                            <tr t-foreach="props.data.orderlines" t-as="line" t-key="line_index">
+                                <td style="text-align: left; padding: 2px;">
+                                    <div style="font-weight: 600;" t-esc="line.productName or line.product_name or 'Product'"/>
+                                    <div t-if="line.discount and line.discount > 0" style="font-size: 11px; color: #666;">
+                                        Discount: <t t-esc="line.discount"/>%
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 2px;" t-esc="line.qty or line.quantity or '1'"/>
+                                <td style="text-align: right; padding: 2px;" t-esc="line.price or '0.00'"/>
+                            </tr>
+                        </t>
+
+                        <!-- FALLBACK 3: Try props.orderlines directly -->
+                        <t t-elif="props.orderlines and props.orderlines.length">
+                            <tr t-foreach="props.orderlines" t-as="line" t-key="line_index">
+                                <td style="text-align: left; padding: 2px;">
+                                    <div style="font-weight: 600;" t-esc="line.productName or line.product_name or 'Product'"/>
+                                    <div t-if="line.discount and line.discount > 0" style="font-size: 11px; color: #666;">
+                                        Discount: <t t-esc="line.discount"/>%
+                                    </div>
+                                </td>
+                                <td style="text-align: center; padding: 2px;" t-esc="line.qty or line.quantity or '1'"/>
+                                <td style="text-align: right; padding: 2px;" t-esc="line.price or '0.00'"/>
+                            </tr>
+                        </t>
+
+                        <!-- NO DATA FOUND -->
+                        <t t-else="">
+                            <tr>
+                                <td colspan="3" style="text-align: center; padding: 10px; font-style: italic; color: #666;">
+                                    No items found
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- TOTALS SECTION -->
+            <div style="border-top: 1px dashed #000; padding-top: 5px; margin-bottom: 10px;">
+                <!-- Subtotal -->
+                <div style="font-size: 13px; margin-bottom: 2px;">
+                    <span>Subtotal</span>
+                    <span style="float: right;">
+                        <t t-if="props.order and props.order.get_total_without_tax">
+                            <t t-esc="props.order.get_total_without_tax()"/>
+                        </t>
+                        <t t-elif="props.data and props.data.total_without_tax">
+                            <t t-esc="props.data.total_without_tax"/>
+                        </t>
+                        <t t-else="">0.00</t>
+                    </span>
+                </div>
+
+                <!-- Tax (if any) -->
+                <div t-if="props.order and props.order.get_total_tax and props.order.get_total_tax() > 0" style="font-size: 13px; margin-bottom: 2px;">
+                    <span>Tax</span>
+                    <span style="float: right;" t-esc="props.order.get_total_tax()"/>
+                </div>
+
+                <!-- Total -->
+                <div style="font-size: 14px; font-weight: bold; border-top: 1px dashed #000; padding-top: 3px; margin-bottom: 5px;">
+                    <span>Total</span>
+                    <span style="float: right;">
+                        <t t-if="props.order and props.order.get_total_with_tax">
+                            <t t-esc="props.order.get_total_with_tax()"/>
+                        </t>
+                        <t t-elif="props.data and props.data.amount_total">
+                            <t t-esc="props.data.amount_total"/>
+                        </t>
+                        <t t-else="">0.00</t>
+                    </span>
+                </div>
+
+                <!-- Payment Lines -->
+                <div style="margin-top: 5px;">
+                    <!-- Try multiple paths for payment lines -->
+                    <t t-if="props.order and props.order.paymentlines and props.order.paymentlines.length">
+                        <div t-foreach="props.order.paymentlines" t-as="payment" t-key="payment_index" style="font-size: 13px;">
+                            <span t-esc="payment.payment_method_id.name or payment.name or 'Payment'"/>
+                            <span style="float: right;" t-esc="payment.amount"/>
+                        </div>
+                    </t>
+                    <t t-elif="props.data and props.data.paymentlines and props.data.paymentlines.length">
+                        <div t-foreach="props.data.paymentlines" t-as="payment" t-key="payment_index" style="font-size: 13px;">
+                            <span t-esc="payment.name or 'Payment'"/>
+                            <span style="float: right;" t-esc="payment.amount"/>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- Change -->
+                <div t-if="props.order and props.order.get_change and props.order.get_change() > 0" style="font-size: 13px; margin-top: 3px;">
+                    <span>Change</span>
+                    <span style="float: right;" t-esc="props.order.get_change()"/>
+                </div>
+            </div>
+
+            <!-- QR CODE -->
+            <div style="text-align: center; margin: 15px 0;">
+                <img src="/pos_kuwait_retail/static/src/img/brand_qr_code.png"
+                     alt="Brand QR Code"
+                     style="width: 100px; height: 100px;"
+                     onerror="this.style.display='none'"/>
+                <div style="font-size: 12px; margin-top: 5px; color: #666;">
+                    Scan to visit our brand page
+                </div>
+            </div>
+
+            <!-- FOOTER -->
+            <div style="text-align: center; font-size: 12px; margin-top: 10px; color: #666;">
+                Thank you for shopping with us!
+            </div>
+
+            <!-- DEBUG INFO (remove in production) -->
+            <!-- <div style="margin-top: 20px; font-size: 10px; color: #999; white-space: pre-wrap;">
+                DEBUG INFO:
+                props.order exists: <t t-esc="props.order ? 'YES' : 'NO'"/>
+                props.data exists: <t t-esc="props.data ? 'YES' : 'NO'"/>
+                props.orderlines exists: <t t-esc="props.orderlines ? 'YES' : 'NO'"/>
+            </div> -->
+
+        </div>
+        ]]></field>
+    </record>
+</odoo>
