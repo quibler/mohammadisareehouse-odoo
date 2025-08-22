@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+    🎯 SMART SOLUTION: Global List View Priority Override
+    One change affects ALL product actions across ALL modules!
+    -->
+
+    <!-- ========================================= -->
+    <!-- GLOBAL PRODUCT VIEW PRIORITY OVERRIDES   -->
+    <!-- ========================================= -->
+
+    <!-- Make Product Template List View the highest priority globally -->
+    <record id="product_template_tree_view_kuwait_default" model="ir.ui.view">
+        <field name="name">Product Template List - Kuwait Retail Priority</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_tree_view"/>
+        <field name="priority">1</field>  <!-- Highest priority = appears first in ALL actions -->
+        <field name="arch" type="xml">
+            <!-- Kuwait retail customizations -->
+            <field name="default_code" position="after">
+                <field name="barcode" optional="show" string="Barcode"/>
+            </field>
+
+            <!-- Ensure important retail fields are visible -->
+            <xpath expr="//field[@name='list_price']" position="attributes">
+                <attribute name="optional">show</attribute>
+                <attribute name="string">Sale Price</attribute>
+            </xpath>
+
+            <!-- Hide less important fields for retail -->
+            <xpath expr="//field[@name='uom_id']" position="attributes">
+                <attribute name="optional">hide</attribute>
+            </xpath>
+
+            <!-- Make product name more prominent -->
+            <xpath expr="//field[@name='name']" position="attributes">
+                <attribute name="class">o_text_bold</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Make Product Variants List View the highest priority globally -->
+    <record id="product_product_tree_view_kuwait_default" model="ir.ui.view">
+        <field name="name">Product Variants List - Kuwait Retail Priority</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_product_tree_view"/>
+        <field name="priority">1</field>  <!-- Highest priority = appears first in ALL actions -->
+        <field name="arch" type="xml">
+            <!-- Kuwait retail customizations -->
+            <field name="default_code" position="after">
+                <field name="barcode" optional="show" string="Barcode"/>
+            </field>
+
+            <!-- Ensure important retail fields are visible -->
+            <xpath expr="//field[@name='lst_price']" position="attributes">
+                <attribute name="optional">show</attribute>
+                <attribute name="string">Sale Price</attribute>
+            </xpath>
+
+            <!-- Make product name more prominent -->
+            <xpath expr="//field[@name='name']" position="attributes">
+                <attribute name="class">o_text_bold</attribute>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

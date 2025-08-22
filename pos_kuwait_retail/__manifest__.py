@@ -70,6 +70,7 @@
         'views/res_config_settings_views.xml',
 
         # Product & barcode management - ONLY custom price field
+        'views/product_views.xml',
         'views/product_label_layout_views.xml',
         'views/product_label_templates.xml',
 

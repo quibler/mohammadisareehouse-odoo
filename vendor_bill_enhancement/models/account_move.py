@@ -424,7 +424,23 @@ class AccountMove(models.Model):
         for line in cost_lines:
             try:
                 product = line.product_id
-                new_cost = line.price_unit
+
+                # Get the price in bill currency
+                bill_currency_price = line.price_unit
+
+                # Convert to company currency if needed
+                if self.currency_id != self.company_id.currency_id:
+                    # Convert from bill currency to company currency
+                    new_cost = self.currency_id._convert(
+                        bill_currency_price,
+                        self.company_id.currency_id,
+                        self.company_id,
+                        self.invoice_date or fields.Date.context_today(self)
+                    )
+                    _logger.info(
+                        f"Currency conversion: {bill_currency_price} {self.currency_id.name} -> {new_cost} {self.company_id.currency_id.name}")
+                else:
+                    new_cost = bill_currency_price
 
                 _logger.info(f"Updating cost for {product.name}: {product.standard_price} -> {new_cost}")
 
