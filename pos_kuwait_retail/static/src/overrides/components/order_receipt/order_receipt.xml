@@ -62,14 +62,14 @@
                         Sales person: <t t-esc="props.data.sales_person"/>
                     </div>
 
-                    <!-- Receipt -->
-                    <!-- <div t-if="props.data.name">
-                        Receipt: <t t-esc="props.data.name" />
-                    </div> -->
-
                     <!-- Date -->
                     <div t-if="props.data.date">
                         Date: <t t-esc="props.data.date" />
+                    </div>
+
+                    <!-- Receipt -->
+                    <div t-if="props.data.name">
+                        Receipt: <t t-esc="props.data.name" />
                     </div>
                 </div>
             </div>
