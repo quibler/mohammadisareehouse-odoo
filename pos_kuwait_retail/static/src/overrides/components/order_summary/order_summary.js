@@ -1,61 +1,45 @@
-/** @odoo-module **/
+/** @odoo-module */
 
 import { patch } from "@web/core/utils/patch";
 import { OrderSummary } from "@point_of_sale/app/screens/product_screen/order_summary/order_summary";
 import { useExternalListener } from "@odoo/owl";
 
+/**
+ * Minimal Order Summary Enhancement
+ * Only handles Delete key for selected orderlines
+ */
+
 patch(OrderSummary.prototype, {
     setup() {
         super.setup();
-        
-        // Add keyboard event listener for Delete key
-        useExternalListener(window, "keydown", this._onKeyDown.bind(this));
+        useExternalListener(window, "keydown", this._onDelete.bind(this));
     },
 
-    _onKeyDown(event) {
-        // Check if Delete key is pressed
-        if (event.key === "Delete" || event.key === "Del") {
-            // Only process if not in an input field or textarea
-            if (!["INPUT", "TEXTAREA"].includes(event.target.tagName)) {
-                event.preventDefault();
-                event.stopPropagation();
-                this._handleDeleteKey();
-            }
-        }
-    },
+    _onDelete(event) {
+        // Only Delete key on Product Screen
+        if (event.key !== "Delete" && event.key !== "Del") return;
 
-    _handleDeleteKey() {
-        const order = this.currentOrder;
-        const selectedLine = order?.get_selected_orderline();
-
-        if (!order || !selectedLine || order.is_empty()) {
+        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
+            event.target.closest('.modal, .popup, .dialog, .dropdown-menu, .o_popover') ||
+            !document.querySelector('.product-screen:not(.oe_hidden)')?.offsetParent) {
             return;
         }
 
-        // Directly delete the line without confirmation
-        this._deleteSelectedLine();
-    },
-
-    _deleteSelectedLine() {
-        const order = this.currentOrder;
-        const selectedLine = order?.get_selected_orderline();
-
-        if (!order || !selectedLine) {
-            return;
+        const selectedLine = this.currentOrder?.get_selected_orderline();
+        if (selectedLine) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.currentOrder.removeOrderline(selectedLine);
         }
-
-        // Remove the orderline using the pos.order's removeOrderline method
-        order.removeOrderline(selectedLine);
     },
 
-    // Method to delete a specific line (called from X button)
+    // Method to delete a specific line (called from X button clicks)
     deleteOrderLine(line) {
         const order = this.currentOrder;
         if (!order || !line) {
             return;
         }
-        
-        // Remove the orderline using the pos.order's removeOrderline method
+
         order.removeOrderline(line);
-    },
+    }
 });
