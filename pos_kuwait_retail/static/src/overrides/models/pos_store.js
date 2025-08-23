@@ -39,88 +39,18 @@ class ModeManager {
 
 const modeManager = new ModeManager();
 
-// Minimal navigation manager
-class NavigationManager {
-    constructor() {
-        this.handleKeydown = this.handleKeydown.bind(this);
-    }
+// Navigation logic is now handled directly in ProductScreen patch
 
-    activate() {
-        document.addEventListener('keydown', this.handleKeydown, { passive: false });
-    }
-
-    handleKeydown(event) {
-        // Skip if typing in inputs or popups
-        if (event.target.tagName === 'INPUT' ||
-            event.target.tagName === 'TEXTAREA' ||
-            event.target.closest('.modal, .popup, .dialog, .dropdown-menu, .o_popover') ||
-            event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) {
-            return;
-        }
-
-        const currentScreen = this.getCurrentScreen();
-
-        // Payment Screen: Only Left/Right arrows
-        if (currentScreen === 'PaymentScreen') {
-            if (event.key === 'ArrowLeft') {
-                event.preventDefault();
-                this.goToOrder();
-            } else if (event.key === 'ArrowRight') {
-                event.preventDefault();
-                this.validatePayment();
-            }
-        }
-        // Receipt Screen: Only Enter key
-        else if (currentScreen === 'ReceiptScreen') {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                this.printReceipt();
-            }
-        }
-    }
-
-    getCurrentScreen() {
-        if (document.querySelector('.payment-screen:not(.oe_hidden)')?.offsetParent) return 'PaymentScreen';
-        if (document.querySelector('.receipt-screen:not(.oe_hidden)')?.offsetParent) return 'ReceiptScreen';
-        return 'ProductScreen';
-    }
-
-    goToOrder() {
-        const backBtn = document.querySelector('.button.back, .back-button, [data-action="back"]');
-        if (backBtn?.offsetParent) {
-            backBtn.click();
-        }
-    }
-
-    validatePayment() {
-        const validateBtn = document.querySelector('.button.next, .validate-button, .button.validate');
-        if (validateBtn?.offsetParent && !validateBtn.disabled) {
-            validateBtn.click();
-        }
-    }
-
-    printReceipt() {
-        const printBtn = document.querySelector('.print-button, .button.print, [data-action="print"]');
-        if (printBtn?.offsetParent) {
-            printBtn.click();
-        }
-    }
-}
-
-const navigationManager = new NavigationManager();
-
-// Enhanced ProductScreen patch with order change detection
+// Enhanced ProductScreen patch - simplified single event listener
 patch(ProductScreen.prototype, {
     setup() {
         super.setup();
-        this.addQuantityControls();
-        this.addPaymentNavigation();
+        this.initializeKeyboardHandling();
         this.watchForOrderChanges();
     },
 
     // Watch for order changes to trigger button attachment
     watchForOrderChanges() {
-        // Trigger button attachment when order lines change
         const originalAddLineToCurrentOrder = this.pos.addLineToCurrentOrder;
         this.pos.addLineToCurrentOrder = (...args) => {
             const result = originalAddLineToCurrentOrder.call(this.pos, ...args);
@@ -129,79 +59,136 @@ patch(ProductScreen.prototype, {
         };
     },
 
-    addQuantityControls() {
-        document.addEventListener('keydown', (event) => {
-            // Only on Product Screen
-            if (!document.querySelector('.product-screen:not(.oe_hidden)')?.offsetParent) return;
+    initializeKeyboardHandling() {
+        // Ensure only one event listener exists globally
+        if (document._posKeyboardHandler) {
+            document.removeEventListener('keydown', document._posKeyboardHandler);
+        }
 
-            // Skip if in inputs/popups
-            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
-                event.target.closest('.modal, .popup, .dialog, .dropdown-menu, .o_popover')) return;
-
-            const order = this.pos?.get_order?.();
-            if (!order) return;
-
-            const targetLine = order.get_selected_orderline() || order.get_orderlines().slice(-1)[0];
-            if (!targetLine) return;
-
-            let handled = false;
-            const currentQty = targetLine.get_quantity();
-
-            switch (event.key) {
-                case 'ArrowUp':
-                case '+':
-                    targetLine.set_quantity(currentQty + 1);
-                    handled = true;
-                    break;
-                case 'ArrowDown':
-                case '-':
-                    const newQty = Math.max(0, currentQty - 1);
-                    if (newQty === 0) {
-                        order.removeOrderline(targetLine);
-                    } else {
-                        targetLine.set_quantity(newQty);
-                    }
-                    handled = true;
-                    break;
-                case 'Delete':
-                    order.removeOrderline(targetLine);
-                    handled = true;
-                    break;
+        const handler = (event) => {
+            // Skip if in inputs/popups or with modifier keys
+            if (event.target.tagName === 'INPUT' || 
+                event.target.tagName === 'TEXTAREA' ||
+                event.target.closest('.modal, .popup, .dialog, .dropdown-menu, .o_popover') ||
+                event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) {
+                return;
             }
 
-            if (handled) {
+            const currentScreen = this.getCurrentScreen();
+            
+            if (currentScreen === 'ProductScreen') {
+                this.handleProductScreenKeys(event);
+            } else if (currentScreen === 'PaymentScreen') {
+                this.handlePaymentScreenKeys(event);
+            } else if (currentScreen === 'ReceiptScreen') {
+                this.handleReceiptScreenKeys(event);
+            }
+        };
+
+        document.addEventListener('keydown', handler, { passive: false });
+        document._posKeyboardHandler = handler;
+    },
+
+    getCurrentScreen() {
+        if (document.querySelector('.payment-screen:not(.oe_hidden)')?.offsetParent) return 'PaymentScreen';
+        if (document.querySelector('.receipt-screen:not(.oe_hidden)')?.offsetParent) return 'ReceiptScreen';
+        if (document.querySelector('.product-screen:not(.oe_hidden)')?.offsetParent) return 'ProductScreen';
+        return null;
+    },
+
+    handleProductScreenKeys(event) {
+        const order = this.pos?.get_order?.();
+        if (!order) return;
+
+        let handled = false;
+
+        switch (event.key) {
+            case 'ArrowUp':
+            case '+':
+                const targetLineUp = order.get_selected_orderline() || order.get_orderlines().slice(-1)[0];
+                if (targetLineUp) {
+                    targetLineUp.set_quantity(targetLineUp.get_quantity() + 1);
+                    handled = true;
+                }
+                break;
+            
+            case 'ArrowDown':
+            case '-':
+                const targetLineDown = order.get_selected_orderline() || order.get_orderlines().slice(-1)[0];
+                if (targetLineDown) {
+                    const newQty = Math.max(0, targetLineDown.get_quantity() - 1);
+                    if (newQty === 0) {
+                        order.removeOrderline(targetLineDown);
+                    } else {
+                        targetLineDown.set_quantity(newQty);
+                    }
+                    handled = true;
+                }
+                break;
+            
+            case 'ArrowRight':
+                if (order.get_orderlines()?.length > 0) {
+                    const payBtn = document.querySelector('.control-button .pay-button, .pay-button') ||
+                                 [...document.querySelectorAll('button')].find(btn =>
+                                   btn.textContent?.toLowerCase().includes('pay'));
+                    if (payBtn?.offsetParent) {
+                        payBtn.click();
+                        handled = true;
+                    }
+                }
+                break;
+            
+            case 'Delete':
+                const targetLineDelete = order.get_selected_orderline() || order.get_orderlines().slice(-1)[0];
+                if (targetLineDelete) {
+                    order.removeOrderline(targetLineDelete);
+                    handled = true;
+                }
+                break;
+        }
+
+        if (handled) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    },
+
+    handlePaymentScreenKeys(event) {
+        let handled = false;
+        
+        switch (event.key) {
+            case 'ArrowLeft':
+                const backBtn = document.querySelector('.button.back, .back-button');
+                if (backBtn?.offsetParent) {
+                    backBtn.click();
+                    handled = true;
+                }
+                break;
+            
+            case 'ArrowRight':
+                const validateBtn = document.querySelector('.button.next, .validate-button, .button.validate');
+                if (validateBtn?.offsetParent && !validateBtn.disabled) {
+                    validateBtn.click();
+                    handled = true;
+                }
+                break;
+        }
+
+        if (handled) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    },
+
+    handleReceiptScreenKeys(event) {
+        if (event.key === 'Enter') {
+            const printBtn = document.querySelector('.print-button, .button.print');
+            if (printBtn?.offsetParent) {
+                printBtn.click();
                 event.preventDefault();
                 event.stopPropagation();
             }
-        }, { passive: false });
-    },
-
-    addPaymentNavigation() {
-        document.addEventListener('keydown', (event) => {
-            // Only on Product Screen
-            if (!document.querySelector('.product-screen:not(.oe_hidden)')?.offsetParent) return;
-
-            // Only Arrow Right
-            if (event.key !== 'ArrowRight') return;
-
-            // Skip if in inputs/popups
-            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
-                event.target.closest('.modal, .popup, .dialog, .dropdown-menu, .o_popover')) return;
-
-            // Check if order has items
-            const order = this.pos?.get_order?.();
-            if (!order?.get_orderlines()?.length) return;
-
-            // Go to payment
-            const payBtn = document.querySelector('.control-button .pay-button, .pay-button, [data-action="payment"]') ||
-                         [...document.querySelectorAll('button, .button')].find(btn =>
-                           btn.textContent?.toLowerCase().includes('pay'));
-
-            if (payBtn?.offsetParent) {
-                event.preventDefault();
-                payBtn.click();
-            }
-        }, { passive: false });
+        }
     }
 });
 
@@ -357,15 +344,13 @@ patch(PosStore.prototype, {
         if (btn && !btn._modeListenerAttached) {
             // Regular click handler for non-discount buttons
             const clickHandler = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-
+                // Don't prevent default - let Odoo handle input clearing
                 modeManager.setManualMode(mode);
-                this.numpadMode = mode;
+                this._numpadMode = mode;
                 this._updateModeVisuals();
             };
 
-            btn.addEventListener('click', clickHandler, true);
+            btn.addEventListener('click', clickHandler, false);
             btn._modeListenerAttached = true;
             btn._clickHandler = clickHandler;
         }
@@ -385,15 +370,13 @@ patch(PosStore.prototype, {
             if (btn && !btn._numpadModeListenerAttached) {
                 // TARGETED: Click handler only for numpad % button
                 const clickHandler = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-
+                    // Don't prevent default - let Odoo handle input clearing
                     modeManager.setManualMode(mode);
-                    this.numpadMode = mode;
+                    this._numpadMode = mode;
                     this._updateModeVisuals();
                 };
 
-                btn.addEventListener('click', clickHandler, true);
+                btn.addEventListener('click', clickHandler, false);
                 btn._numpadModeListenerAttached = true;
                 btn._numpadClickHandler = clickHandler;
             }
@@ -401,22 +384,20 @@ patch(PosStore.prototype, {
     }
 });
 
-// Initialize - with better timing and order change detection
+// Initialize - simplified
 patch(ActionpadWidget.prototype, {
     setup() {
         super.setup();
         onMounted(() => {
-            navigationManager.activate();
-
-            // Store reference to POS for global access (use the correct object)
+            // Store reference to POS for global access
             window.pos = this.pos;
-            window.posmodel = this.pos; // Also store as posmodel for consistency
+            window.posmodel = this.pos;
 
             setTimeout(() => {
                 this.pos._attachButtonListeners();
             }, 500);
 
-            // Also try when DOM changes occur
+            // Try when DOM changes occur
             const observer = new MutationObserver(() => {
                 this.pos._attachOnOrderChange();
             });
@@ -426,7 +407,7 @@ patch(ActionpadWidget.prototype, {
                 subtree: true
             });
 
-            // TARGETED % BUTTON ATTACHMENT - only look in .numpad area
+            // Attach numpad buttons
             const attachNumpadButtons = () => {
                 const numpadArea = document.querySelector('.numpad');
                 if (numpadArea) {
@@ -446,31 +427,24 @@ patch(ActionpadWidget.prototype, {
                 }
             };
 
-            // Enhanced numpad mode listener with proper mode change
             this._attachEnhancedNumpadModeListener = (btn, mode) => {
                 if (btn && !btn._enhanced_listener_attached) {
                     const enhancedHandler = (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-
-                        // Set manual mode
+                        // Don't prevent default - let Odoo handle input clearing
                         modeManager.setManualMode(mode);
-
-                        // Update POS mode properly
                         if (window.posmodel) {
-                            window.posmodel.numpadMode = mode;
+                            window.posmodel._numpadMode = mode;
                         }
                     };
 
-                    // Add event listeners with high priority
-                    btn.addEventListener('click', enhancedHandler, true);
-                    btn.addEventListener('mousedown', enhancedHandler, true);
+                    btn.addEventListener('click', enhancedHandler, false);
+                    btn.addEventListener('mousedown', enhancedHandler, false);
                     btn._enhanced_listener_attached = true;
                     btn._enhanced_handler = enhancedHandler;
                 }
             };
 
-            setInterval(attachNumpadButtons, 2000); // Try every 2 seconds
+            setInterval(attachNumpadButtons, 2000);
         });
     }
 });
@@ -481,7 +455,12 @@ patch(ReceiptScreen.prototype, {
         super.setup();
         onMounted(() => {
             if (this.pos.config.iface_print_auto) {
-                setTimeout(() => navigationManager.printReceipt(), 1000);
+                setTimeout(() => {
+                    const printBtn = document.querySelector('.print-button, .button.print');
+                    if (printBtn?.offsetParent) {
+                        printBtn.click();
+                    }
+                }, 1000);
             }
         });
     }
