@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <templates id="template" xml:space="preserve">
     <t t-name="pos_kuwait_retail.DiscountButton">
-        <button class="btn btn-light btn-lg lh-lg text-truncate w-auto" t-on-click="() => this.onClick()">
+        <button class="btn btn-light btn-lg lh-lg text-truncate w-auto" 
+                t-on-click="(ev) => this.onClick(ev)"
+                t-on-keydown="(ev) => this.onKeydown(ev)">
             <i class="fa fa-tag me-2" role="img" aria-label="Discount" title="Discount" />
             <span>Discount</span>
         </button>

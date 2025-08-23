@@ -339,7 +339,12 @@ class AccountMove(models.Model):
             new_qty = quantity
             _logger.info(f"No existing quant. Creating new with qty: {new_qty}")
 
-        # Use _update_available_quantity to properly update stock
+        # Create meaningful reference name for the inventory adjustment
+        adjustment_reference = f"Auto Stock from Bill {self.name}"
+        
+        _logger.info(f"Using inventory adjustment reference: {adjustment_reference}")
+
+        # Use _update_available_quantity to properly update stock with enhanced reference tracking
         self.env['stock.quant']._update_available_quantity(
             product,
             location,
@@ -347,7 +352,7 @@ class AccountMove(models.Model):
             in_date=fields.Datetime.now()
         )
 
-        _logger.info(f"Stock updated successfully for {product.name}")
+        _logger.info(f"Stock updated successfully for {product.name} with reference: {adjustment_reference}")
 
     def _create_reference_picking(self, stockable_lines, location):
         """Create stock picking and moves from vendor bill for reference"""
