@@ -79,45 +79,21 @@ class ProductProduct(models.Model):
 
     def _ensure_unique_barcode(self, barcode):
         """Make barcode unique if needed"""
-        if not barcode:
-            return barcode
-
         counter = 1
         original_barcode = barcode
-        current_barcode = barcode
 
-        while True:
-            # Check if barcode exists (excluding current record)
-            domain = [('barcode', '=', current_barcode)]
-            if hasattr(self, 'id') and self.id:
-                domain.append(('id', '!=', self.id))
-
-            if not self.search(domain, limit=1):
-                return current_barcode
-
-            # Make unique
+        while self.search([('barcode', '=', barcode), ('id', '!=', self.id or 0)]):
             if len(original_barcode) == 13 and original_barcode.isdigit():
                 # EAN-13: increment middle digits and recalculate checksum
-                try:
-                    base = original_barcode[:4] + str(int(original_barcode[4:11]) + counter)[-7:].zfill(7)
-                    current_barcode = base + self._generate_ean13_checksum(base)
-                except:
-                    # Fallback if EAN-13 manipulation fails
-                    current_barcode = f"PROD_{int(time.time())}{counter}"
+                base = original_barcode[:4] + str(int(original_barcode[4:11]) + counter)[-7:].zfill(7)
+                barcode = base + self._generate_ean13_checksum(base)
             else:
                 # Legacy: add suffix
                 suffix = f"_{counter}"
-                max_length = 25 - len(suffix)
-                current_barcode = original_barcode[:max_length] + suffix
-
+                barcode = original_barcode[:25 - len(suffix)] + suffix
             counter += 1
 
-            # Safety check to prevent infinite loop
-            if counter > 9999:
-                current_barcode = f"PROD_{int(time.time())}{counter}"
-                break
-
-        return current_barcode
+        return barcode
 
     def _generate_barcode(self, name, force_ean13=False):
         """Main barcode generation - EAN-13 for new/cleared, legacy for existing"""
@@ -154,28 +130,31 @@ class ProductProduct(models.Model):
 
     @api.constrains('barcode')
     def _check_barcode_validity(self):
-        """Validate barcode format and ensure uniqueness"""
+        """Validate barcode format and uniqueness"""
         for product in self:
             if not product.barcode:
                 continue
 
             # Format validation
             if not (
-                    re.match(r'^[A-Za-z0-9\-\s\._]+, product.barcode) or  # Legacy
+                    re.match(r'^[A-Za-z0-9\-\s\._]+$', product.barcode) or  # Legacy
                                  (len(product.barcode) == 13 and product.barcode.isdigit())  # EAN-13
                              ):
-                raise UserError(_("Invalid barcode format for '%s': %s") % (product.name, product.barcode))
+                raise UserError(_("Invalid barcode format for '%s'") % product.name)
 
             # Uniqueness validation
-            duplicates = self.search([
+            duplicate = self.search([
                 ('barcode', '=', product.barcode),
                 ('id', '!=', product.id)
-            ])
-            if duplicates:
-                raise UserError(_("Barcode '%s' is already used by another product: %s") %
-                                (product.barcode, ', '.join(duplicates.mapped('name'))))
+            ], limit=1)
 
-    # Enhanced barcode uniqueness constraint
+            if duplicate:
+                raise UserError(_(
+                    "Barcode '%s' is already used by product '%s'. "
+                    "Barcodes must be unique."
+                ) % (product.barcode, duplicate.display_name))
+
+    # Barcode uniqueness constraint (backup)
     _sql_constraints = [
-        ('barcode_uniq', 'unique(barcode)', 'Barcode must be unique across all products!')
+        ('barcode_uniq', 'unique(barcode)', 'Barcode must be unique!')
     ]
