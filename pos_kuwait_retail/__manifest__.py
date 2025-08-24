@@ -5,7 +5,6 @@
         All-in-one Point of Sale solution for Kuwait retail clothing stores:
 
         🏪 RETAIL OPERATIONS
-        • Auto barcode generation from product names (uppercase, 25 chars max)
         • Default product settings optimized for retail (POS available, consumable type)
         • Smart product cost updates from vendor bills
 
