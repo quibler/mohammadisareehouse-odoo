@@ -27,18 +27,3 @@ class ProductTemplate(models.Model):
             'list_price': 0.0
         })
         return defaults
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        """Auto-generate barcodes when creating product templates"""
-        templates = super().create(vals_list)
-
-        for template in templates:
-            if len(template.product_variant_ids) == 1:
-                variant = template.product_variant_ids[0]
-                if not variant.barcode and template.name:
-                    generated_barcode = variant._generate_barcode(template.name)
-                    variant.barcode = generated_barcode
-                    _logger.info(f"Generated barcode '{generated_barcode}' for '{template.name}'")
-
-        return templates
