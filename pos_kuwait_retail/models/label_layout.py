@@ -21,13 +21,17 @@ class ProductLabelLayout(models.TransientModel):
 
         return xml_id, data
 
+    # FORCE dymo in all cases
     @api.model
     def default_get(self, fields_list):
-        """Override to set default quantity from latest vendor bill"""
+        """Override to set default quantity from latest vendor bill and FORCE dymo"""
         import logging
         _logger = logging.getLogger(__name__)
 
         res = super().default_get(fields_list)
+
+        # ALWAYS force dymo format
+        res['print_format'] = 'dymo'
 
         # Get the products from context
         product_tmpl_ids = self.env.context.get('default_product_tmpl_ids', [])
@@ -69,6 +73,18 @@ class ProductLabelLayout(models.TransientModel):
 
         return res
 
+    @api.model
+    def create(self, vals):
+        """Force dymo on create"""
+        vals['print_format'] = 'dymo'
+        return super().create(vals)
+
+    def write(self, vals):
+        """Force dymo on write"""
+        vals['print_format'] = 'dymo'
+        return super().write(vals)
+
+    # EXISTING: Method preserved exactly as is
     def _get_total_quantity_from_latest_bills(self, products):
         """Calculate total quantity for products from latest vendor bills"""
         if not products:
