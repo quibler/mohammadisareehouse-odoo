@@ -449,19 +449,116 @@ patch(ActionpadWidget.prototype, {
     }
 });
 
-// Receipt Screen: Auto-print if configured
+// Receipt Screen: Enhanced Auto-print functionality
 patch(ReceiptScreen.prototype, {
     setup() {
         super.setup();
+        
         onMounted(() => {
-            if (this.pos.config.iface_print_auto) {
-                setTimeout(() => {
-                    const printBtn = document.querySelector('.print-button, .button.print');
-                    if (printBtn?.offsetParent) {
-                        printBtn.click();
-                    }
-                }, 1000);
-            }
+            // Auto-print receipt when screen is mounted/rendered
+            // Try multiple times with different delays to handle various loading states
+            this.autoPrintReceipt();
+            
+            // Backup attempts in case first one fails due to timing
+            setTimeout(() => this.autoPrintReceipt(), 1000);
+            setTimeout(() => this.autoPrintReceipt(), 2000);
         });
+    },
+
+    /**
+     * Enhanced auto-print receipt when receipt screen is rendered
+     * Supports multiple button selectors and intelligent fallback logic
+     */
+    autoPrintReceipt() {
+        // Prevent multiple print attempts
+        if (this._autoPrintAttempted) {
+            return;
+        }
+        
+        // Always auto-print receipts when receipt screen loads
+        // Wait a brief moment for the screen to fully render
+        setTimeout(() => {
+            // Try to call doFullPrint method directly if available
+            if (this.doFullPrint && typeof this.doFullPrint.call === 'function') {
+                console.log('Auto-printing receipt using doFullPrint method');
+                this.doFullPrint.call();
+                this._autoPrintAttempted = true;
+                return;
+            }
+
+            // Primary selectors - targeting official receipt screen button structure
+            const printSelectors = [
+                // Official template button: <button class="button print btn btn-lg btn-secondary...
+                'button.button.print.btn.btn-lg.btn-secondary',
+                '.button.print.btn.btn-secondary',
+                'button.button.print',
+                '.button.print',
+                '.print-button',
+                '[data-action="print"]'
+            ];
+
+            // Try primary selectors first
+            for (const selector of printSelectors) {
+                const button = document.querySelector(selector);
+                if (button && button.offsetParent !== null) {
+                    console.log(`Auto-printing receipt using selector: ${selector}`);
+                    button.click();
+                    this._autoPrintAttempted = true;
+                    return;
+                }
+            }
+
+            // Enhanced text-based search - specifically target official button text
+            const buttons = document.querySelectorAll('button, .button');
+            let fullReceiptButton = null;
+            let basicReceiptButton = null;
+            let genericPrintButton = null;
+            
+            for (const button of buttons) {
+                if (!button.offsetParent) continue; // Skip hidden buttons
+                
+                const text = button.textContent?.trim().toLowerCase() || '';
+                
+                // Exact match for "Print Full Receipt" (highest priority)
+                if (text.includes('print full receipt')) {
+                    fullReceiptButton = button;
+                    break; // Highest priority - exit immediately
+                }
+                // Match for "Print Basic Receipt" (if full receipt not found)
+                else if (text.includes('print basic receipt')) {
+                    basicReceiptButton = button;
+                }
+                // Generic print button (lowest priority)
+                else if (text.includes('print') && 
+                        !text.includes('reprint') && 
+                        !text.includes('new order') && 
+                        !text.includes('back')) {
+                    genericPrintButton = button;
+                }
+            }
+
+            // Execute in priority order
+            if (fullReceiptButton) {
+                console.log('Auto-printing receipt using "Print Full Receipt" button');
+                fullReceiptButton.click();
+                this._autoPrintAttempted = true;
+            } else if (basicReceiptButton) {
+                console.log('Auto-printing receipt using "Print Basic Receipt" button');
+                basicReceiptButton.click();
+                this._autoPrintAttempted = true;
+            } else if (genericPrintButton) {
+                console.log('Auto-printing receipt using generic print button');
+                genericPrintButton.click();
+                this._autoPrintAttempted = true;
+            } else {
+                console.log('No suitable print button found for auto-printing');
+                // Debug: log available buttons
+                console.log('Available buttons:', Array.from(buttons).map(b => ({
+                    text: b.textContent?.trim(),
+                    classes: b.className,
+                    visible: !!b.offsetParent
+                })));
+            }
+        }, 500); // 500ms delay to ensure screen is fully rendered
     }
 });
