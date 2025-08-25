@@ -23,7 +23,7 @@ import { onMounted } from "@odoo/owl";
  * - window.receiptAPI.printBasicReceipt()    // Print basic receipt  
  * - window.receiptAPI.sendReceiptEmail(email) // Send via email (optional email param)
  * - window.receiptAPI.editPayment()          // Edit payment details
- * - window.receiptAPI.newOrder()             // Start new order
+ * - window.receiptAPI.newOrder()             // Start new order (MANUAL ONLY - only works on receipt screen)
  * - window.receiptAPI.isReceiptScreenActive() // Check if receipt screen is active
  * - window.receiptAPI.getOrderAmount()       // Get current order amount
  *
@@ -51,6 +51,12 @@ import { onMounted } from "@odoo/owl";
  * 3. Less likely to break when UI changes
  * 4. Better error handling and logging
  * 5. Automatic fallback to DOM clicking if direct methods fail
+ * 
+ * IMPORTANT: RECEIPT SCREEN BEHAVIOR
+ * - Receipt screen is NEVER automatically skipped
+ * - New Order can ONLY be triggered by manual user action (button click)
+ * - Auto-print is allowed, but user must manually start new order
+ * - All automatic navigation away from receipt screen is blocked
  */
 
 // Simple mode management
@@ -587,7 +593,7 @@ patch(ActionpadWidget.prototype, {
     }
 });
 
-// Payment Screen: Store instance globally for direct access
+// Payment Screen: Store instance globally for direct access and prevent auto-skip
 patch(PaymentScreen.prototype, {
     setup() {
         super.setup();
@@ -597,6 +603,56 @@ patch(PaymentScreen.prototype, {
             window.paymentScreen = this;
             console.log('Payment screen instance stored globally');
         });
+    },
+
+    /**
+     * Override afterOrderValidation to ALWAYS show receipt screen
+     * Never auto-skip to new order - user must manually click "New Order"
+     */
+    async afterOrderValidation() {
+        // Always show the receipt screen regardless of configuration
+        let nextScreen = "ReceiptScreen";
+        let switchScreen = true;
+
+        // Handle auto-printing if configured, but NEVER skip receipt screen
+        if (
+            this.currentOrder.nb_print === 0 &&
+            this.pos.config.iface_print_auto
+        ) {
+            const invoiced_finalized = this.currentOrder.is_to_invoice()
+                ? this.currentOrder.finalized
+                : true;
+
+            if (invoiced_finalized) {
+                console.log('Auto-printing receipt, but staying on receipt screen');
+                this.pos.printReceipt(this.currentOrder);
+                
+                // IMPORTANT: Never skip receipt screen, even if iface_print_skip_screen is true
+                // Always force user to manually click "New Order"
+            }
+        }
+
+        // ALWAYS go to receipt screen - never auto-skip
+        if (switchScreen) {
+            console.log('Showing receipt screen - user must manually start new order');
+            this.pos.showScreen(nextScreen);
+        }
+    },
+
+    /**
+     * Override selectNextOrder to prevent automatic order switching
+     * This should only be called when user manually clicks "New Order"
+     */
+    selectNextOrder() {
+        // This method should only be called from receipt screen manual button click
+        // Don't automatically select next order from payment screen
+        console.log('selectNextOrder called - should only happen from manual button click');
+        
+        if (this.currentOrder.originalSplittedOrder) {
+            this.pos.selectedOrderUuid = this.currentOrder.originalSplittedOrder.uuid;
+        } else {
+            this.pos.selectEmptyOrder();
+        }
     }
 });
 
@@ -707,7 +763,7 @@ patch(ReceiptScreen.prototype, {
     directNewOrder() {
         try {
             if (this.orderDone && typeof this.orderDone === 'function') {
-                console.log('Calling orderDone directly');
+                console.log('Starting new order via direct orderDone call');
                 return this.orderDone();
             }
             throw new Error('orderDone method not available');
@@ -762,6 +818,7 @@ patch(ReceiptScreen.prototype, {
             '[data-action="new-order"]',
             'button:contains("New Order")'
         ];
+        console.log('Using DOM fallback for new order');
         return this.clickFirstAvailable(selectors, 'new order');
     },
 
@@ -803,6 +860,7 @@ patch(ReceiptScreen.prototype, {
     isCurrentScreen() {
         return document.querySelector('.receipt-screen:not(.oe_hidden)')?.offsetParent !== null;
     },
+
 
     /**
      * Enhanced auto-print receipt using direct method calls
