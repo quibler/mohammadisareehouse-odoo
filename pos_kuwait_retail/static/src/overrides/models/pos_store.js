@@ -2,6 +2,7 @@
 
 import { PosStore } from "@point_of_sale/app/store/pos_store";
 import { ProductScreen } from "@point_of_sale/app/screens/product_screen/product_screen";
+import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
 import { ActionpadWidget } from "@point_of_sale/app/screens/product_screen/action_pad/action_pad";
 import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt_screen";
 import { patch } from "@web/core/utils/patch";
@@ -13,6 +14,43 @@ import { onMounted } from "@odoo/owl";
  * Product Screen: Arrow keys for quantity, Arrow Right to Payment
  * Payment Screen: Arrow Left/Right for navigation only
  * Receipt Screen: Enter to print, default Odoo behavior otherwise
+ *
+ * DIRECT FUNCTION CALL API:
+ * Instead of targeting DOM elements and clicking them, use these direct method calls:
+ *
+ * Receipt Screen Actions (available when window.receiptAPI is loaded):
+ * - window.receiptAPI.printFullReceipt()     // Print full receipt
+ * - window.receiptAPI.printBasicReceipt()    // Print basic receipt  
+ * - window.receiptAPI.sendReceiptEmail(email) // Send via email (optional email param)
+ * - window.receiptAPI.editPayment()          // Edit payment details
+ * - window.receiptAPI.newOrder()             // Start new order
+ * - window.receiptAPI.isReceiptScreenActive() // Check if receipt screen is active
+ * - window.receiptAPI.getOrderAmount()       // Get current order amount
+ *
+ * Navigation Actions:
+ * - window.pos.pay()                         // Go to payment screen from product screen
+ * - window.pos.onClickBackButton()           // Go back to product screen from payment
+ * - window.paymentScreen.validateOrder()     // Validate payment (payment screen)
+ * - window.receiptAPI.newOrder()             // Start new order from receipt screen
+ * 
+ * Payment Screen Actions (available when window.paymentScreen is loaded):
+ * - window.paymentScreen.addNewPaymentLine(method) // Add payment line
+ * - window.paymentScreen.deletePaymentLine(uuid)   // Delete payment line
+ * - window.paymentScreen.validateOrder()           // Validate and complete order
+ * - window.paymentScreen.toggleIsToInvoice()       // Toggle invoice flag
+ * - window.paymentScreen.addTip()                  // Add tip to order
+ *
+ * Order Management:
+ * - order.set_quantity(qty)                  // Set quantity directly
+ * - order.removeOrderline(line)              // Remove order line directly
+ * - pos.addLineToCurrentOrder(product, options) // Add product directly
+ *
+ * This approach is more reliable than DOM clicking because:
+ * 1. No dependency on CSS classes or DOM structure
+ * 2. Direct method calls are faster and more predictable
+ * 3. Less likely to break when UI changes
+ * 4. Better error handling and logging
+ * 5. Automatic fallback to DOM clicking if direct methods fail
  */
 
 // Simple mode management
@@ -128,12 +166,33 @@ patch(ProductScreen.prototype, {
             
             case 'ArrowRight':
                 if (order.get_orderlines()?.length > 0) {
-                    const payBtn = document.querySelector('.control-button .pay-button, .pay-button') ||
-                                 [...document.querySelectorAll('button')].find(btn =>
-                                   btn.textContent?.toLowerCase().includes('pay'));
-                    if (payBtn?.offsetParent) {
-                        payBtn.click();
-                        handled = true;
+                    // Use the exact same method as the template: this.pos.pay()
+                    try {
+                        if (this.pos && this.pos.pay && typeof this.pos.pay === 'function') {
+                            console.log('Product screen: Using pos.pay() method directly');
+                            this.pos.pay();
+                            handled = true;
+                        } else {
+                            // Fallback to DOM clicking if pos.pay() not available
+                            const payBtn = document.querySelector('.btn-switchpane.pay-button, .pay-button') ||
+                                         [...document.querySelectorAll('button')].find(btn =>
+                                           btn.textContent?.toLowerCase().includes('pay'));
+                            if (payBtn?.offsetParent) {
+                                console.log('Product screen: Using DOM click fallback for payment');
+                                payBtn.click();
+                                handled = true;
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('Direct pos.pay() failed, using DOM fallback:', error);
+                        // Fallback to DOM clicking
+                        const payBtn = document.querySelector('.btn-switchpane.pay-button, .pay-button') ||
+                                     [...document.querySelectorAll('button')].find(btn =>
+                                       btn.textContent?.toLowerCase().includes('pay'));
+                        if (payBtn?.offsetParent) {
+                            payBtn.click();
+                            handled = true;
+                        }
                     }
                 }
                 break;
@@ -158,18 +217,59 @@ patch(ProductScreen.prototype, {
         
         switch (event.key) {
             case 'ArrowLeft':
-                const backBtn = document.querySelector('.button.back, .back-button');
-                if (backBtn?.offsetParent) {
-                    backBtn.click();
-                    handled = true;
+                // Use the exact same method as the template: pos.onClickBackButton()
+                try {
+                    if (this.pos && this.pos.onClickBackButton && typeof this.pos.onClickBackButton === 'function') {
+                        console.log('Payment screen: Using pos.onClickBackButton() method directly');
+                        this.pos.onClickBackButton();
+                        handled = true;
+                    } else {
+                        // Fallback to DOM clicking
+                        const backBtn = document.querySelector('.button.back, .back-button, .btn-switchpane.back-button');
+                        if (backBtn?.offsetParent) {
+                            console.log('Payment screen: Using DOM click fallback for back navigation');
+                            backBtn.click();
+                            handled = true;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Direct back navigation failed, using DOM fallback:', error);
+                    const backBtn = document.querySelector('.button.back, .back-button, .btn-switchpane.back-button');
+                    if (backBtn?.offsetParent) {
+                        backBtn.click();
+                        handled = true;
+                    }
                 }
                 break;
             
             case 'ArrowRight':
-                const validateBtn = document.querySelector('.button.next, .validate-button, .button.validate');
-                if (validateBtn?.offsetParent && !validateBtn.disabled) {
-                    validateBtn.click();
-                    handled = true;
+                // Use the exact same method as the template: validateOrder()
+                try {
+                    const currentScreen = this.getCurrentPaymentScreen();
+                    if (currentScreen && currentScreen.validateOrder && typeof currentScreen.validateOrder === 'function') {
+                        // Check if order can be validated (same logic as template)
+                        const order = this.pos?.get_order?.();
+                        if (order && order.is_paid && order.is_paid() && order._isValidEmptyOrder && order._isValidEmptyOrder()) {
+                            console.log('Payment screen: Using validateOrder() method directly');
+                            currentScreen.validateOrder();
+                            handled = true;
+                        }
+                    } else {
+                        // Fallback to DOM clicking
+                        const validateBtn = document.querySelector('.button.next, .validation-button, .btn-switchpane.validation-button');
+                        if (validateBtn?.offsetParent && !validateBtn.disabled && !validateBtn.classList.contains('disabled')) {
+                            console.log('Payment screen: Using DOM click fallback for validation');
+                            validateBtn.click();
+                            handled = true;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Direct validation failed, using DOM fallback:', error);
+                    const validateBtn = document.querySelector('.button.next, .validation-button, .btn-switchpane.validation-button');
+                    if (validateBtn?.offsetParent && !validateBtn.disabled && !validateBtn.classList.contains('disabled')) {
+                        validateBtn.click();
+                        handled = true;
+                    }
                 }
                 break;
         }
@@ -180,13 +280,51 @@ patch(ProductScreen.prototype, {
         }
     },
 
+    getCurrentPaymentScreen() {
+        // Try to get the current PaymentScreen instance
+        if (window.paymentScreen) {
+            return window.paymentScreen;
+        }
+        
+        // Try to find it in the POS screens registry
+        try {
+            const registry = window.owl?.registry || window.__owl_registry__;
+            if (registry && registry.category) {
+                const posScreens = registry.category('pos_screens');
+                const PaymentScreen = posScreens.get('PaymentScreen');
+                if (PaymentScreen && PaymentScreen.prototype) {
+                    // Return the current instance if available
+                    const paymentElements = document.querySelectorAll('.payment-screen');
+                    for (const elem of paymentElements) {
+                        if (elem.__owl__ && elem.__owl__.component) {
+                            return elem.__owl__.component;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            // Continue to fallback
+        }
+        
+        return null;
+    },
+
     handleReceiptScreenKeys(event) {
         if (event.key === 'Enter') {
-            const printBtn = document.querySelector('.print-button, .button.print');
-            if (printBtn?.offsetParent) {
-                printBtn.click();
+            // Use direct method call instead of DOM clicking
+            if (window.receiptAPI && window.receiptAPI.printFullReceipt) {
+                console.log('Receipt screen: Using direct print method via keyboard');
+                window.receiptAPI.printFullReceipt();
                 event.preventDefault();
                 event.stopPropagation();
+            } else {
+                // Fallback to DOM clicking if API not available
+                const printBtn = document.querySelector('.print-button, .button.print');
+                if (printBtn?.offsetParent) {
+                    printBtn.click();
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
             }
         }
     }
@@ -449,12 +587,28 @@ patch(ActionpadWidget.prototype, {
     }
 });
 
-// Receipt Screen: Enhanced Auto-print functionality
+// Payment Screen: Store instance globally for direct access
+patch(PaymentScreen.prototype, {
+    setup() {
+        super.setup();
+        
+        onMounted(() => {
+            // Store payment screen instance globally for direct access
+            window.paymentScreen = this;
+            console.log('Payment screen instance stored globally');
+        });
+    }
+});
+
+// Receipt Screen: Enhanced functionality with direct method calls
 patch(ReceiptScreen.prototype, {
     setup() {
         super.setup();
         
         onMounted(() => {
+            // Make methods globally accessible for external calls
+            this.setupGlobalReceiptAPI();
+            
             // Auto-print receipt when screen is mounted/rendered
             // Try multiple times with different delays to handle various loading states
             this.autoPrintReceipt();
@@ -466,8 +620,193 @@ patch(ReceiptScreen.prototype, {
     },
 
     /**
-     * Enhanced auto-print receipt when receipt screen is rendered
-     * Supports multiple button selectors and intelligent fallback logic
+     * Setup global API for external access to receipt functions
+     * This allows direct function calls instead of DOM targeting
+     */
+    setupGlobalReceiptAPI() {
+        // Store receipt screen instance globally for direct access
+        window.receiptScreen = this;
+        
+        // Create simplified API object for external use
+        window.receiptAPI = {
+            // Direct method calls - most reliable approach
+            printFullReceipt: () => this.directPrintFull(),
+            printBasicReceipt: () => this.directPrintBasic(),
+            sendReceiptEmail: (email = null) => this.directSendEmail(email),
+            editPayment: () => this.directEditPayment(),
+            newOrder: () => this.directNewOrder(),
+            
+            // Utility methods
+            isReceiptScreenActive: () => this.isCurrentScreen(),
+            getOrderAmount: () => this.orderAmountPlusTip,
+            validateEmail: (email) => this.isValidEmail
+        };
+        
+        console.log('Receipt API initialized - use window.receiptAPI for direct calls');
+    },
+
+    /**
+     * Direct method calls - bypass DOM entirely
+     */
+    directPrintFull() {
+        try {
+            if (this.doFullPrint && typeof this.doFullPrint.call === 'function') {
+                console.log('Calling doFullPrint directly');
+                return this.doFullPrint.call();
+            }
+            throw new Error('doFullPrint method not available');
+        } catch (error) {
+            console.warn('Direct print full failed, falling back to DOM:', error);
+            return this.fallbackPrintFull();
+        }
+    },
+
+    directPrintBasic() {
+        try {
+            if (this.doBasicPrint && typeof this.doBasicPrint.call === 'function') {
+                console.log('Calling doBasicPrint directly');
+                return this.doBasicPrint.call();
+            }
+            throw new Error('doBasicPrint method not available');
+        } catch (error) {
+            console.warn('Direct print basic failed, falling back to DOM:', error);
+            return this.fallbackPrintBasic();
+        }
+    },
+
+    directSendEmail(email = null) {
+        try {
+            if (email) {
+                this.state.email = email;
+            }
+            
+            if (this.actionSendReceiptOnEmail && typeof this.actionSendReceiptOnEmail === 'function') {
+                console.log('Calling actionSendReceiptOnEmail directly');
+                return this.actionSendReceiptOnEmail();
+            }
+            throw new Error('actionSendReceiptOnEmail method not available');
+        } catch (error) {
+            console.warn('Direct send email failed, falling back to DOM:', error);
+            return this.fallbackSendEmail();
+        }
+    },
+
+    directEditPayment() {
+        try {
+            if (this.pos && this.pos.orderDetails && typeof this.pos.orderDetails === 'function') {
+                console.log('Calling pos.orderDetails directly');
+                return this.pos.orderDetails(this.currentOrder);
+            }
+            throw new Error('pos.orderDetails method not available');
+        } catch (error) {
+            console.warn('Direct edit payment failed, falling back to DOM:', error);
+            return this.fallbackEditPayment();
+        }
+    },
+
+    directNewOrder() {
+        try {
+            if (this.orderDone && typeof this.orderDone === 'function') {
+                console.log('Calling orderDone directly');
+                return this.orderDone();
+            }
+            throw new Error('orderDone method not available');
+        } catch (error) {
+            console.warn('Direct new order failed, falling back to DOM:', error);
+            return this.fallbackNewOrder();
+        }
+    },
+
+    /**
+     * Fallback DOM methods - only used when direct calls fail
+     */
+    fallbackPrintFull() {
+        const selectors = [
+            'button.button.print.btn.btn-lg.btn-secondary',
+            '.button.print[data-action="print-full"]',
+            'button:contains("Print Full Receipt")',
+            '.button.print'
+        ];
+        return this.clickFirstAvailable(selectors, 'print full receipt');
+    },
+
+    fallbackPrintBasic() {
+        const selectors = [
+            'button.button.print[data-action="print-basic"]',
+            'button:contains("Print Basic Receipt")'
+        ];
+        return this.clickFirstAvailable(selectors, 'print basic receipt');
+    },
+
+    fallbackSendEmail() {
+        const selectors = [
+            'button[data-action="send-email"]',
+            '.btn.btn-primary[aria-label*="email"]',
+            'button .fa-paper-plane'
+        ];
+        return this.clickFirstAvailable(selectors, 'send email');
+    },
+
+    fallbackEditPayment() {
+        const selectors = [
+            '[data-action="edit-payment"]',
+            '.edit-order-payment',
+            'span:contains("Edit Payment")'
+        ];
+        return this.clickFirstAvailable(selectors, 'edit payment');
+    },
+
+    fallbackNewOrder() {
+        const selectors = [
+            'button[name="done"]',
+            '[data-action="new-order"]',
+            'button:contains("New Order")'
+        ];
+        return this.clickFirstAvailable(selectors, 'new order');
+    },
+
+    /**
+     * Utility method to click first available element from selectors
+     */
+    clickFirstAvailable(selectors, actionName) {
+        for (const selector of selectors) {
+            try {
+                const element = document.querySelector(selector);
+                if (element && element.offsetParent) {
+                    console.log(`Fallback: clicking ${actionName} using selector: ${selector}`);
+                    element.click();
+                    return true;
+                }
+            } catch (e) {
+                // Continue to next selector
+            }
+        }
+        
+        // Text-based fallback
+        const buttons = document.querySelectorAll('button, .button, [role="button"]');
+        for (const btn of buttons) {
+            if (btn.offsetParent && 
+                btn.textContent?.toLowerCase().includes(actionName.toLowerCase())) {
+                console.log(`Fallback: clicking ${actionName} using text search`);
+                btn.click();
+                return true;
+            }
+        }
+        
+        console.warn(`Failed to ${actionName} - no suitable element found`);
+        return false;
+    },
+
+    /**
+     * Check if receipt screen is currently active
+     */
+    isCurrentScreen() {
+        return document.querySelector('.receipt-screen:not(.oe_hidden)')?.offsetParent !== null;
+    },
+
+    /**
+     * Enhanced auto-print receipt using direct method calls
+     * Falls back to DOM clicking only if direct methods fail
      */
     autoPrintReceipt() {
         // Prevent multiple print attempts
@@ -478,86 +817,13 @@ patch(ReceiptScreen.prototype, {
         // Always auto-print receipts when receipt screen loads
         // Wait a brief moment for the screen to fully render
         setTimeout(() => {
-            // Try to call doFullPrint method directly if available
-            if (this.doFullPrint && typeof this.doFullPrint.call === 'function') {
-                console.log('Auto-printing receipt using doFullPrint method');
-                this.doFullPrint.call();
-                this._autoPrintAttempted = true;
-                return;
-            }
-
-            // Primary selectors - targeting official receipt screen button structure
-            const printSelectors = [
-                // Official template button: <button class="button print btn btn-lg btn-secondary...
-                'button.button.print.btn.btn-lg.btn-secondary',
-                '.button.print.btn.btn-secondary',
-                'button.button.print',
-                '.button.print',
-                '.print-button',
-                '[data-action="print"]'
-            ];
-
-            // Try primary selectors first
-            for (const selector of printSelectors) {
-                const button = document.querySelector(selector);
-                if (button && button.offsetParent !== null) {
-                    console.log(`Auto-printing receipt using selector: ${selector}`);
-                    button.click();
-                    this._autoPrintAttempted = true;
-                    return;
-                }
-            }
-
-            // Enhanced text-based search - specifically target official button text
-            const buttons = document.querySelectorAll('button, .button');
-            let fullReceiptButton = null;
-            let basicReceiptButton = null;
-            let genericPrintButton = null;
+            console.log('Auto-printing receipt using direct method call');
+            const success = this.directPrintFull();
             
-            for (const button of buttons) {
-                if (!button.offsetParent) continue; // Skip hidden buttons
-                
-                const text = button.textContent?.trim().toLowerCase() || '';
-                
-                // Exact match for "Print Full Receipt" (highest priority)
-                if (text.includes('print full receipt')) {
-                    fullReceiptButton = button;
-                    break; // Highest priority - exit immediately
-                }
-                // Match for "Print Basic Receipt" (if full receipt not found)
-                else if (text.includes('print basic receipt')) {
-                    basicReceiptButton = button;
-                }
-                // Generic print button (lowest priority)
-                else if (text.includes('print') && 
-                        !text.includes('reprint') && 
-                        !text.includes('new order') && 
-                        !text.includes('back')) {
-                    genericPrintButton = button;
-                }
-            }
-
-            // Execute in priority order
-            if (fullReceiptButton) {
-                console.log('Auto-printing receipt using "Print Full Receipt" button');
-                fullReceiptButton.click();
-                this._autoPrintAttempted = true;
-            } else if (basicReceiptButton) {
-                console.log('Auto-printing receipt using "Print Basic Receipt" button');
-                basicReceiptButton.click();
-                this._autoPrintAttempted = true;
-            } else if (genericPrintButton) {
-                console.log('Auto-printing receipt using generic print button');
-                genericPrintButton.click();
+            if (success) {
                 this._autoPrintAttempted = true;
             } else {
-                console.log('No suitable print button found for auto-printing');
-                // Debug: log available buttons
-                console.log('Available buttons:', Array.from(buttons).map(b => ({
-                    text: b.textContent?.trim(),
-                    classes: b.className,
-                    visible: !!b.offsetParent
-                })));
+                console.log('Auto-print failed - no suitable print method found');
             }
         }, 500); // 500ms delay to ensure screen is fully rendered
     }
