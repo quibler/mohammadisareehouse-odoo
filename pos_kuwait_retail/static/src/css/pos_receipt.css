@@ -1,0 +1,55 @@
+/* Thermal Receipt CSS - Minimal with Default Fonts */
+
+/* Print setup */
+@page {
+    margin: 0;
+    padding: 0;
+    size: auto;
+}
+
+/* Base thermal receipt styles - using default Bootstrap fonts */
+.pos-receipt {
+    /* Print optimization only - no font overrides */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    -webkit-font-smoothing: none !important;
+    -moz-osx-font-smoothing: unset !important;
+    text-rendering: optimizeSpeed !important;
+
+    /* Layout - minimal padding */
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 2px;
+    background: transparent;
+    line-height: 1.3;
+}
+
+/* Table fixes for proper alignment and no overflow */
+.pos-receipt .table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.pos-receipt .table th,
+.pos-receipt .table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 0;
+}
+
+/* Ensure all text is sharp and dark for thermal printing */
+.pos-receipt * {
+    color: #000 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+}
+
+/* Print-specific optimizations */
+@media print {
+    body {
+        margin: 0;
+        padding: 0;
+    }
+}

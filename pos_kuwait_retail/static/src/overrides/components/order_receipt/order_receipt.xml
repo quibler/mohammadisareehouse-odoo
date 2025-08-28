@@ -1,183 +1,145 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<!-- OrderReceipt Template - Complete Custom Receipt -->
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Thermal Receipt Template - Optimized Version -->
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
-
-        <!-- Replace the entire pos-receipt div with custom version -->
         <xpath expr="//div[hasclass('pos-receipt')]" position="replace">
-            <div class="pos-receipt thermal-receipt-wrapper">
+            <div class="pos-receipt">
 
-                <!-- HEADER SECTION -->
-                <div class="thermal-receipt-header text-center">
-                    <!-- Full Width Logo -->
-                    <img t-attf-src="/web/image?model=res.company&amp;id={{props.data.headerData.company.id}}&amp;field=logo" alt="Logo" class="w-100 d-block"/>
-                    <br/>
+                <!-- HEADER -->
+                <div class="receipt-section text-center">
+                    <img t-attf-src="/web/image?model=res.company&amp;id={{props.data.headerData.company.id}}&amp;field=logo"
+                         alt="Logo" class="w-100 mb-1"/>
 
-                    <!-- Company Contact Info -->
-                    <div class="thermal-receipt-company-info">
-                        <!-- Address -->
-                        <div class="text-wrap">
-                            <span t-if="props.data.headerData.company.street" t-esc="props.data.headerData.company.street" />
-                            <span t-if="props.data.headerData.company.street2">, <t t-esc="props.data.headerData.company.street2" /></span>
+                    <!-- Company Info -->
+                    <div class="company-info">
+                        <div t-if="props.data.headerData.company.street">
+                            <t t-esc="props.data.headerData.company.street"/>
+                            <t t-if="props.data.headerData.company.street2">, <t t-esc="props.data.headerData.company.street2"/></t>
                         </div>
-                        <div class="text-wrap">
-                            <span t-if="props.data.headerData.company.city" t-esc="props.data.headerData.company.city" />
-                            <span t-if="props.data.headerData.company.zip"> <t t-esc="props.data.headerData.company.zip" /></span>
+                        <div t-if="props.data.headerData.company.city">
+                            <t t-esc="props.data.headerData.company.city"/>
+                            <t t-if="props.data.headerData.company.zip"> <t t-esc="props.data.headerData.company.zip"/></t>
                         </div>
-
-                        <!-- Contact Numbers -->
-                        <div t-if="props.data.headerData.company.phone" class="text-wrap" t-esc="props.data.headerData.company.phone" />
-                        <div t-if="props.data.headerData.company.mobile" class="text-wrap" t-esc="props.data.headerData.company.mobile" />
-                        <div t-elif="props.data.headerData.company.partner_id and props.data.headerData.company.partner_id.mobile"
-                             class="text-wrap" t-esc="props.data.headerData.company.partner_id.mobile" />
-
-                        <!-- Email -->
-                        <div t-if="props.data.headerData.company.email" class="text-wrap" t-esc="props.data.headerData.company.email" />
+                        <div t-if="props.data.headerData.company.phone" t-esc="props.data.headerData.company.phone"/>
+                        <div t-if="props.data.headerData.company.mobile" t-esc="props.data.headerData.company.mobile"/>
+                        <div t-if="props.data.headerData.company.email" t-esc="props.data.headerData.company.email"/>
                     </div>
 
-                    <!-- Custom Header Text -->
-                    <div t-if="props.data.headerData.header" class="thermal-receipt-company-info text-wrap"
-                         t-esc="props.data.headerData.header" />
+                    <div t-if="props.data.headerData.header" class="mt-1" t-esc="props.data.headerData.header"/>
+                </div>
 
-                    <!-- Order Info Section -->
-                    <div class="thermal-receipt-order-info-no-box text-start">
-                        <div t-if="props.data.pos_config_name or props.data.headerData.trackingNumber">
-                            <span t-if="props.data.pos_config_name">Shop: <t t-esc="props.data.pos_config_name" /></span>
-                            <span t-if="props.data.pos_config_name and props.data.headerData.trackingNumber">, </span>
-                            <span t-if="props.data.headerData.trackingNumber">Order: #<t t-esc="props.data.headerData.trackingNumber" /></span>
-                        </div>
-                        <div t-if="props.data.sales_person">Sales person: <t t-esc="props.data.sales_person"/></div>
-                        <div t-if="props.data.date">Date: <t t-esc="props.data.date" /></div>
-                        <div t-if="props.data.name">Receipt: <t t-esc="props.data.name" /></div>
+                <!-- ORDER INFO -->
+                <div class="receipt-section border-top border-bottom border-dark">
+                    <div t-if="props.data.pos_config_name or props.data.headerData.trackingNumber">
+                        <span t-if="props.data.pos_config_name">Shop: <t t-esc="props.data.pos_config_name"/></span>
+                        <span t-if="props.data.pos_config_name and props.data.headerData.trackingNumber">, </span>
+                        <span t-if="props.data.headerData.trackingNumber">Order: #<t t-esc="props.data.headerData.trackingNumber"/></span>
+                    </div>
+                    <div t-if="props.data.sales_person">Sales person: <t t-esc="props.data.sales_person"/></div>
+                    <div t-if="props.data.date">Date: <t t-esc="props.data.date"/></div>
+                    <div t-if="props.data.name">Receipt: <t t-esc="props.data.name"/></div>
+                </div>
+
+                <!-- ITEMS TABLE -->
+                <div t-if="props.data.orderlines?.length" class="receipt-section">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless mb-0">
+                            <!-- Header -->
+                            <thead>
+                                <tr class="border-bottom border-dark">
+                                    <th class="text-start ps-0" style="width: 40%;">Item</th>
+                                    <th class="text-center" style="width: 15%;">Qty</th>
+                                    <th class="text-end" style="width: 20%;">Rate</th>
+                                    <th class="text-end pe-0" style="width: 25%;">Amount</th>
+                                </tr>
+                            </thead>
+                            <!-- Items -->
+                            <tbody>
+                                <tr t-foreach="props.data.orderlines" t-as="line" t-key="line_index">
+                                    <td class="align-top ps-0" style="width: 40%;">
+                                        <div t-esc="line.productName"/>
+                                        <div t-if="line.discount and line.discount !== '0'" class="small text-muted fst-italic">
+                                            Discount: <t t-esc="line.discount"/>%
+                                        </div>
+                                        <div t-if="line.customerNote" class="small text-muted fst-italic">
+                                            Note: <t t-esc="line.customerNote"/>
+                                        </div>
+                                    </td>
+                                    <td class="text-center align-top">
+                                        <t t-set="qtyStr" t-value="line.qty.toString()"/>
+                                        <t t-set="qtyWhole" t-value="qtyStr.split('.')[0]"/>
+                                        <t t-esc="qtyWhole"/>
+                                    </td>
+                                    <td class="text-end align-top">
+                                        <t t-set="unitPriceStr" t-value="line.unitPrice.split(' ')[0]"/>
+                                        <t t-set="unitPriceParts" t-value="unitPriceStr.split('.')"/>
+                                        <t t-set="unitPriceFormatted" t-value="unitPriceParts[0] + '.' + (unitPriceParts[1] || '00').substring(0, 2).padEnd(2, '0')"/>
+                                        <t t-esc="unitPriceFormatted"/>
+                                    </td>
+                                    <td class="text-end align-top pe-0" style="width: 25%;">
+                                        <t t-set="priceStr" t-value="line.price.split(' ')[0]"/>
+                                        <t t-set="priceParts" t-value="priceStr.split('.')"/>
+                                        <t t-set="priceFormatted" t-value="priceParts[0] + '.' + (priceParts[1] || '00').substring(0, 2).padEnd(2, '0')"/>
+                                        <t t-esc="priceFormatted"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <!-- ORDER ITEMS TABLE -->
-                <div t-if="props.data.orderlines?.length" class="thermal-receipt-items w-100">
-                    <!-- Table Header -->
-                    <div class="d-flex w-100 border-bottom border-dark pb-1 mb-2 fw-bold">
-                        <div class="flex-fill text-start pe-1">Item</div>
-                        <div style="flex: 0 0 15%; text-align: center;">Qty</div>
-                        <div style="flex: 0 0 20%; text-align: end;">Rate</div>
-                        <div style="flex: 0 0 20%; text-align: end;">Amount</div>
-                    </div>
-
-                    <!-- Order Lines -->
-                    <div t-foreach="props.data.orderlines" t-as="line" t-key="line_index" class="d-flex w-100 mb-1 align-items-start">
-                        <div class="flex-fill text-start pe-1">
-                            <div class="fw-bold" t-esc="line.productName"/>
-                            <div t-if="line.discount and line.discount !== '0'" class="small text-muted">
-                                Discount: <t t-esc="line.discount"/>%
-                            </div>
-                            <div t-if="line.customerNote" class="small fst-italic text-muted">
-                                Note: <t t-esc="line.customerNote"/>
-                            </div>
-                        </div>
-                        <div style="flex: 0 0 15%; text-align: center;" t-esc="line.qty"/>
-                        <div style="flex: 0 0 20%; text-align: end;">
-                            <t t-set="unitPriceNum" t-value="line.unitPrice.split(' ')[0]"/>
-                            <t t-esc="unitPriceNum"/>
-                        </div>
-                        <div style="flex: 0 0 20%; text-align: end;" class="fw-bold">
-                            <t t-set="priceNum" t-value="line.price.split(' ')[0]"/>
-                            <t t-esc="priceNum"/>
-                        </div>
-                    </div>
-
-                    <!-- General Note -->
-                    <div t-if="props.data.generalNote" class="border-top border-dark pt-2 mt-2 fst-italic small">
-                        <strong>Note:</strong> <t t-esc="props.data.generalNote"/>
+                <!-- TOTAL -->
+                <div class="receipt-section border-top border-dark">
+                    <div class="d-flex justify-content-between">
+                        <strong>
+                            <t t-out="props.data.label_total or 'Total:'"/>
+                        </strong>
+                        <strong>
+                            <t t-set="taxTotals" t-value="props.data.taxTotals"/>
+                            <t t-if="taxTotals" t-esc="props.formatCurrency(taxTotals.order_sign * taxTotals.order_total)"/>
+                            <t t-else="" t-esc="props.formatCurrency(props.data.total_with_tax)"/>
+                        </strong>
                     </div>
                 </div>
 
-                <!-- TOTALS AND PAYMENTS -->
-                <t t-if="!props.basic_receipt">
-                    <t t-set="taxTotals" t-value="props.data.taxTotals"/>
-
-                    <!-- Tax Details (if any) -->
-                    <div t-if="taxTotals and taxTotals.has_tax_groups" class="my-2">
-                        <t t-foreach="taxTotals.subtotals" t-as="subtotal" t-key="subtotal.name">
-                            <div class="d-flex justify-content-between">
-                                <span class="fw-bold text-nowrap" t-out="subtotal.name"/>
-                                <span t-esc="props.formatCurrency(subtotal.base_amount_currency)"/>
-                            </div>
-                            <div t-foreach="subtotal.tax_groups" t-as="tax_group" t-key="tax_group.id" class="d-flex justify-content-between">
-                                <span>
-                                    <span t-esc="tax_group.group_name"/>
-                                    <t t-if="!taxTotals.same_tax_base">
-                                        on <span t-esc="props.formatCurrency(tax_group.base_amount_currency)"/>
-                                    </t>
-                                </span>
-                                <span t-esc="props.formatCurrency(tax_group.tax_amount_currency)"/>
-                            </div>
-                        </t>
-                    </div>
-
-                    <!-- Separator Line -->
-                    <div class="text-center my-1">--------------------------------</div>
-
-                    <!-- TOTAL -->
-                    <div class="d-flex justify-content-between fw-bold fs-6 my-2">
-                        <t t-out="props.data.label_total"/>
-                        <span t-esc="props.formatCurrency(taxTotals.order_sign * taxTotals.order_total)"/>
-                    </div>
-
-                    <!-- Rounding (if applicable) -->
-                    <t t-if="props.data.show_rounding">
-                        <div class="d-flex justify-content-between">
-                            <t t-out="props.data.label_rounding"/>
-                            <span t-esc="props.formatCurrency(taxTotals.order_sign * taxTotals.order_rounding)"/>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            To Pay
-                            <span t-esc="props.formatCurrency(taxTotals.order_sign * (taxTotals.order_total + taxTotals.order_rounding))"/>
-                        </div>
-                    </t>
-
-                    <!-- Payment Lines -->
-                    <div class="d-flex justify-content-between" t-foreach="props.data.paymentlines" t-as="line" t-key="line_index">
-                        <t t-esc="line.name" />
+                <!-- PAYMENTS -->
+                <div t-if="props.data.paymentlines?.length" class="receipt-section border-top border-dark pt-1">
+                    <div t-foreach="props.data.paymentlines" t-as="line" t-key="line_index" class="d-flex justify-content-between">
+                        <span t-esc="line.name"/>
                         <span t-esc="props.formatCurrency(line.amount)"/>
                     </div>
 
-                    <!-- Change -->
-                    <div t-if="props.data.show_change" class="d-flex justify-content-between small fw-normal">
-                        <t t-out="props.data.label_change"/>
+                    <div t-if="props.data.show_change" class="d-flex justify-content-between small">
+                        <span t-out="props.data.label_change"/>
                         <span t-esc="props.formatCurrency(props.data.order_change)"/>
                     </div>
 
-                    <!-- Discounts (if applicable) -->
-                    <t t-if="props.data.total_discount">
-                        <div class="d-flex justify-content-between text-center">
-                            <t t-out="props.data.label_discounts"/>
-                            <span t-esc="props.formatCurrency(props.data.total_discount)"/>
-                        </div>
-                    </t>
-                </t>
+                    <div t-if="props.data.total_discount" class="d-flex justify-content-between">
+                        <span t-out="props.data.label_discounts"/>
+                        <span t-esc="props.formatCurrency(props.data.total_discount)"/>
+                    </div>
+                </div>
 
                 <!-- QR CODE -->
-                <div class="text-center my-3">
-                    <img src="/pos_kuwait_retail/static/src/img/brand_qr_code.png" alt="Brand QR Code" class="d-inline-block" style="width: 100px; height: 100px;"/>
+                <div class="receipt-section text-center">
+                    <img src="/pos_kuwait_retail/static/src/img/brand_qr_code.png"
+                         alt="Brand QR Code"
+                         style="width: 100px; height: 100px;"/>
                     <div class="mt-1">Scan to visit our brand page</div>
                 </div>
 
                 <!-- FOOTER -->
-                <div t-if="props.data.footer" class="text-center lh-sm" style="white-space: pre-line;" t-esc="props.data.footer" />
+                <div t-if="props.data.footer" class="receipt-section text-center" style="white-space: pre-line;" t-esc="props.data.footer"/>
 
-                <!-- Payment Terminal Receipts (hidden by default) -->
+                <!-- Payment Terminal Receipts (hidden) -->
                 <div class="d-none">
                     <t t-foreach="props.data.paymentlines" t-as="line" t-key="line_index">
-                        <t t-if="line.ticket">
-                            <br />
-                            <div class="pos-payment-terminal-receipt">
-                                <pre t-esc="line.ticket" />
-                            </div>
-                        </t>
+                        <div t-if="line.ticket" class="pos-payment-terminal-receipt">
+                            <pre t-esc="line.ticket"/>
+                        </div>
                     </t>
                 </div>
-
             </div>
         </xpath>
-
     </t>
 </templates>
