@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Thermal Receipt Template - Optimized Version -->
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('pos-receipt')]" position="replace">
@@ -43,8 +42,7 @@
                 <!-- ITEMS TABLE -->
                 <div t-if="props.data.orderlines?.length" class="receipt-section">
                     <div class="table-responsive">
-                        <table class="table table-sm table-borderless mb-0">
-                            <!-- Header -->
+                        <table class="table table-sm table-borderless mb-0" style="table-layout: fixed;">
                             <thead>
                                 <tr class="border-bottom border-dark">
                                     <th class="text-start ps-0" style="width: 40%;">Item</th>
@@ -56,7 +54,7 @@
                             <!-- Items -->
                             <tbody>
                                 <tr t-foreach="props.data.orderlines" t-as="line" t-key="line_index">
-                                    <td class="align-top ps-0" style="width: 40%;">
+                                    <td class="align-top ps-0" style="width: 40%; word-break: break-all;">
                                         <div t-esc="line.productName"/>
                                         <div t-if="line.discount and line.discount !== '0'" class="small text-muted fst-italic">
                                             Discount: <t t-esc="line.discount"/>%
