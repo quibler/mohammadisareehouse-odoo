@@ -1,24 +1,29 @@
+# -*- coding: utf-8 -*-
 from odoo import models, fields
 
 
 class ProductCategory(models.Model):
     _inherit = 'product.category'
 
-    auto_update_cost_from_bill = fields.Boolean(
-        string='Auto Update Cost from Vendor Bills',
-        default=True,
-        help="If enabled, product costs will be automatically updated "
-             "when vendor bills are posted for products in this category."
-    )
-    
+    # Cost update strategy for vendor bill processing
+    # This field is kept for future extensibility but not currently exposed in the UI
+    # 
+    # Future developers can:
+    # 1. Add views/product_category_views.xml to expose this field in the UI
+    # 2. Modify the cost update logic in account_move.py to use different strategies
+    # 3. Add additional strategy options as needed
+    # 
+    # Currently, cost updates always happen for all products regardless of category settings
+    # The strategy defaults to 'always' but can be changed programmatically if needed
     cost_update_strategy = fields.Selection([
         ('always', 'Always Update to Bill Price'),
         ('if_higher', 'Only if Bill Price is Higher'),
         ('if_lower', 'Only if Bill Price is Lower'),
         ('weighted_average', 'Calculate Weighted Average'),
-    ], string='Cost Update Strategy', default='always',
-       help="Strategy to use when updating product costs from vendor bills:\n"
-            "- Always Update: Replace current cost with bill price\n"
-            "- Only if Higher: Update only when bill price > current cost\n"
-            "- Only if Lower: Update only when bill price < current cost\n"
-            "- Weighted Average: Calculate average with existing stock")
+    ], string='Cost Update Strategy', default='always')
+
+    # Future extension possibilities:
+    # - Add cost_update_enabled boolean field to toggle per-category
+    # - Add minimum_cost_threshold float field for threshold-based updates
+    # - Add cost_update_journal_id many2one for specific accounting treatment
+    # - Add cost_update_notification boolean for alerting on cost changes

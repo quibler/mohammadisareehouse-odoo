@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 import logging
+import hashlib
 
 _logger = logging.getLogger(__name__)
 
@@ -43,15 +44,18 @@ class AccountMove(models.Model):
     _inherit = 'account.move'
 
     # Enhanced fields for auto stock functionality
-    auto_stock_picking_id = fields.Many2one(
+    auto_stock_picking_ids = fields.One2many(
         'stock.picking',
-        string='Auto Stock Picking',
-        readonly=True
+        'vendor_bill_id',
+        string='Auto Stock Pickings',
+        readonly=True,
+        help="Stock pickings automatically created from this vendor bill"
     )
     auto_stock_picking_count = fields.Integer(
         string='Stock Picking Count',
         compute='_compute_auto_stock_picking_count'
     )
+
     # Track if stock has been processed and content hash
     stock_processed_hash = fields.Char(
         string='Stock Processing Hash',
@@ -65,6 +69,19 @@ class AccountMove(models.Model):
         help="Indicates if automatic stock moves have been created for this bill"
     )
 
+    # Discrepancy tracking
+    has_stock_discrepancy = fields.Boolean(
+        string='Has Stock Discrepancy',
+        readonly=True,
+        default=False,
+        help="Indicates if there's a stock discrepancy that needs resolution"
+    )
+    stock_discrepancy_details = fields.Text(
+        string='Stock Discrepancy Details',
+        readonly=True,
+        help="Details of the stock discrepancy"
+    )
+
     # Total quantity of all products in the bill
     total_product_quantity = fields.Float(
         string='Total Product Quantity',
@@ -72,10 +89,10 @@ class AccountMove(models.Model):
         help="Total quantity of all products in this vendor bill"
     )
 
-    @api.depends('auto_stock_picking_id')
+    @api.depends('auto_stock_picking_ids')
     def _compute_auto_stock_picking_count(self):
         for record in self:
-            record.auto_stock_picking_count = 1 if record.auto_stock_picking_id else 0
+            record.auto_stock_picking_count = len(record.auto_stock_picking_ids)
 
     @api.depends('invoice_line_ids.quantity')
     def _compute_total_product_quantity(self):
@@ -126,12 +143,9 @@ class AccountMove(models.Model):
 
         # Create a string representation of the relevant bill data (no vendor name)
         hash_data = f"{self.name}|"
-        for line in stockable_lines:
-            # Use a safe way to get line id for hash
-            line_id = line.id if line.id else hash(line)
-            hash_data += f"{line.product_id.id}:{line.quantity}:{line.price_unit}:{line_id}|"
+        for line in stockable_lines.sorted('id'):  # Sort for consistency
+            hash_data += f"{line.product_id.id}:{line.quantity}:{line.price_unit}|"
 
-        import hashlib
         return hashlib.md5(hash_data.encode()).hexdigest()
 
     def _should_process_stock(self):
@@ -151,35 +165,11 @@ class AccountMove(models.Model):
         # If content has changed, process new stock and warn about discrepancy
         if self.stock_processed_hash != current_hash:
             _logger.warning(
-                f"Bill content changed for {self.name}. Previous hash: {self.stock_processed_hash}, New hash: {current_hash}")
+                f"Bill content changed for {self.name}. "
+                f"Previous hash: {self.stock_processed_hash}, New hash: {current_hash}")
             return True
 
         return False
-
-    def _post_discrepancy_warning(self):
-        """Post a warning message about stock discrepancy"""
-        self.ensure_one()
-
-        warning_message = _(
-            "⚠️ <strong>STOCK DISCREPANCY WARNING</strong><br/><br/>"
-            "The content of this vendor bill has changed since stock moves were last created. "
-            "New automatic stock moves have been generated based on the current bill content.<br/><br/>"
-            "<strong>Action Required:</strong><br/>"
-            "• Review the previous automatic stock moves<br/>"
-            "• Manually reverse/adjust previous stock moves if necessary<br/>"
-            "• Check inventory levels for affected products<br/><br/>"
-            "<strong>Affected Products:</strong><br/>"
-            "%s"
-        ) % self._get_stockable_products_summary()
-
-        self.message_post(
-            body=warning_message,
-            message_type='comment',
-            subtype_xmlid='mail.mt_note'
-        )
-
-        # Also log for admin attention
-        _logger.warning(f"Stock discrepancy detected for bill {self.name}. Manual review required.")
 
     def _get_stockable_products_summary(self):
         """Get a summary of stockable products for warning message"""
@@ -190,11 +180,58 @@ class AccountMove(models.Model):
                          and (line.display_type == 'product' or not line.display_type)
         )
 
-        summary = ""
+        summary_lines = []
         for line in stockable_lines:
-            summary += f"• {line.product_id.name}: {line.quantity} {line.product_uom_id.name}<br/>"
+            summary_lines.append(f"• {line.product_id.name}: {line.quantity} {line.product_uom_id.name}")
 
-        return summary
+        return "\n".join(summary_lines)
+
+    def _post_discrepancy_warning(self):
+        """Post a warning message about stock discrepancy"""
+        self.ensure_one()
+
+        # Get affected products summary
+        products_summary = self._get_stockable_products_summary()
+
+        # Store discrepancy details for the resolution wizard
+        discrepancy_details = f"""Stock discrepancy detected for vendor bill {self.name}.
+
+The content of this vendor bill has changed since stock moves were last created.
+New automatic stock moves have been generated based on the current bill content.
+
+AFFECTED PRODUCTS:
+{products_summary}
+
+ACTION REQUIRED:
+• Review the previous automatic stock moves
+• Use the 'Resolve Stock Discrepancy' button to view and correct the issue
+• Check inventory levels for affected products"""
+
+        self.stock_discrepancy_details = discrepancy_details
+        self.has_stock_discrepancy = True
+
+        # Post clean message to chatter (no HTML)
+        warning_message = f"""⚠️ STOCK DISCREPANCY WARNING
+
+The content of this vendor bill has changed since stock moves were last created.
+New automatic stock moves have been generated based on the current bill content.
+
+ACTION REQUIRED:
+• Review the previous automatic stock moves
+• Use the 'Resolve Stock Discrepancy' button to view and correct the issue
+• Check inventory levels for affected products
+
+AFFECTED PRODUCTS:
+{products_summary}"""
+
+        self.message_post(
+            body=warning_message,
+            message_type='comment',
+            subtype_xmlid='mail.mt_note'
+        )
+
+        # Also log for admin attention (clean log message)
+        _logger.warning(f"Stock discrepancy detected for bill {self.name}. Manual review required.")
 
     def action_post(self):
         """Override to create stock movements and update costs after posting vendor bills"""
@@ -216,8 +253,8 @@ class AccountMove(models.Model):
                 # Update product costs FIRST (before stock movements)
                 bill._update_product_costs_from_bill()
 
-                # Create stock movements
-                bill._create_auto_stock_picking()
+                # Create stock movements using proper stock moves
+                bill._create_proper_stock_moves()
 
                 # Update tracking fields
                 bill.stock_processed_hash = bill._compute_bill_content_hash()
@@ -226,12 +263,16 @@ class AccountMove(models.Model):
                 # Post warning if content changed
                 if is_content_change:
                     bill._post_discrepancy_warning()
+                else:
+                    # Clear any previous discrepancy flags for fresh processing
+                    bill.has_stock_discrepancy = False
+                    bill.stock_discrepancy_details = False
 
             except Exception as e:
                 _logger.error(f"Failed to process bill {bill.name}: {str(e)}")
                 # Create a message in the chatter instead of blocking the bill
                 bill.message_post(
-                    body=_("❌ <strong>Error:</strong> Failed to automatically process vendor bill. Error: %s") % str(e),
+                    body=f"❌ Error: Failed to automatically process vendor bill. Error: {str(e)}",
                     message_type='comment',
                     subtype_xmlid='mail.mt_note'
                 )
@@ -248,26 +289,54 @@ class AccountMove(models.Model):
 
         return result
 
-    def action_view_auto_stock_picking(self):
-        """Action to view the auto-created stock picking"""
+    def action_view_auto_stock_pickings(self):
+        """Action to view all auto-created stock pickings"""
         self.ensure_one()
-        if not self.auto_stock_picking_id:
+        if not self.auto_stock_picking_ids:
             return
+
+        if len(self.auto_stock_picking_ids) == 1:
+            return {
+                'type': 'ir.actions.act_window',
+                'name': _('Auto Stock Picking'),
+                'res_model': 'stock.picking',
+                'view_mode': 'form',
+                'res_id': self.auto_stock_picking_ids[0].id,
+                'target': 'current',
+            }
+        else:
+            return {
+                'type': 'ir.actions.act_window',
+                'name': _('Auto Stock Pickings'),
+                'res_model': 'stock.picking',
+                'view_mode': 'tree,form',
+                'domain': [('id', 'in', self.auto_stock_picking_ids.ids)],
+                'target': 'current',
+            }
+
+    def action_resolve_stock_discrepancy(self):
+        """Open wizard to resolve stock discrepancy"""
+        self.ensure_one()
+
+        if not self.has_stock_discrepancy:
+            raise UserError(_("No stock discrepancy found for this vendor bill."))
 
         return {
             'type': 'ir.actions.act_window',
-            'name': _('Auto Stock Picking'),
-            'res_model': 'stock.picking',
+            'name': _('Resolve Stock Discrepancy'),
+            'res_model': 'vendor.bill.stock.discrepancy.wizard',
             'view_mode': 'form',
-            'res_id': self.auto_stock_picking_id.id,
-            'target': 'current',
+            'target': 'new',
+            'context': {
+                'default_vendor_bill_id': self.id,
+            }
         }
 
-    def _create_auto_stock_picking(self):
-        """Create stock picking and moves from vendor bill"""
+    def _create_proper_stock_moves(self):
+        """Create proper stock moves with full traceability - Odoo Standard Way"""
         self.ensure_one()
 
-        _logger.info(f"Starting auto stock picking creation for bill {self.name}")
+        _logger.info(f"Starting proper stock moves creation for bill {self.name}")
 
         if self.move_type != 'in_invoice':
             _logger.info(f"Bill {self.name} is not a vendor bill, skipping")
@@ -282,132 +351,80 @@ class AccountMove(models.Model):
         )
 
         _logger.info(f"Found {len(stockable_lines)} stockable lines in bill {self.name}")
-        for line in stockable_lines:
-            _logger.info(f"  - Product: {line.product_id.name}, Qty: {line.quantity}, Type: {line.product_id.type}")
 
         if not stockable_lines:
             _logger.info(f"No stockable products found in bill {self.name}, skipping")
             return
 
-        # Create direct stock updates
-        self._create_direct_stock_update(stockable_lines)
-
-    def _create_direct_stock_update(self, stockable_lines):
-        """Create direct stock update using stock.quant methods"""
-        _logger.info("Creating direct stock update using quant methods")
-
-        # Get the default stock location
-        warehouse = self.env['stock.warehouse'].search([
-            ('company_id', '=', self.company_id.id)
+        # Get incoming picking type
+        picking_type = self.env['stock.picking.type'].search([
+            ('code', '=', 'incoming'),
+            ('warehouse_id.company_id', '=', self.company_id.id)
         ], limit=1)
 
-        if not warehouse:
-            raise UserError(_("No warehouse found for company %s") % self.company_id.name)
+        if not picking_type:
+            raise UserError(_("No incoming picking type found for company %s") % self.company_id.name)
 
-        stock_location = warehouse.lot_stock_id
-        _logger.info(f"Using stock location: {stock_location.name}")
+        # Create stock picking
+        picking_vals = {
+            'picking_type_id': picking_type.id,
+            'location_id': self.partner_id.property_stock_supplier.id,
+            'location_dest_id': picking_type.default_location_dest_id.id,
+            'origin': f"Vendor Bill: {self.name}",
+            'partner_id': self.partner_id.id,
+            'company_id': self.company_id.id,
+            'immediate_transfer': True,
+            'vendor_bill_id': self.id,  # Link back to vendor bill
+        }
 
-        # Create inventory adjustment for each product
+        picking = self.env['stock.picking'].create(picking_vals)
+        _logger.info(f"Created picking {picking.name}")
+
+        # Create stock moves for each line
+        moves_created = []
         for line in stockable_lines:
-            try:
-                _logger.info(f"Processing product: {line.product_id.name}, Qty: {line.quantity}")
-                self._create_inventory_adjustment(line.product_id, line.quantity, stock_location)
-                _logger.info(f"Successfully updated stock for {line.product_id.name}")
-
-            except Exception as e:
-                _logger.error(f"Failed to update stock for product {line.product_id.name}: {str(e)}")
-                raise
-
-        # Create a reference picking for traceability
-        self._create_reference_picking(stockable_lines, stock_location)
-
-    def _create_inventory_adjustment(self, product, quantity, location):
-        """Create an inventory adjustment to add stock with proper vendor bill reference"""
-        _logger.info(f"Creating inventory adjustment for {product.name}, adding qty: {quantity}")
-
-        # Check if quant exists
-        existing_quant = self.env['stock.quant'].search([
-            ('product_id', '=', product.id),
-            ('location_id', '=', location.id)
-        ], limit=1)
-
-        if existing_quant:
-            current_qty = existing_quant.quantity
-            new_qty = current_qty + quantity
-            _logger.info(f"Existing quant found. Current: {current_qty}, Adding: {quantity}, New: {new_qty}")
-        else:
-            new_qty = quantity
-            _logger.info(f"No existing quant. Creating new with qty: {new_qty}")
-
-        # Create meaningful reference name for the inventory adjustment
-        adjustment_reference = f"Auto Stock from Bill {self.name}"
-        
-        _logger.info(f"Using inventory adjustment reference: {adjustment_reference}")
-
-        # Use _update_available_quantity to properly update stock with enhanced reference tracking
-        self.env['stock.quant']._update_available_quantity(
-            product,
-            location,
-            quantity=quantity,
-            in_date=fields.Datetime.now()
-        )
-
-        _logger.info(f"Stock updated successfully for {product.name} with reference: {adjustment_reference}")
-
-    def _create_reference_picking(self, stockable_lines, location):
-        """Create stock picking and moves from vendor bill for reference"""
-        try:
-            picking_type = self.env['stock.picking.type'].search([
-                ('code', '=', 'incoming'),
-                ('warehouse_id.company_id', '=', self.company_id.id)
-            ], limit=1)
-
-            if not picking_type:
-                _logger.warning("No incoming picking type found, skipping reference picking")
-                return
-
-            picking_vals = {
-                'picking_type_id': picking_type.id,
+            move_vals = {
+                'name': f"{line.product_id.name} (from {self.name})",
+                'product_id': line.product_id.id,
+                'product_uom_qty': line.quantity,
+                'product_uom': line.product_uom_id.id,
                 'location_id': self.partner_id.property_stock_supplier.id,
-                'location_dest_id': location.id,
+                'location_dest_id': picking_type.default_location_dest_id.id,
+                'picking_id': picking.id,
                 'origin': f"Vendor Bill: {self.name}",
-                'state': 'done',
-                'move_type': 'direct',
                 'company_id': self.company_id.id,
+                'to_refund': True,  # Allow returns if needed
+                'price_unit': line.price_unit,  # For proper valuation
             }
 
-            # Create picking
-            picking = self.env['stock.picking'].create(picking_vals)
-            _logger.info(f"Created picking {picking.name}")
+            move = self.env['stock.move'].create(move_vals)
+            moves_created.append(move)
 
-            # Store reference to the most recent picking
-            self.auto_stock_picking_id = picking.id
+            # Create move lines for immediate transfer
+            move_line_vals = {
+                'move_id': move.id,
+                'product_id': line.product_id.id,
+                'product_uom_id': line.product_uom_id.id,
+                'quantity': line.quantity,
+                'location_id': self.partner_id.property_stock_supplier.id,
+                'location_dest_id': picking_type.default_location_dest_id.id,
+            }
 
-            # Create stock moves for reference
-            for line in stockable_lines:
-                move_vals = {
-                    'name': f"{line.product_id.name} (Auto from {self.name})",
-                    'product_id': line.product_id.id,
-                    'product_uom': line.product_uom_id.id,
-                    'product_uom_qty': line.quantity,
-                    'location_id': self.partner_id.property_stock_supplier.id,
-                    'location_dest_id': location.id,
-                    'picking_id': picking.id,
-                    'company_id': self.company_id.id,
-                    'state': 'done',
-                }
+            self.env['stock.move.line'].create(move_line_vals)
 
-                self.env['stock.move'].create(move_vals)
+            _logger.info(f"Created move for product {line.product_id.name}, qty: {line.quantity}")
 
-            _logger.info(f"Created {len(stockable_lines)} reference moves in picking {picking.name}")
+        # Process the picking through standard Odoo workflow
+        picking.action_confirm()
+        picking.action_assign()
+        picking.button_validate()
 
-        except Exception as e:
-            _logger.error(f"Failed to create reference picking: {str(e)}")
-            # Don't fail the whole process if reference picking fails
+        _logger.info(f"Successfully processed picking {picking.name} with {len(moves_created)} moves")
 
-    # Keep existing cost update methods unchanged
+        return picking
+
     def _update_product_costs_from_bill(self):
-        """Update product costs based on vendor bill prices"""
+        """Update product costs based on vendor bill prices - only from latest bills"""
         self.ensure_one()
 
         if self.move_type != 'in_invoice' or self.state != 'posted':
@@ -415,7 +432,7 @@ class AccountMove(models.Model):
 
         _logger.info(f"Starting cost update for bill {self.name}")
 
-        # Get vendor bill lines with products
+        # Get vendor bill lines with products - all stockable products are eligible for cost updates
         cost_lines = self.invoice_line_ids.filtered(
             lambda line: line.product_id
                          and line.product_id.type in ['product', 'consu']
@@ -424,38 +441,175 @@ class AccountMove(models.Model):
                          and (line.display_type == 'product' or not line.display_type)
         )
 
-        _logger.info(f"Found {len(cost_lines)} cost lines to process")
+        if not cost_lines:
+            _logger.info(f"No cost update eligible lines found in bill {self.name}")
+            return
+
+        # Get minimum cost difference threshold
+        min_cost_diff = float(self.env['ir.config_parameter'].sudo().get_param(
+            'auto_stock_update.min_cost_difference', 0.01))
+
+        updated_count = 0
+        skipped_count = 0
 
         for line in cost_lines:
             try:
                 product = line.product_id
 
-                # Get the price in bill currency
-                bill_currency_price = line.price_unit
-
-                # Convert to company currency if needed
-                if self.currency_id != self.company_id.currency_id:
-                    # Convert from bill currency to company currency
-                    new_cost = self.currency_id._convert(
-                        bill_currency_price,
-                        self.company_id.currency_id,
-                        self.company_id,
-                        self.invoice_date or fields.Date.context_today(self)
-                    )
+                # CRITICAL: Check if this is the latest bill for this product
+                if not self._is_latest_bill_for_product(product):
                     _logger.info(
-                        f"Currency conversion: {bill_currency_price} {self.currency_id.name} -> {new_cost} {self.company_id.currency_id.name}")
+                        f"Skipping cost update for {product.name}: Not the latest bill mentioning this product")
+                    skipped_count += 1
+                    continue
+
+                # Convert price to product's currency if needed
+                bill_price = line.price_unit
+                if self.currency_id != product.currency_id:
+                    bill_price = self.currency_id._convert(
+                        bill_price,
+                        product.currency_id,
+                        self.company_id,
+                        self.date or fields.Date.context_today(self)
+                    )
+
+                # Get cost update strategy from product category
+                cost_strategy = product.categ_id.cost_update_strategy or 'always'
+                current_cost = product.standard_price
+
+                # Calculate new cost based on strategy
+                new_cost = self._calculate_new_cost(product, bill_price, current_cost, cost_strategy, line.quantity)
+
+                if new_cost is None:
+                    _logger.info(f"Skipped cost update for {product.name}: strategy={cost_strategy} conditions not met")
+                    skipped_count += 1
+                    continue
+
+                cost_difference = abs(current_cost - new_cost)
+
+                # Check if difference is significant enough to update
+                if cost_difference >= min_cost_diff:
+                    # Update the cost
+                    product.write({'standard_price': new_cost})
+                    updated_count += 1
+
+                    # Log the update
+                    strategy_msg = self._get_strategy_message(cost_strategy, current_cost, bill_price, new_cost)
+                    self.message_post(
+                        body=f"Updated cost price for product {product.name} from {current_cost} to {new_cost} {strategy_msg}",
+                        message_type='comment',
+                        subtype_xmlid='mail.mt_note'
+                    )
+
+                    _logger.info(
+                        f"Updated cost for {product.name}: {current_cost} → {new_cost} (Strategy: {cost_strategy})")
                 else:
-                    new_cost = bill_currency_price
-
-                _logger.info(f"Updating cost for {product.name}: {product.standard_price} -> {new_cost}")
-
-                # Update the product cost
-                product.with_context(disable_auto_svl=True).write({
-                    'standard_price': new_cost
-                })
-
-                _logger.info(f"Successfully updated cost for {product.name}")
+                    _logger.info(
+                        f"Skipped cost update for {product.name}: difference {cost_difference} below threshold {min_cost_diff}")
+                    skipped_count += 1
 
             except Exception as e:
                 _logger.error(f"Failed to update cost for product {line.product_id.name}: {str(e)}")
+                skipped_count += 1
                 continue
+
+        _logger.info(f"Cost update completed for bill {self.name}: {updated_count} updated, {skipped_count} skipped")
+
+    def _is_latest_bill_for_product(self, product):
+        """Check if this bill is the latest one mentioning the given product"""
+        self.ensure_one()
+
+        # Find all posted vendor bills that mention this product with a date >= this bill's date
+        later_bills = self.env['account.move'].search([
+            ('move_type', '=', 'in_invoice'),
+            ('state', '=', 'posted'),
+            ('invoice_date', '>', self.invoice_date),
+            ('invoice_line_ids.product_id', '=', product.id),
+            ('id', '!=', self.id),  # Exclude current bill
+        ], limit=1)
+
+        # If no later bills found, this is the latest
+        return not later_bills
+
+    def _calculate_new_cost(self, product, bill_price, current_cost, strategy, quantity):
+        """Calculate new cost based on the selected strategy"""
+
+        if strategy == 'always':
+            return bill_price
+
+        elif strategy == 'if_higher':
+            return bill_price if bill_price > current_cost else None
+
+        elif strategy == 'if_lower':
+            return bill_price if bill_price < current_cost else None
+
+        elif strategy == 'weighted_average':
+            # Calculate weighted average with existing stock
+            current_qty = product.qty_available
+            if current_qty <= 0:
+                # No existing stock, use bill price directly
+                return bill_price
+            else:
+                # Weighted average: (current_cost * current_qty + bill_price * new_qty) / (current_qty + new_qty)
+                total_value = (current_cost * current_qty) + (bill_price * quantity)
+                total_qty = current_qty + quantity
+                return total_value / total_qty if total_qty > 0 else bill_price
+
+        return None  # Unknown strategy
+
+    def _get_strategy_message(self, strategy, old_cost, bill_price, new_cost):
+        """Get descriptive message for cost update strategy"""
+        messages = {
+            'always': f"(Strategy: Always Update - Bill Price: {bill_price})",
+            'if_higher': f"(Strategy: Update if Higher - Bill Price: {bill_price})",
+            'if_lower': f"(Strategy: Update if Lower - Bill Price: {bill_price})",
+            'weighted_average': f"(Strategy: Weighted Average - Bill Price: {bill_price}, Calculated: {new_cost})",
+        }
+        return messages.get(strategy, f"(Strategy: {strategy})")
+
+    @api.model
+    def _check_cost_consistency_on_save(self):
+        """Check cost consistency when bill lines are modified"""
+        # This will be called from write method to ensure consistency during edits
+        for move in self:
+            if move.move_type == 'in_invoice' and move.state == 'posted':
+                # Re-run cost update to ensure consistency
+                move._update_product_costs_from_bill()
+
+    def write(self, vals):
+        """Override write to check cost consistency on line changes"""
+        # Check if invoice lines are being modified
+        lines_modified = 'invoice_line_ids' in vals
+
+        result = super().write(vals)
+
+        # If lines were modified and bill is posted, check cost consistency
+        if lines_modified:
+            posted_bills = self.filtered(lambda m: m.move_type == 'in_invoice' and m.state == 'posted')
+            for bill in posted_bills:
+                # Only update if this bill is still the latest for its products
+                bill._update_product_costs_from_bill()
+
+        return result
+
+    def reset_stock_processing(self):
+        """Reset stock processing flags - use with caution"""
+        self.ensure_one()
+
+        if not self.env.user.has_group('stock.group_stock_manager'):
+            raise UserError(_("Only stock managers can reset stock processing flags."))
+
+        self.write({
+            'stock_moves_created': False,
+            'stock_processed_hash': False,
+            'has_stock_discrepancy': False,
+            'stock_discrepancy_details': False,
+        })
+
+        self.message_post(
+            body="Stock processing flags have been reset. Next posting will create fresh stock moves.",
+            message_type='comment',
+            subtype_xmlid='mail.mt_note'
+        )
+
+        _logger.info(f"Stock processing flags reset for bill {self.name} by user {self.env.user.name}")

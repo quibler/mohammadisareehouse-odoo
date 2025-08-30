@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Enhanced Stock Picking Form View -->
+    <record id="view_picking_form_enhanced" model="ir.ui.view">
+        <field name="name">stock.picking.form.enhanced</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Add vendor bill reference after origin field -->
+            <field name="origin" position="after">
+                <field name="vendor_bill_id"
+                       invisible="not vendor_bill_id"
+                       groups="account.group_account_invoice"/>
+            </field>
+
+            <!-- Add button to view vendor bill in button_box -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button class="oe_stat_button"
+                        type="object"
+                        name="action_view_vendor_bill"
+                        invisible="not vendor_bill_id"
+                        icon="fa-file-text-o"
+                        groups="account.group_account_invoice">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_text">Vendor</span>
+                        <span class="o_stat_text">Bill</span>
+                    </div>
+                </button>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- Enhanced Stock Picking List View -->
+    <record id="vpicktree_enhanced" model="ir.ui.view">
+        <field name="name">stock.picking.list.enhanced</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.vpicktree"/>
+        <field name="arch" type="xml">
+
+            <!-- Add vendor bill reference column after origin -->
+            <field name="origin" position="after">
+                <field name="vendor_bill_id"
+                       string="Vendor Bill"
+                       optional="hide"
+                       groups="account.group_account_invoice"/>
+            </field>
+
+        </field>
+    </record>
+
+</odoo>

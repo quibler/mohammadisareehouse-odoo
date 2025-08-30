@@ -73,11 +73,18 @@ class ProductLabelLayout(models.TransientModel):
 
         return res
 
-    @api.model
-    def create(self, vals):
-        """Force dymo on create"""
-        vals['print_format'] = 'dymo'
-        return super().create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Force dymo on create - properly handles batch creation"""
+        # Handle both single dict and list of dicts for backward compatibility
+        if isinstance(vals_list, dict):
+            vals_list = [vals_list]
+
+        # Force dymo format for all records
+        for vals in vals_list:
+            vals['print_format'] = 'dymo'
+
+        return super().create(vals_list)
 
     def write(self, vals):
         """Force dymo on write"""
