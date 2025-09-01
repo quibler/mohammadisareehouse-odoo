@@ -110,7 +110,7 @@ Products affected: {products_summary.replace('• ', '').replace(chr(10), ', ')}
         _logger.warning(f"Stock discrepancy detected for bill {self.name}. {picking_count} pickings exist. Resolution required.")
 
     def action_view_auto_stock_pickings(self):
-        """Action to view all auto-created stock pickings"""
+        """Action to view all auto-created stock pickings - enhanced to hide returned pickings"""
         self.ensure_one()
         if not self.auto_stock_picking_ids:
             return {
@@ -122,27 +122,74 @@ Products affected: {products_summary.replace('• ', '').replace(chr(10), ', ')}
                 }
             }
 
-        if len(self.auto_stock_picking_ids) == 1:
+        # Filter out pickings that have been returned (have return entries)
+        # A picking is considered returned if another picking exists with origin referencing it
+        active_pickings = self.auto_stock_picking_ids.filtered(
+            lambda picking: not self._has_return_picking(picking)
+        )
+
+        if not active_pickings:
             return {
-                'type': 'ir.actions.act_window',
-                'name': _('Auto Stock Picking'),
-                'res_model': 'stock.picking',
-                'view_mode': 'form',
-                'res_id': self.auto_stock_picking_ids[0].id,
-                'target': 'current',
-                'views': [(False, 'form')],
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'type': 'info',
+                    'message': _('All stock pickings for this vendor bill have been returned.'),
+                }
             }
-        else:
-            return {
-                'type': 'ir.actions.act_window',
-                'name': _('Auto Stock Pickings'),
-                'res_model': 'stock.picking',
-                'view_mode': 'list,form',
-                'domain': [('id', 'in', self.auto_stock_picking_ids.ids)],
-                'target': 'current',
-                'views': [(False, 'list'), (False, 'form')],
-                'context': {'contact_display': 'partner_address'},
-            }
+
+        # Always show list view first, regardless of count
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Auto Stock Pickings'),
+            'res_model': 'stock.picking',
+            'view_mode': 'list,form',
+            'domain': [('id', 'in', active_pickings.ids)],
+            'target': 'current',
+            'views': [(False, 'list'), (False, 'form')],
+            'context': {
+                'contact_display': 'partner_address',
+            },
+        }
+
+    def _has_return_picking(self, picking):
+        """Check if a picking has a return picking associated with it"""
+        # Method 1: Direct return_id relationship (most reliable)
+        return_exists = self.env['stock.picking'].search_count([
+            ('return_id', '=', picking.id),
+            ('state', '!=', 'cancel')
+        ]) > 0
+
+        if return_exists:
+            return True
+
+        # Method 2: Origin field pattern matching for manual returns
+        return_pattern_exists = self.env['stock.picking'].search_count([
+            ('origin', 'ilike', f'Return of {picking.name}'),
+            ('state', '!=', 'cancel')
+        ]) > 0
+
+        if return_pattern_exists:
+            return True
+
+        # Method 3: Check if moves have been returned via origin_returned_move_id
+        # This catches cases where return was created through standard Odoo return wizard
+        for move in picking.move_ids:
+            returned_moves = self.env['stock.move'].search([
+                ('origin_returned_move_id', '=', move.id),
+                ('state', '!=', 'cancel')
+            ])
+            if returned_moves:
+                return True
+
+        return False
+
+    def refresh_stock_discrepancy_status(self):
+        """Manual method to refresh stock discrepancy status - useful for external triggers"""
+        self.ensure_one()
+        self._compute_has_stock_discrepancy()
+        self._compute_auto_stock_picking_count()
+        return True
 
     def action_resolve_stock_discrepancy(self):
         """Directly resolve stock discrepancy by reverting all previous stock moves except the last one"""
@@ -154,7 +201,6 @@ Products affected: {products_summary.replace('• ', '').replace(chr(10), ', ')}
         if not self.env.user.has_group('stock.group_stock_manager'):
             raise UserError(_("Only stock managers can resolve stock discrepancies."))
 
-        # FIXED: Changed auto_stock_pickup_ids to auto_stock_picking_ids
         all_done_pickings = self.auto_stock_picking_ids.filtered(
             lambda p: p.state == 'done'
         ).sorted('create_date', reverse=True)
@@ -266,6 +312,7 @@ Products affected: {products_summary.replace('• ', '').replace(chr(10), ', ')}
             'company_id': original_picking.company_id.id,
             'return_id': original_picking.id,
             'state': 'draft',
+            'move_type': 'direct',  # FIX: Explicitly set the stock picking move_type
         }
 
         return_picking = self.env['stock.picking'].create(return_vals)
@@ -356,6 +403,7 @@ Products affected: {products_summary.replace('• ', '').replace(chr(10), ', ')}
             'company_id': self.company_id.id,
             'move_type': 'direct',  # Set proper stock.picking move_type
             'vendor_bill_id': self.id,  # Link back to vendor bill
+            'scheduled_date': self.invoice_date or self.date or fields.Datetime.now(),  # Set proper scheduled date
         }
 
         picking = self.env['stock.picking'].create(picking_vals)
@@ -391,6 +439,29 @@ Products affected: {products_summary.replace('• ', '').replace(chr(10), ', ')}
         picking.button_validate()
 
         _logger.info(f"Successfully processed picking {picking.name} with {len(moves_created)} moves")
+
+        # Post chatter message about stock picking creation - similar to cost price updates
+        products_summary = self._get_stockable_products_summary()
+
+        picking_message = f"""📦 Stock Picking Created Automatically
+
+    Stock movements have been automatically created for this vendor bill:
+
+    **Picking Details:**
+    • Picking: {picking.name}
+    • Status: {dict(picking._fields['state']._description_selection(self.env))[picking.state]}
+    • Products processed: {len(stockable_lines)}
+
+    **Products Received:**
+    {products_summary}
+
+    The inventory has been updated to reflect the new stock from this vendor bill."""
+
+        self.message_post(
+            body=picking_message,
+            message_type='comment',
+            subtype_xmlid='mail.mt_note'
+        )
 
         return picking
 
