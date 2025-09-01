@@ -5,7 +5,7 @@
         <field name="model">pos.config</field>
         <field name="inherit_id" ref="point_of_sale.view_pos_config_kanban"/>
         <field name="arch" type="xml">
-            <xpath expr="//div[hasclass('row') and contains(., 'Balance')]" position="replace">
+            <xpath expr="//div[@class='row'][contains(., 'Balance')]" position="replace">
             </xpath>
         </field>
     </record>

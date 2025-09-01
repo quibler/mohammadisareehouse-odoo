@@ -11,10 +11,12 @@
 
                     <!-- Company Info -->
                     <div class="company-info">
-                        <div t-if="props.data.headerData.company.street">
-                            <t t-esc="props.data.headerData.company.street"/>
-                            <t t-if="props.data.headerData.company.street2">, <t t-esc="props.data.headerData.company.street2"/></t>
-                        </div>
+                        <t t-if="props.data.headerData.company.street">
+                            <div><t t-esc="props.data.headerData.company.street"/></div>
+                        </t>
+                        <t t-if="props.data.headerData.company.street2">
+                            <div><t t-esc="props.data.headerData.company.street2"/></div>
+                        </t>
                         <div t-if="props.data.headerData.company.city">
                             <t t-esc="props.data.headerData.company.city"/>
                             <t t-if="props.data.headerData.company.zip"> <t t-esc="props.data.headerData.company.zip"/></t>

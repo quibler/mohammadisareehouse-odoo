@@ -3,3 +3,4 @@
 from . import product
 from . import pos
 from . import label_layout
+from . import res_company
