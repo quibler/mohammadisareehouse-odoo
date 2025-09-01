@@ -85,15 +85,6 @@
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_in_invoice_tree"/>
         <field name="arch" type="xml">
-
-            <!-- Add stock discrepancy indicator -->
-            <field name="currency_id" position="after">
-                <field name="has_stock_discrepancy" invisible="1"/>
-                <field name="auto_stock_picking_count" string="Pickings"
-                       optional="hide"
-                       groups="stock.group_stock_user"/>
-            </field>
-
             <!-- Add visual indicator for discrepancies -->
             <list position="attributes">
                 <attribute name="decoration-warning">has_stock_discrepancy</attribute>
@@ -114,6 +105,72 @@
 if records.filtered(lambda r: r.move_type == 'in_invoice'):
     for record in records:
         record.reset_stock_processing()
+        </field>
+    </record>
+
+    <!-- Hide Tax Excluded and show Amount Due in invoice list view -->
+    <record id="view_invoice_tree_amount_due" model="ir.ui.view">
+        <field name="name">account.invoice.tree.amount.due.kuwait</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_invoice_tree"/>
+        <field name="arch" type="xml">
+            <!-- Hide Tax Excluded field -->
+            <field name="amount_untaxed_in_currency_signed" position="attributes">
+                <attribute name="optional">hide</attribute>
+            </field>
+            <!-- Show Amount Due field -->
+            <field name="amount_residual_signed" position="attributes">
+                <attribute name="optional">show</attribute>
+            </field>
+            <!-- Show Payment Reference field by default in ALL views -->
+            <field name="payment_reference" position="replace">
+                <field name="payment_reference" optional="show"/>
+            </field>
+            <!-- Add total quantity column for vendor bills -->
+            <field name="amount_total_in_currency_signed" position="after">
+                <field name="total_product_quantity"
+                       string="Total Qty"
+                       optional="show"
+                       invisible="move_type != 'in_invoice'"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Hide asset_category_id and tax_ids fields in invoice form view -->
+    <record id="view_move_form_hide_fields" model="ir.ui.view">
+        <field name="name">account.move.form.hide.fields.kuwait</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <!-- Hide asset_category_id in invoice lines -->
+            <xpath expr="//field[@name='invoice_line_ids']/list/field[@name='asset_category_id']" position="attributes">
+                <attribute name="column_invisible">True</attribute>
+            </xpath>
+            <!-- Hide tax_ids in invoice lines -->
+            <xpath expr="//field[@name='invoice_line_ids']/list/field[@name='tax_ids']" position="attributes">
+                <attribute name="optional">hide</attribute>
+            </xpath>
+            <!-- Hide asset_category_id in journal items -->
+            <xpath expr="//field[@name='line_ids']/list/field[@name='asset_category_id']" position="attributes">
+                <attribute name="column_invisible">True</attribute>
+            </xpath>
+            <!-- Hide tax_ids in journal items -->
+            <xpath expr="//field[@name='line_ids']/list/field[@name='tax_ids']" position="attributes">
+                <attribute name="optional">hide</attribute>
+            </xpath>
+
+            <!-- Add total quantity display after invoice lines for vendor bills -->
+            <xpath expr="//field[@name='invoice_line_ids']" position="after">
+                <div class="row" invisible="move_type != 'in_invoice'">
+                    <div class="col-12">
+                        <div class="alert alert-info" role="alert" style="margin-top: 10px; padding: 10px;">
+                            <strong>📦 Total Product Quantity: </strong>
+                            <field name="total_product_quantity" nolabel="1" readonly="1" class="oe_inline"/>
+                            <span> units</span>
+                        </div>
+                    </div>
+                </div>
+            </xpath>
         </field>
     </record>
 
