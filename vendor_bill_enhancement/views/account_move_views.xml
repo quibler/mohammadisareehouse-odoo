@@ -10,13 +10,14 @@
 
             <!-- Add stock-related buttons in the header -->
             <xpath expr="//header" position="inside">
-                <!-- Stock Discrepancy Resolution Button -->
+                <!-- Direct Stock Discrepancy Resolution Button -->
                 <button name="action_resolve_stock_discrepancy"
                         string="Resolve Stock Discrepancy"
                         type="object"
                         class="btn-warning"
                         invisible="not has_stock_discrepancy"
-                        groups="stock.group_stock_user"/>
+                        groups="stock.group_stock_manager"
+                        confirm="This will revert all previous stock moves except the most recent one. Are you sure?"/>
 
                 <!-- View Stock Pickings Button -->
                 <button name="action_view_auto_stock_pickings"
@@ -33,8 +34,8 @@
                 <div class="alert alert-warning" role="alert"
                      invisible="not has_stock_discrepancy">
                     <strong>⚠️ Stock Discrepancy Detected</strong>
-                    <p>This vendor bill has stock discrepancies that need attention.
-                    Click "Resolve Stock Discrepancy" to review and fix the issues.</p>
+                    <p>This vendor bill content changed after stock moves were created. 
+                    Click "Resolve Stock Discrepancy" to automatically fix the issue by reverting previous duplicate moves.</p>
                 </div>
 
                 <!-- Stock Summary for Vendor Bills -->

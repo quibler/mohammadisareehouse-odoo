@@ -32,7 +32,6 @@
     'data': [
         'security/ir.model.access.csv',
         'views/account_move_views.xml',
-        'views/stock_discrepancy_wizard_views.xml',
         'views/menu_customization.xml',
         'data/ir_config_parameter.xml',
     ],
