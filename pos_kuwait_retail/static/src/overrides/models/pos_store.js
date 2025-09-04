@@ -264,7 +264,7 @@ patch(ProductScreen.prototype, {
                             {
                                 title: _t("Cannot Proceed to Payment"),
                                 type: "warning",
-                                sticky: true
+                                sticky: false
                             }
                         );
                         handled = true; // Prevent default payment action
@@ -532,7 +532,7 @@ patch(PosStore.prototype, {
                     {
                         title: _t("Cannot Proceed to Payment"),
                         type: "warning",
-                        sticky: true
+                        sticky: false
                     }
                 );
             } else {
