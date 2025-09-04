@@ -1,165 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Enhanced Vendor Bill Form View -->
-    <record id="view_move_form_vendor_bill_enhanced" model="ir.ui.view">
-        <field name="name">account.move.form.vendor.bill.enhanced</field>
+    <!-- Enhanced Vendor Bill Form View - Minimal UI -->
+    <record id="view_move_form_vendor_bill_enhanced_v4" model="ir.ui.view">
+        <field name="name">account.move.form.vendor.bill.enhanced.v4</field>
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_move_form"/>
         <field name="arch" type="xml">
-
-            <!-- Add stock-related buttons in the header -->
-            <xpath expr="//header" position="inside">
-                <!-- Direct Stock Discrepancy Resolution Button -->
-                <button name="action_resolve_stock_discrepancy"
-                        string="Resolve Stock Discrepancy"
-                        type="object"
-                        class="btn-warning"
-                        invisible="not has_stock_discrepancy"
-                        groups="stock.group_stock_manager"
-                        confirm="This will revert all previous stock moves except the most recent one. Are you sure?"/>
-
-                <!-- View Stock Pickings Button -->
-                <button name="action_view_auto_stock_pickings"
-                        string="View Stock Pickings"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="auto_stock_picking_count == 0"
-                        groups="stock.group_stock_user"/>
-            </xpath>
-
-            <!-- Add stock information after partner_shipping_id in the form -->
-            <field name="partner_shipping_id" position="after">
-                <!-- Stock Discrepancy Warning -->
-                <div class="alert alert-warning" role="alert"
-                     invisible="not has_stock_discrepancy">
-                    <strong>⚠️ Stock Discrepancy Detected</strong>
-                    <p>This vendor bill content changed after stock moves were created. 
-                    Click "Resolve Stock Discrepancy" to automatically fix the issue by reverting previous duplicate moves.</p>
-                </div>
-
-                <!-- Stock Summary for Vendor Bills -->
-                <group string="Stock Information"
-                       invisible="move_type != 'in_invoice' or not stock_moves_created">
-                    <field name="auto_stock_picking_count" string="Stock Pickings"/>
-                    <field name="total_product_quantity" string="Total Product Qty"/>
-                    <field name="stock_moves_created" invisible="1"/>
-                    <field name="has_stock_discrepancy" invisible="1"/>
-                </group>
-            </field>
 
             <!-- Add line numbers to invoice lines - target the tree inside invoice_line_ids -->
             <xpath expr="//field[@name='invoice_line_ids']/list/field[@name='sequence']" position="after">
                 <field name="line_number" string="#" width="40px"/>
             </xpath>
 
-        </field>
-    </record>
-
-    <!-- Smart Button Statistics for Vendor Bills -->
-    <record id="view_move_form_vendor_bill_buttons" model="ir.ui.view">
-        <field name="name">account.move.form.vendor.bill.buttons</field>
-        <field name="model">account.move</field>
-        <field name="inherit_id" ref="account.view_move_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//div[@name='button_box']" position="inside">
-
-                <!-- Stock Pickings Smart Button -->
-                <button class="oe_stat_button"
-                        type="object"
-                        name="action_view_auto_stock_pickings"
-                        invisible="auto_stock_picking_count == 0 or move_type != 'in_invoice'"
-                        icon="fa-truck"
-                        groups="stock.group_stock_user">
-                    <field name="auto_stock_picking_count" widget="statinfo"
-                           string="Stock Pickings"/>
-                </button>
-
-            </xpath>
-        </field>
-    </record>
-
-    <!-- Enhanced Tree View for Vendor Bills -->
-    <record id="view_in_invoice_tree_enhanced" model="ir.ui.view">
-        <field name="name">account.move.tree.vendor.bill.enhanced</field>
-        <field name="model">account.move</field>
-        <field name="inherit_id" ref="account.view_in_invoice_tree"/>
-        <field name="arch" type="xml">
-            <!-- Add visual indicator for discrepancies -->
-            <list position="attributes">
-                <attribute name="decoration-warning">has_stock_discrepancy</attribute>
-            </list>
-
-        </field>
-    </record>
-
-    <!-- Debug/Admin Menu Item to Reset Stock Processing -->
-    <record id="action_reset_stock_processing" model="ir.actions.server">
-        <field name="name">Reset Stock Processing</field>
-        <field name="model_id" ref="account.model_account_move"/>
-        <field name="binding_model_id" ref="account.model_account_move"/>
-        <field name="binding_view_types">form</field>
-        <field name="state">code</field>
-        <field name="groups_id" eval="[(4, ref('stock.group_stock_manager'))]"/>
-        <field name="code">
-if records.filtered(lambda r: r.move_type == 'in_invoice'):
-    for record in records:
-        record.reset_stock_processing()
-        </field>
-    </record>
-
-    <!-- Hide Tax Excluded and show Amount Due in invoice list view -->
-    <record id="view_invoice_tree_amount_due" model="ir.ui.view">
-        <field name="name">account.invoice.tree.amount.due.kuwait</field>
-        <field name="model">account.move</field>
-        <field name="inherit_id" ref="account.view_invoice_tree"/>
-        <field name="arch" type="xml">
-            <!-- Hide Tax Excluded field -->
-            <field name="amount_untaxed_in_currency_signed" position="attributes">
-                <attribute name="optional">hide</attribute>
-            </field>
-            <!-- Show Amount Due field -->
-            <field name="amount_residual_signed" position="attributes">
-                <attribute name="optional">show</attribute>
-            </field>
-            <!-- Show Payment Reference field by default in ALL views -->
-            <field name="payment_reference" position="replace">
-                <field name="payment_reference" optional="show"/>
-            </field>
-            <!-- Add total quantity column for vendor bills -->
-            <field name="amount_total_in_currency_signed" position="after">
-                <field name="total_product_quantity"
-                       string="Total Qty"
-                       optional="show"
-                       invisible="move_type != 'in_invoice'"/>
-            </field>
-        </field>
-    </record>
-
-    <!-- Hide asset_category_id and tax_ids fields in invoice form view -->
-    <record id="view_move_form_hide_fields" model="ir.ui.view">
-        <field name="name">account.move.form.hide.fields.kuwait</field>
-        <field name="model">account.move</field>
-        <field name="inherit_id" ref="account.view_move_form"/>
-        <field name="arch" type="xml">
-            <!-- Hide asset_category_id in invoice lines -->
-            <xpath expr="//field[@name='invoice_line_ids']/list/field[@name='asset_category_id']" position="attributes">
-                <attribute name="column_invisible">True</attribute>
-            </xpath>
-            <!-- Hide tax_ids in invoice lines -->
-            <xpath expr="//field[@name='invoice_line_ids']/list/field[@name='tax_ids']" position="attributes">
-                <attribute name="optional">hide</attribute>
-            </xpath>
-            <!-- Hide asset_category_id in journal items -->
-            <xpath expr="//field[@name='line_ids']/list/field[@name='asset_category_id']" position="attributes">
-                <attribute name="column_invisible">True</attribute>
-            </xpath>
-            <!-- Hide tax_ids in journal items -->
-            <xpath expr="//field[@name='line_ids']/list/field[@name='tax_ids']" position="attributes">
-                <attribute name="optional">hide</attribute>
-            </xpath>
-
-            <!-- Add total quantity display after invoice lines for vendor bills -->
+            <!-- Add total product quantity display after invoice lines -->
             <xpath expr="//field[@name='invoice_line_ids']" position="after">
                 <div class="row" invisible="move_type != 'in_invoice'">
                     <div class="col-12">
@@ -171,6 +25,7 @@ if records.filtered(lambda r: r.move_type == 'in_invoice'):
                     </div>
                 </div>
             </xpath>
+
         </field>
     </record>
 

@@ -1,26 +1,23 @@
 {
     'name': 'Vendor Bill Enhancement Suite',
-    'version': '18.0.3.0.0',  # Increment version for proper stock moves implementation
+    'version': '18.0.4.2.0',  # Feature restoration: cost price auto-update + total product quantity UI
     'category': 'Inventory/Purchase',
-    'summary': 'Enhanced vendor bill processing with proper stock moves, discrepancy resolution, and cost management',
+    'summary': 'Streamlined vendor bill processing with automatic differential stock moves and cost updates',
     'description': """
-        Enhanced vendor bill processing with comprehensive automation features and proper stock move integration.
-        Streamlines inventory management and cost tracking for better business efficiency.
+        Streamlined vendor bill processing with intelligent automation that works behind the scenes.
+        Automatically handles stock movements and cost updates without user intervention.
 
         Key Features:
-        - Auto-create proper stock pickings from vendor bills with full traceability
-        - Smart discrepancy detection and resolution wizard
-        - Product cost price updates with configurable strategies
-        - Quick product label printing with bill quantities
+        - Automatic stock moves creation on vendor bill posting
+        - Intelligent differential processing - only creates moves for actual changes
+        - Seamless handling of bill modifications (qty changes, product additions/removals)
+        - Automatic product cost price updates from latest bills
         - Default bill date automation (today's date)
-        - Integration with existing purchase workflows
-        - Currency conversion for accurate cost calculations
-        - Comprehensive error handling and audit trails
-        - Only processes stockable products for safety
-        - Proper stock move creation following Odoo standards
-        - Reversible stock operations with full audit trail
-        - Real-time inventory valuation updates
-        - Clean warning messages without HTML tags
+        - Clean, minimal user interface with essential information only
+        - Simple line numbering for easy reference
+        - Robust error handling with informative messages
+        - Full Odoo 18 compatibility with standard stock patterns
+        - No manual intervention required - everything happens automatically
     """,
     'author': 'Custom Development',
     'depends': [
@@ -30,7 +27,6 @@
         'pos_kuwait_retail',
     ],
     'data': [
-        'security/ir.model.access.csv',
         'views/account_move_views.xml',
         'views/menu_customization.xml',
         'data/ir_config_parameter.xml',
