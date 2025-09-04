@@ -7,6 +7,8 @@ import { ActionpadWidget } from "@point_of_sale/app/screens/product_screen/actio
 import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt_screen";
 import { patch } from "@web/core/utils/patch";
 import { onMounted } from "@odoo/owl";
+import { useService } from "@web/core/utils/hooks";
+import { _t } from "@web/core/l10n/translation";
 
 /**
  * OPTIMIZED POS NAVIGATION - Kuwait Retail
@@ -89,8 +91,86 @@ const modeManager = new ModeManager();
 patch(ProductScreen.prototype, {
     setup() {
         super.setup();
+        this.notification = useService("notification");
         this.initializeKeyboardHandling();
         this.watchForOrderChanges();
+    },
+
+    // Zero price validation method
+    validateOrderPrices() {
+        const order = this.pos?.get_order?.();
+        if (!order || !order.get_orderlines) {
+            return { valid: true, zeroPriceItems: [] };
+        }
+
+        const orderlines = order.get_orderlines();
+        if (!orderlines || orderlines.length === 0) {
+            return { valid: true, zeroPriceItems: [] };
+        }
+
+        // Check each order line for zero or negative unit prices only, but skip discount products
+        const zeroPriceLines = orderlines.filter(line => {
+            const unitPrice = line.get_unit_price ? line.get_unit_price() : line.price_unit;
+            
+            // Skip discount products - they are allowed to have negative prices
+            if (this._isDiscountLine(line)) {
+                return false;
+            }
+            
+            // Only check unit price - total can be zero due to discounts
+            return unitPrice <= 0;
+        });
+
+        const zeroPriceItems = zeroPriceLines.map(line => {
+            const product = line.get_product ? line.get_product() : line.product_id;
+            return product ? product.display_name || product.name : 'Unknown Product';
+        });
+
+        return {
+            valid: zeroPriceLines.length === 0,
+            zeroPriceItems: zeroPriceItems,
+            zeroPriceCount: zeroPriceLines.length
+        };
+    },
+
+    // Find discount product using same logic as DiscountButton
+    _findDiscountProduct() {
+        // Method 1: Try by specific product ID (discount product)
+        try {
+            let product = this.pos.models["product.product"].get(3007);
+            if (product) return product;
+        } catch (e) {}
+
+        // Method 2: Try by exact name "Discount"
+        const allProducts = this.pos.models["product.product"].getAll();
+        let product = allProducts.find(p =>
+            p.name && p.name.toLowerCase() === 'discount'
+        );
+        if (product) return product;
+
+        // Method 3: Try by name containing "discount" (fallback)
+        product = allProducts.find(p =>
+            p.name && p.name.toLowerCase().includes('discount')
+        );
+        if (product) return product;
+
+        // Method 4: Check POS config for specific discount product
+        if (this.pos.config.discount_product_id) {
+            product = this.pos.models["product.product"].get(this.pos.config.discount_product_id.id);
+            if (product) return product;
+        }
+
+        return null;
+    },
+
+    // Check if a line is a discount product line
+    _isDiscountLine(line) {
+        const discountProduct = this._findDiscountProduct();
+        if (!discountProduct) return false;
+        
+        const lineProductId = line.product_id ? line.product_id.id : 
+                             (line.get_product ? line.get_product().id : null);
+        return lineProductId === discountProduct.id;
     },
 
     // Watch for order changes to trigger button attachment
@@ -172,6 +252,25 @@ patch(ProductScreen.prototype, {
             
             case 'ArrowRight':
                 if (order.get_orderlines()?.length > 0) {
+                    // Validate order prices before proceeding to payment
+                    const validation = this.validateOrderPrices();
+                    if (!validation.valid) {
+                        // Show error banner notification for zero price items
+                        const itemsList = validation.zeroPriceItems.join(', ');
+                        const itemText = validation.zeroPriceCount === 1 ? 'item has' : 'items have';
+                        
+                        this.notification.add(
+                            _t("Cannot proceed to payment. The following %s zero price: %s. Please set prices for all items before proceeding to payment.", itemText, itemsList),
+                            {
+                                title: _t("Cannot Proceed to Payment"),
+                                type: "warning",
+                                sticky: true
+                            }
+                        );
+                        handled = true; // Prevent default payment action
+                        break;
+                    }
+
                     // Use the exact same method as the template: this.pos.pay()
                     try {
                         if (this.pos && this.pos.pay && typeof this.pos.pay === 'function') {
@@ -350,6 +449,101 @@ patch(PosStore.prototype, {
             setTimeout(() => this._updateModeVisuals(), 50);
         }
         return this._numpadMode;
+    },
+
+    // Find discount product using same logic as DiscountButton (PosStore version)
+    _findDiscountProduct() {
+        // Method 1: Try by specific product ID (discount product)
+        try {
+            let product = this.models["product.product"].get(3007);
+            if (product) return product;
+        } catch (e) {}
+
+        // Method 2: Try by exact name "Discount"
+        const allProducts = this.models["product.product"].getAll();
+        let product = allProducts.find(p =>
+            p.name && p.name.toLowerCase() === 'discount'
+        );
+        if (product) return product;
+
+        // Method 3: Try by name containing "discount" (fallback)
+        product = allProducts.find(p =>
+            p.name && p.name.toLowerCase().includes('discount')
+        );
+        if (product) return product;
+
+        // Method 4: Check POS config for specific discount product
+        if (this.config.discount_product_id) {
+            product = this.models["product.product"].get(this.config.discount_product_id.id);
+            if (product) return product;
+        }
+
+        return null;
+    },
+
+    // Check if a line is a discount product line (PosStore version)
+    _isDiscountLine(line) {
+        const discountProduct = this._findDiscountProduct();
+        if (!discountProduct) return false;
+        
+        const lineProductId = line.product_id ? line.product_id.id : 
+                             (line.get_product ? line.get_product().id : null);
+        return lineProductId === discountProduct.id;
+    },
+
+    // Override pay method to add zero price validation
+    pay() {
+        const order = this.get_order();
+        if (!order || !order.get_orderlines) {
+            return super.pay();
+        }
+
+        const orderlines = order.get_orderlines();
+        if (!orderlines || orderlines.length === 0) {
+            return super.pay();
+        }
+
+        // Check for zero unit price items only, but skip discount products
+        const zeroPriceLines = orderlines.filter(line => {
+            const unitPrice = line.get_unit_price ? line.get_unit_price() : line.price_unit;
+            
+            // Skip discount products - they are allowed to have negative prices
+            if (this._isDiscountLine(line)) {
+                return false;
+            }
+            
+            // Only check unit price - total can be zero due to discounts
+            return unitPrice <= 0;
+        });
+
+        if (zeroPriceLines.length > 0) {
+            const zeroPriceItems = zeroPriceLines.map(line => {
+                const product = line.get_product ? line.get_product() : line.product_id;
+                return product ? product.display_name || product.name : 'Unknown Product';
+            });
+
+            const itemsList = zeroPriceItems.join(', ');
+            const itemText = zeroPriceLines.length === 1 ? 'item has' : 'items have';
+
+            // Use notification service if dialog not available in PosStore
+            if (this.env && this.env.services && this.env.services.notification) {
+                this.env.services.notification.add(
+                    _t("Cannot proceed to payment. The following %s zero price: %s. Please set prices for all items before proceeding.", itemText, itemsList),
+                    {
+                        title: _t("Cannot Proceed to Payment"),
+                        type: "warning",
+                        sticky: true
+                    }
+                );
+            } else {
+                // Fallback to console warning
+                console.warn('Cannot proceed to payment - zero price items:', zeroPriceItems);
+            }
+            return; // Prevent payment
+        }
+
+        // If validation passes, proceed with normal payment
+        return super.pay();
     },
 
     _updateModeVisuals() {
