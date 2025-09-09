@@ -16,36 +16,6 @@ class AccountMove(models.Model):
         readonly=True,
         help="JSON snapshot of stockable products for differential processing"
     )
-
-    # Compatibility fields for smooth upgrade (TEMPORARY - will be removed in v5.0.0)
-    auto_stock_picking_count = fields.Integer(
-        string='Stock Pickings Count',
-        default=0,
-        deprecated=True,
-        help="Deprecated field - kept for upgrade compatibility"
-    )
-    has_stock_discrepancy = fields.Boolean(
-        string='Has Stock Discrepancy',
-        default=False,
-        deprecated=True,
-        help="Deprecated field - kept for upgrade compatibility"
-    )
-    stock_discrepancy_details = fields.Text(
-        string='Stock Discrepancy Details',
-        deprecated=True,
-        help="Deprecated field - kept for upgrade compatibility"
-    )
-    stock_moves_created = fields.Boolean(
-        string='Stock Moves Created',
-        default=False,
-        deprecated=True,
-        help="Deprecated field - kept for upgrade compatibility"
-    )
-    stock_processed_hash = fields.Char(
-        string='Stock Processing Hash',
-        deprecated=True,
-        help="Deprecated field - kept for upgrade compatibility"
-    )
     total_product_quantity = fields.Float(
         string='Total Product Quantity',
         compute='_compute_total_product_quantity',
@@ -330,17 +300,6 @@ class AccountMove(models.Model):
             subtype_xmlid='mail.mt_note'
         )
 
-    # Compatibility method for any cached view references
-    def action_view_auto_stock_pickings(self):
-        """Compatibility stub - functionality removed in v4.0.0"""
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'type': 'info',
-                'message': 'Stock moves are now handled automatically behind the scenes.',
-            }
-        }
 
     def _is_latest_bill_for_product(self, product):
         """Check if this bill is the latest for the given product"""
