@@ -31,6 +31,7 @@
         'views/menu_customization.xml',
         'data/ir_config_parameter.xml',
     ],
+    'license': 'LGPL-3',
     'installable': True,
     'auto_install': False,
     'application': False,

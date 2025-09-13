@@ -17,6 +17,10 @@ class FollowupPrint(models.TransientModel):
             [('company_id', '=', company_id)], limit=1)
         return followp_id or False
 
+    def _get_default_email_subject(self):
+        """Get default email subject with proper translation context"""
+        return _('Invoices Reminder')
+
     date = fields.Date('Follow-up Sending Date', required=True,
                        help="This field allow you to select a forecast date "
                             "to plan your follow-ups",
@@ -31,7 +35,7 @@ class FollowupPrint(models.TransientModel):
                                  related='followup_id.company_id')
     email_conf = fields.Boolean('Send Email Confirmation')
     email_subject = fields.Char('Email Subject', size=64,
-                                default=_('Invoices Reminder'))
+                                default=_get_default_email_subject)
     partner_lang = fields.Boolean(
         'Send Email in Partner Language', default=True,
         help='Do not change message text, if you want to send email in '

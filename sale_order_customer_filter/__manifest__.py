@@ -13,6 +13,7 @@
     'data': [
         'views/sale_order_views.xml',
     ],
+    'license': 'LGPL-3',
     'installable': True,
     'auto_install': False,
     'application': False,

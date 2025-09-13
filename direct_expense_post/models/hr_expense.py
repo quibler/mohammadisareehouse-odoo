@@ -34,10 +34,10 @@ class HrExpense(models.Model):
 
         return defaults
 
-    @api.model
-    def create(self, vals):
-        """Override create method"""
-        return super().create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Override create method to handle batch operations"""
+        return super().create(vals_list)
 
     def write(self, vals):
         """Override write method"""
