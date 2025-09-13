@@ -55,65 +55,7 @@ class PosSession(models.Model):
 
         return data
 
-    @api.model
-    def create_cash_out_entry(self, session_id, amount, reason):
-        """Create a cash out entry during session closing"""
-        session = self.browse(session_id)
-        session.ensure_one()
 
-        if not session.cash_journal_id or amount <= 0:
-            return False
-
-        # Create a bank statement line for cash out using sudo() to bypass user permissions
-        cash_out_line = self.env['account.bank.statement.line'].sudo().create({
-            'journal_id': session.cash_journal_id.id,
-            'payment_ref': reason,
-            'amount': -amount,  # Negative for cash out
-            'date': fields.Date.context_today(self),
-            'pos_session_id': session.id,
-        })
-
-        # Post a message to the session for audit trail
-        session.message_post(
-            body=_("Automatic cash collection: %s - Amount: %s") % (
-                reason,
-                session.currency_id.format(amount)
-            )
-        )
-
-        return cash_out_line.id
-    def post_closing_cash_details(self, counted_cash):
-        """Override to handle automatic cash out before normal closing"""
-
-        # First, check if we should do automatic cash out
-        if self.config_id.cash_control and counted_cash > 0:
-            # Create automatic cash out for all counted cash
-            try:
-                self.create_cash_out_entry(
-                    self.id,
-                    counted_cash,
-                    _('Cash Collection - End of Day Deposit')
-                )
-                # Set counted cash to 0 since we're taking it all out
-                counted_cash = 0.0
-            except Exception as e:
-                # Log error but continue with normal closing
-                self.message_post(
-                    body=_("Warning: Could not create automatic cash out: %s") % str(e)
-                )
-
-        # Continue with normal closing process using 0 as counted cash
-        return super().post_closing_cash_details(counted_cash)
-
-    def _compute_cash_balance(self):
-        """Ensure proper cash balance computation"""
-        super()._compute_cash_balance()
-
-        # After auto cash out, the difference should be minimal/zero
-        for session in self:
-            # If we have automatic cash collection, the difference should reflect
-            # only actual discrepancies, not planned cash removal
-            pass
 
 
 class PosOrder(models.Model):
