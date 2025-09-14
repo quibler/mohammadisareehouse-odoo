@@ -27,7 +27,7 @@
             </xpath>
 
             <!-- Add company currency total right within the subtotal footer group -->
-            <xpath expr="//group[@class='oe_subtotal_footer']/field[@name='amount_residual']" position='before'>
+            <xpath expr="//group[hasclass('oe_subtotal_footer')]/field[@name='amount_residual']" position='before'>
                 <field name="amount_total_company_currency"
                        invisible="currency_id == company_currency_id or move_type not in ('in_invoice', 'in_refund', 'in_receipt')"
                        readonly="1"

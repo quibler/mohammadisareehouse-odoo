@@ -84,10 +84,10 @@
 
                 <!-- Hide tax-related fields by replacing the entire tax section -->
                 <xpath expr="//label[@for='tax_ids']" position="replace"/>
-                <xpath expr="//div[@class='o_row'][field[@name='tax_ids']]" position="replace"/>
+                <xpath expr="//div[hasclass('o_row')][field[@name='tax_ids']]" position="replace"/>
 
                 <!-- Also hide the tax amount that appears in the total line -->
-                <xpath expr="//span[@class='d-flex'][field[@name='tax_amount']]" position="replace"/>
+                <xpath expr="//span[hasclass('d-flex')][field[@name='tax_amount']]" position="replace"/>
 
                 <!-- Hide vendor_id field in expense lines -->
                 <xpath expr="//field[@name='vendor_id']" position="attributes">

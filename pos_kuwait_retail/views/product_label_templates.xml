@@ -4,7 +4,7 @@
         <!-- Complete override of Dymo template to hide barcode text and make all text bold -->
         <template id="report_simple_label_dymo_kuwait" inherit_id="product.report_simple_label_dymo">
             <!-- Replace the entire content with customized version -->
-            <xpath expr="//div[@class='o_label_sheet o_label_dymo']" position="replace">
+            <xpath expr="//div[hasclass('o_label_sheet') and hasclass('o_label_dymo')]" position="replace">
                 <div class="o_label_sheet o_label_dymo" t-att-style="padding_page">
                     <div class="o_label_full" t-att-style="table_style">
                         <div class="text-start o_label_small_barcode">
