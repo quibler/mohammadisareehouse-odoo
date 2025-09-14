@@ -100,7 +100,7 @@
                     <div class="alert alert-success" role="alert"
                          invisible="state != 'done'"
                          style="margin: 15px; padding: 15px; font-size: 16px; font-weight: bold;">
-                        <i class="fa fa-check-circle" style="margin-right: 8px;"></i>
+                        <i class="fa fa-check-circle" style="margin-right: 8px;" title="Paid Status Indicator"/>
                         <strong>PAID:</strong> This expense has been processed and paid directly.
                     </div>
                 </xpath>
@@ -139,7 +139,7 @@
                     <div class="alert alert-success" role="alert"
                          invisible="state != 'done'"
                          style="margin: 15px; padding: 15px; font-size: 16px; font-weight: bold;">
-                        <i class="fa fa-check-circle" style="margin-right: 8px;"></i>
+                        <i class="fa fa-check-circle" style="margin-right: 8px;" title="Expense Paid"/>
                         <strong>PAID:</strong> This expense has been processed and paid directly.
                     </div>
                 </xpath>
