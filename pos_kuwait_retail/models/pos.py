@@ -165,12 +165,6 @@ class PosCategory(models.Model):
         """Override search_read to add Arabic translation when called from POS"""
         # Force Arabic context to get Arabic translations
         result = super(PosCategory, self.with_context(lang='ar_001')).search_read(domain, fields, offset, limit, order, **kwargs)
-
-        print(f"*** POS CATEGORY search_read with Arabic context, got {len(result)} categories ***")
-
-        for category_data in result:
-            print(f"Category ID: {category_data['id']}, Arabic name: '{category_data['name']}'")
-
         return result
 
 
