@@ -54,7 +54,7 @@
                                 </tr>
                             </thead>
                             <!-- Items -->
-                            <tbody>
+                            <tbody t-log="props.data.orderlines">
                                 <tr t-foreach="props.data.orderlines" t-as="line" t-key="line_index">
                                     <td class="align-top ps-0" style="width: 40%; word-break: break-all;">
                                         <div t-esc="line.productName"/>

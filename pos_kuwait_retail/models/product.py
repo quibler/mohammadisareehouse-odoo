@@ -27,3 +27,5 @@ class ProductTemplate(models.Model):
             'list_price': 0.0
         })
         return defaults
+
+
