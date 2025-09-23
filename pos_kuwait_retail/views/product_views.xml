@@ -20,6 +20,7 @@
             <!-- Kuwait retail customizations -->
             <field name="default_code" position="after">
                 <field name="barcode" optional="show" string="Barcode"/>
+                <field name="shipment_number" optional="show" string="Shipment"/>
             </field>
 
             <!-- Ensure important retail fields are visible -->
@@ -50,6 +51,7 @@
             <!-- Kuwait retail customizations -->
             <field name="default_code" position="after">
                 <field name="barcode" optional="show" string="Barcode"/>
+                <field name="shipment_number" optional="show" string="Shipment"/>
             </field>
 
             <!-- Ensure important retail fields are visible -->

@@ -17,6 +17,18 @@ class ProductTemplate(models.Model):
     type = fields.Selection(selection_add=[], default='consu')
     list_price = fields.Float(default=0.0)
 
+    # Shipment tracking
+    shipment_number = fields.Char(
+        string='Shipment Number',
+        help="Shipment or batch number for traceability"
+    )
+
+    # Custom label price
+    custom_label_price = fields.Float(
+        string='Label Price',
+        help="Custom price to display on product labels (overrides standard price when set)"
+    )
+
     @api.model
     def default_get(self, fields_list):
         """Set Kuwait retail defaults"""

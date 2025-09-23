@@ -6,12 +6,11 @@ class ReportProductTemplateLabelDymo(models.AbstractModel):
     _inherit = 'report.product.report_producttemplatelabel_dymo'
 
     def _get_report_values(self, docids, data):
-        """Override to include custom_price in template context"""
+        """Override to remove custom_price dependency from wizard"""
         # Get the original report values
         result = super()._get_report_values(docids, data)
 
-        # Add custom_price to the context if provided
-        if data and data.get('custom_price'):
-            result['custom_price'] = data.get('custom_price')
+        # Custom price is now handled directly from product.custom_label_price field
+        # No need to pass custom_price from wizard data anymore
 
         return result

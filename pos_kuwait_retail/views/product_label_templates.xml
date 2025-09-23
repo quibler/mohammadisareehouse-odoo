@@ -25,18 +25,26 @@
 
                         <!-- Create a proper baseline-aligned container -->
                         <div style="position: relative; padding: 2px; margin-top: 2px; height: 1.5em;">
-                            <!-- Tags section - positioned absolutely to control baseline -->
+                            <!-- Tags and Shipment section - positioned absolutely to control baseline -->
                             <div style="position: absolute; left: 0; bottom: 0; max-width: 60%; overflow: hidden; white-space: nowrap;">
-                                <strong t-foreach="product.product_tag_ids[:2]" t-as="tag">
-                                    <span t-field="tag.name"/><t t-if="not tag_last">, </t>
+                                <strong>
+                                    <t t-if="product.product_tag_ids and product.shipment_number">
+                                        <span t-field="product.product_tag_ids[0].name"/>/<span t-field="product.shipment_number"/>
+                                    </t>
+                                    <t t-elif="product.product_tag_ids">
+                                        <span t-field="product.product_tag_ids[0].name"/>
+                                    </t>
+                                    <t t-elif="product.shipment_number">
+                                        <span t-field="product.shipment_number"/>
+                                    </t>
                                 </strong>
                             </div>
 
                             <!-- Price section - positioned absolutely to control baseline -->
                             <div style="position: absolute; right: 0; bottom: 0;">
-                                <t t-if="custom_price">
+                                <t t-if="product.custom_label_price">
                                     <strong style="font-size: 1.3em;"
-                                            t-out="custom_price"
+                                            t-out="product.custom_label_price"
                                             t-options="{'widget': 'monetary', 'display_currency': product.currency_id, 'label_price': True}"/>
                                 </t>
                                 <t t-else="">

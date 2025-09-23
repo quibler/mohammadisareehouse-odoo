@@ -10,6 +10,11 @@
                 <!-- Add the exact same field from sales tab after category in general information -->
                 <field name="categ_id" position="after">
                     <field name="product_tag_ids" widget="many2many_tags" context="{'product_template_id': id}"/>
+                    <field name="custom_label_price" placeholder="Custom price for labels"/>
+                </field>
+                <!-- Add shipment number at bottom of left column group (after product_tooltip) -->
+                <field name="product_tooltip" position="after">
+                    <field name="shipment_number" placeholder="e.g., SHIP-240322-001"/>
                 </field>
             </field>
         </record>
@@ -28,6 +33,14 @@
                 <div name="standard_price_uom" position="attributes">
                     <attribute name="groups">point_of_sale.group_pos_manager,stock.group_stock_manager</attribute>
                 </div>
+                <!-- Hide purchase taxes field -->
+                <field name="supplier_taxes_id" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </field>
+                <!-- Hide sales taxes field -->
+                <field name="taxes_id" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </field>
             </field>
         </record>
 
