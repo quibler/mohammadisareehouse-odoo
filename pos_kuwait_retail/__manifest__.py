@@ -49,7 +49,6 @@
         Perfect for high-volume clothing stores, boutiques, and retail shops in Kuwait!
 
         🏷️ LABEL PRINTING FEATURES:
-        • Custom price input for labels - override default pricing
         • Smart quantity calculation from vendor bills
         🇰🇼⚡
         """,
@@ -68,7 +67,7 @@
         'views/pos_config_views.xml',
         'views/res_config_settings_views.xml',
 
-        # Product & barcode management - ONLY custom price field
+        # Product & barcode management
         'views/product_views.xml',
         'views/product_label_layout_views.xml',
         'views/product_label_templates.xml',

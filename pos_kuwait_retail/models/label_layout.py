@@ -4,22 +4,6 @@ from odoo import models, fields, api
 class ProductLabelLayout(models.TransientModel):
     _inherit = 'product.label.layout'
 
-    # Custom price input field
-    custom_price = fields.Float(
-        'Custom Price',
-        digits='Product Price',
-        help="Optional custom price for labels. Leave empty to use product's default price."
-    )
-
-    def _prepare_report_data(self):
-        """Override to pass custom_price to template context"""
-        xml_id, data = super()._prepare_report_data()
-
-        # Add custom_price to the data that gets passed to the template
-        if self.custom_price:
-            data['custom_price'] = self.custom_price
-
-        return xml_id, data
 
     # FORCE dymo in all cases
     @api.model

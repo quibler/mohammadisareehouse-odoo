@@ -120,6 +120,11 @@
                     </div>
                 </div>
 
+                <!-- GENERAL NOTE -->
+                <div t-if="props.data.generalNote" class="receipt-section border-top border-dark pt-1">
+                    <div class="small text-muted fst-italic" style="white-space: pre-line;" t-esc="props.data.generalNote"/>
+                </div>
+
                 <!-- QR CODE -->
                 <div class="receipt-section text-center">
                     <img src="/pos_kuwait_retail/static/src/img/brand_qr_code.png"

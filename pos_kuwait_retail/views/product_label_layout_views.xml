@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
+        <!-- Delete the old custom price view record if it exists -->
+        <delete id="product_label_layout_form_view_custom_price" model="ir.ui.view"/>
+
         <!-- Completely replace the print_format field with a read-only display -->
-        <record id="product_label_layout_form_view_dymo_only" model="ir.ui.view">
-            <field name="name">product.label.layout.form.dymo.only</field>
+        <record id="product_label_layout_form_view_dymo_only_clean" model="ir.ui.view">
+            <field name="name">product.label.layout.form.dymo.only.clean</field>
             <field name="model">product.label.layout</field>
             <field name="inherit_id" ref="product.product_label_layout_form"/>
             <field name="arch" type="xml">
@@ -19,16 +22,5 @@
             </field>
         </record>
 
-        <!-- Add the custom price field -->
-        <record id="product_label_layout_form_view_custom_price" model="ir.ui.view">
-            <field name="name">product.label.layout.form.inherit.custom.price</field>
-            <field name="model">product.label.layout</field>
-            <field name="inherit_id" ref="product.product_label_layout_form"/>
-            <field name="arch" type="xml">
-                <field name="custom_quantity" position="after">
-                    <field name="custom_price" placeholder="Enter custom price (optional)"/>
-                </field>
-            </field>
-        </record>
     </data>
 </odoo>
