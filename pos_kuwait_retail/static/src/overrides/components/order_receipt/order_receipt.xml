@@ -58,7 +58,7 @@
                                 <tr t-foreach="props.data.orderlines" t-as="line" t-key="line_index">
                                     <td class="align-top ps-0" style="width: 40%; word-break: break-all;">
                                         <div t-esc="line.productName"/>
-                                        <div t-if="line.discount and line.discount !== '0'" class="small text-muted fst-italic">
+                                        <div t-if="line.discount and line.discount !== '0' and !line.productName.toLowerCase().includes('discount')" class="small text-muted fst-italic">
                                             Discount: <t t-esc="line.discount"/>%
                                         </div>
                                         <div t-if="line.customerNote" class="small text-muted fst-italic">
@@ -67,20 +67,23 @@
                                     </td>
                                     <td class="text-center align-top">
                                         <t t-set="qtyStr" t-value="line.qty.toString()"/>
-                                        <t t-set="qtyWhole" t-value="qtyStr.split('.')[0]"/>
-                                        <t t-esc="qtyWhole"/>
+                                        <t t-set="qtyWhole" t-value="qtyStr.includes('.') ? qtyStr.split('.')[0] : qtyStr"/>
+                                        <div t-esc="qtyWhole"/>
+                                        <div class="small text-muted" t-esc="convertToArabicNumeralsOnly(qtyWhole)"/>
                                     </td>
                                     <td class="text-end align-top">
                                         <t t-set="unitPriceStr" t-value="line.unitPrice.split(' ')[0]"/>
                                         <t t-set="unitPriceParts" t-value="unitPriceStr.split('.')"/>
                                         <t t-set="unitPriceFormatted" t-value="unitPriceParts[0] + '.' + (unitPriceParts[1] || '00').substring(0, 2).padEnd(2, '0')"/>
-                                        <t t-esc="unitPriceFormatted"/>
+                                        <div t-esc="unitPriceFormatted"/>
+                                        <div class="small text-muted" t-esc="convertToArabicNumeralsOnly(unitPriceFormatted)"/>
                                     </td>
                                     <td class="text-end align-top pe-0" style="width: 25%;">
                                         <t t-set="priceStr" t-value="line.price.split(' ')[0]"/>
                                         <t t-set="priceParts" t-value="priceStr.split('.')"/>
                                         <t t-set="priceFormatted" t-value="priceParts[0] + '.' + (priceParts[1] || '00').substring(0, 2).padEnd(2, '0')"/>
-                                        <t t-esc="priceFormatted"/>
+                                        <div t-esc="priceFormatted"/>
+                                        <div class="small text-muted" t-esc="convertToArabicNumeralsOnly(priceFormatted)"/>
                                     </td>
                                 </tr>
                             </tbody>
@@ -96,8 +99,8 @@
                         </strong>
                         <strong>
                             <t t-set="taxTotals" t-value="props.data.taxTotals"/>
-                            <t t-if="taxTotals" t-esc="props.formatCurrency(taxTotals.order_sign * taxTotals.order_total)"/>
-                            <t t-else="" t-esc="props.formatCurrency(props.data.total_with_tax)"/>
+                            <t t-if="taxTotals" t-esc="formatCurrency(taxTotals.order_sign * taxTotals.order_total)"/>
+                            <t t-else="" t-esc="formatCurrency(props.data.total_with_tax)"/>
                         </strong>
                     </div>
                 </div>
@@ -106,17 +109,17 @@
                 <div t-if="props.data.paymentlines?.length" class="receipt-section border-top border-dark pt-1">
                     <div t-foreach="props.data.paymentlines" t-as="line" t-key="line_index" class="d-flex justify-content-between">
                         <span t-esc="line.name"/>
-                        <span t-esc="props.formatCurrency(line.amount)"/>
+                        <span t-esc="formatCurrency(line.amount)"/>
                     </div>
 
                     <div t-if="props.data.show_change" class="d-flex justify-content-between small">
                         <span t-out="props.data.label_change"/>
-                        <span t-esc="props.formatCurrency(props.data.order_change)"/>
+                        <span t-esc="formatCurrency(props.data.order_change)"/>
                     </div>
 
                     <div t-if="props.data.total_discount" class="d-flex justify-content-between">
                         <span t-out="props.data.label_discounts"/>
-                        <span t-esc="props.formatCurrency(props.data.total_discount)"/>
+                        <span t-esc="formatCurrency(props.data.total_discount)"/>
                     </div>
                 </div>
 

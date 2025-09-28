@@ -13,9 +13,18 @@ patch(PosOrderline.prototype, {
 
     /**
      * Get product name with Arabic category prefix for receipt only
+     * Skip category prefix for discount products
      */
     getReceiptProductName() {
         const displayData = this.getDisplayData();
+
+        // Check if this is a discount product
+        const isDiscountProduct = displayData.productName.toLowerCase().includes('discount');
+
+        if (isDiscountProduct) {
+            return displayData.productName;
+        }
+
         const arabicCategoryName = this._getArabicCategoryName();
 
         if (arabicCategoryName) {
