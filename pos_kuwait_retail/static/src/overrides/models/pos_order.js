@@ -5,7 +5,7 @@ import { patch } from "@web/core/utils/patch";
 
 patch(PosOrder.prototype, {
     /**
-     * Override export_for_printing to use Arabic category prefixed product names
+     * Override export_for_printing to use Arabic category prefixed product names and include customer info
      */
     export_for_printing(baseUrl, headerData) {
         const result = super.export_for_printing(baseUrl, headerData);
@@ -27,6 +27,22 @@ patch(PosOrder.prototype, {
 
             return lineData;
         });
+
+        // Add customer information if available
+        const partner = this.get_partner();
+        if (partner) {
+            result.customer = {
+                name: partner.name || "",
+                street: partner.street || "",
+                street2: partner.street2 || "",
+                city: partner.city || "",
+                zip: partner.zip || "",
+                state_id: partner.state_id ? partner.state_id.name : "",
+                country_id: partner.country_id ? partner.country_id.name : "",
+                phone: partner.phone || "",
+                email: partner.email || ""
+            };
+        }
 
         return result;
     }

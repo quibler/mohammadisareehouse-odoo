@@ -41,6 +41,39 @@
                     <div t-if="props.data.name">Receipt: <t t-esc="props.data.name"/></div>
                 </div>
 
+                <!-- CUSTOMER INFO -->
+                <div t-if="props.data.customer" t-log="props.data.customer3" class="receipt-section border-bottom border-dark">
+                    <div class="fw-bold mb-1">Customer Information:</div>
+                    <div t-if="props.data.customer.name" class="mb-1 small">
+                        <strong>Name: <t t-esc="props.data.customer.name"/></strong>
+                    </div>
+                    <div t-if="props.data.customer.street or props.data.customer.street2 or props.data.customer.city or props.data.customer.state_id or props.data.customer.zip or props.data.customer.country_id" class="small">
+                        <div class="fw-bold">Address:</div>
+                        <div t-if="props.data.customer.street" style="margin-left: 10px;">
+                            <t t-esc="props.data.customer.street"/>
+                        </div>
+                        <div t-if="props.data.customer.street2" style="margin-left: 10px;">
+                            <t t-esc="props.data.customer.street2"/>
+                        </div>
+                        <div t-if="props.data.customer.city or props.data.customer.state_id or props.data.customer.zip" style="margin-left: 10px;">
+                            <t t-if="props.data.customer.city" t-esc="props.data.customer.city"/>
+                            <t t-if="props.data.customer.city and props.data.customer.state_id">, </t>
+                            <t t-if="props.data.customer.state_id" t-esc="props.data.customer.state_id"/>
+                            <t t-if="(props.data.customer.city or props.data.customer.state_id) and props.data.customer.zip"> </t>
+                            <t t-if="props.data.customer.zip" t-esc="props.data.customer.zip"/>
+                        </div>
+                        <div t-if="props.data.customer.country_id" style="margin-left: 10px;">
+                            <t t-esc="props.data.customer.country_id"/>
+                        </div>
+                    </div>
+                    <div t-if="props.data.customer.phone" class="small">
+                        <strong>Phone:</strong> <t t-esc="props.data.customer.phone"/>
+                    </div>
+                    <div t-if="props.data.customer.email" class="small">
+                        <strong>Email:</strong> <t t-esc="props.data.customer.email"/>
+                    </div>
+                </div>
+
                 <!-- ITEMS TABLE -->
                 <div t-if="props.data.orderlines?.length" class="receipt-section">
                     <div class="table-responsive">
