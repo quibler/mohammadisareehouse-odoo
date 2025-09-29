@@ -75,6 +75,9 @@
                        string="POS Sales Person"
                        optional="show"
                        widget="many2one_avatar_user"/>
+                <field name="pos_order_general_note"
+                       string="POS General Note"
+                       optional="show"/>
             </xpath>
         </field>
     </record>

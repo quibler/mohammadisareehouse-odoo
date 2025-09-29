@@ -22,6 +22,12 @@ class AccountMove(models.Model):
         store=False,
         help="Total quantity of all stockable products in this vendor bill"
     )
+    pos_order_general_note = fields.Text(
+        string='POS General Note',
+        compute='_compute_pos_order_general_note',
+        store=False,
+        help="General note from the related POS order"
+    )
 
     @api.model
     def default_get(self, fields_list):
@@ -50,6 +56,16 @@ class AccountMove(models.Model):
                 for line in move._get_stockable_lines():
                     total_qty += line.quantity
             move.total_product_quantity = total_qty
+
+    @api.depends('pos_order_ids', 'pos_order_ids.general_note')
+    def _compute_pos_order_general_note(self):
+        """Compute general note from related POS order"""
+        for move in self:
+            if move.pos_order_ids:
+                # Get the general note from the first POS order
+                move.pos_order_general_note = move.pos_order_ids[0].general_note or ''
+            else:
+                move.pos_order_general_note = ''
 
     def action_post(self):
         """Override to create stock movements automatically after posting vendor bills"""
