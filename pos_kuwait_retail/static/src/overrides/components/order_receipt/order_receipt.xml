@@ -161,7 +161,7 @@
 
                 <!-- GENERAL NOTE -->
                 <div t-if="props.data.generalNote" class="receipt-section border-top border-dark pt-1">
-                    <div class="small text-muted fst-italic" style="white-space: pre-line;" t-esc="props.data.generalNote"/>
+                    <div class="small fst-italic" style="white-space: pre-line;" t-esc="props.data.generalNote"/>
                 </div>
 
                 <!-- QR CODE -->

@@ -25,6 +25,7 @@ wheels/
 *.egg
 /.claude/
 .idea
+/*/.claude/
 
 # Docker files (local development only)
 docker-compose.yml
