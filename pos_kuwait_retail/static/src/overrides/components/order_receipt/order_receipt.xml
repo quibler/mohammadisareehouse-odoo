@@ -90,7 +90,10 @@
                             <tbody>
                                 <tr t-foreach="props.data.orderlines" t-as="line" t-key="line_index">
                                     <td class="align-top ps-0" style="width: 40%; word-break: break-all;">
-                                        <div t-esc="line.productName"/>
+                                        <div>
+                                            <t t-if="line.categoryNameAr and !line.isDiscountProduct" t-esc="line.categoryNameAr + ' - '"/>
+                                            <t t-esc="line.productName"/>
+                                        </div>
                                         <div t-if="line.discount and line.discount !== '0' and !line.productName.toLowerCase().includes('discount')" class="small text-muted fst-italic">
                                             Discount: <t t-esc="line.discount"/>%
                                         </div>

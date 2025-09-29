@@ -161,10 +161,30 @@ class ResCompany(models.Model):
 class PosCategory(models.Model):
     _inherit = 'pos.category'
 
-    def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None, **kwargs):
-        """Override search_read to add Arabic translation when called from POS"""
-        # Force Arabic context to get Arabic translations
-        result = super(PosCategory, self.with_context(lang='ar_001')).search_read(domain, fields, offset, limit, order, **kwargs)
-        return result
+    name_ar = fields.Char(string="Arabic Name", compute="_compute_name_ar", store=False)
+
+    @api.depends('name')
+    def _compute_name_ar(self):
+        """Compute Arabic translation for category name"""
+        for category in self:
+            arabic_name = None
+            for lang_code in ['ar_001', 'ar']:
+                try:
+                    translated_name = category.with_context(lang=lang_code).name
+                    if translated_name and translated_name != category.name:
+                        arabic_name = translated_name
+                        break
+                except:
+                    continue
+            category.name_ar = arabic_name
+
+    @api.model
+    def _load_pos_data_fields(self, config_id):
+        fields = super()._load_pos_data_fields(config_id)
+        fields.append('name_ar')
+        return fields
+
+
+
 
 
