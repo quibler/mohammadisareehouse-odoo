@@ -14,7 +14,6 @@ export class SalesPersonButton extends Component {
     setup() {
         this.pos = usePos();
         this.dialog = useService("dialog");
-        console.log('SalesPersonButton setup completed');
     }
 
     get currentOrder() {
