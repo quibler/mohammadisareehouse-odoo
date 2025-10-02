@@ -31,19 +31,14 @@
 
                 <!-- ORDER INFO -->
                 <div class="receipt-section border-top border-bottom border-dark">
-                    <div t-if="props.data.pos_config_name or props.data.headerData.trackingNumber">
-                        <span t-if="props.data.pos_config_name">Shop: <t t-esc="props.data.pos_config_name"/></span>
-                        <span t-if="props.data.pos_config_name and props.data.headerData.trackingNumber">, </span>
-                        <span t-if="props.data.headerData.trackingNumber">Order: #<t t-esc="props.data.headerData.trackingNumber"/></span>
-                    </div>
+                    <div t-if="props.data.name"><t t-esc="props.data.name"/></div>
+                    <div t-if="props.data.invoice_reference">Invoice Ref: <t t-esc="props.data.invoice_reference"/></div>
                     <div t-if="props.data.sales_person">Sales person: <t t-esc="props.data.sales_person"/></div>
                     <div t-if="props.data.date">Date: <t t-esc="props.data.date"/></div>
-                    <div t-if="props.data.name">Receipt: <t t-esc="props.data.name"/></div>
                 </div>
 
                 <!-- CUSTOMER INFO -->
                 <div t-if="props.data.customer" t-log="props.data.customer3" class="receipt-section border-bottom border-dark">
-                    <div class="fw-bold mb-1">Customer Information:</div>
                     <div t-if="props.data.customer.name" class="mb-1 small">
                         <strong>Name: <t t-esc="props.data.customer.name"/></strong>
                     </div>
@@ -160,8 +155,8 @@
                 </div>
 
                 <!-- GENERAL NOTE -->
-                <div t-if="props.data.generalNote" class="receipt-section border-top border-dark pt-1">
-                    <div class="small fst-italic" style="white-space: pre-line;" t-esc="props.data.generalNote"/>
+                <div t-if="props.data.generalNote" class="receipt-section border-top border-dark pt-1 fw-bold">
+                    <div style="white-space: pre-line;" t-esc="props.data.generalNote"/>
                 </div>
 
                 <!-- QR CODE -->

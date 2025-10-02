@@ -17,6 +17,10 @@ patch(PosOrder.prototype, {
 
         // Add POS config name for receipt printing
         order.pos_config_name = this.config_id ? this.config_id.name : false;
+
+        // Add invoice reference (order.name) for matching with invoice
+        order.invoice_reference = this.name;
+
         return order;
     },
 });

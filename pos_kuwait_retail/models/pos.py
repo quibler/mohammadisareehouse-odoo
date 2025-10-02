@@ -123,8 +123,29 @@ class AccountMove(models.Model):
     pos_sales_person_id = fields.Many2one(
         "hr.employee",
         string="POS Sales Person",
+        compute="_compute_pos_sales_person_id",
+        store=True,
         help="Sales person from the original POS order"
     )
+
+    pos_order_reference = fields.Char(
+        string="POS Order #",
+        compute="_compute_pos_order_reference",
+        store=True,
+        help="User-friendly POS order reference number"
+    )
+
+    @api.depends('pos_order_ids.sales_person_id')
+    def _compute_pos_sales_person_id(self):
+        """Automatically populate sales person from linked POS order"""
+        for move in self:
+            move.pos_sales_person_id = move.pos_order_ids[:1].sales_person_id if move.pos_order_ids else False
+
+    @api.depends('pos_order_ids.pos_reference')
+    def _compute_pos_order_reference(self):
+        """Get user-friendly POS order reference"""
+        for move in self:
+            move.pos_order_reference = move.pos_order_ids[:1].pos_reference if move.pos_order_ids else False
 
 
 class ResPartner(models.Model):
