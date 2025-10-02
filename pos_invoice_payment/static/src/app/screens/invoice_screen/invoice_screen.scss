@@ -1,0 +1,83 @@
+.invoice-screen .leftpane {
+    max-width: 500px;
+}
+
+.invoice-screen .orders .col {
+    flex: 1;
+    display: flex;
+    align-items: center;
+
+    &.very-narrow {
+        flex: 0.2;
+    }
+
+    &.narrow {
+        flex: 0.5;
+    }
+
+    &.wide {
+        flex: 1.5;
+    }
+
+    &.end {
+        justify-content: flex-end;
+        text-align: right;
+    }
+}
+
+.invoice-screen .order-row:hover {
+    color: white;
+    background-color: $primary !important;
+}
+
+.invoice-screen .buttons {
+    grid-area: buttons;
+}
+
+@include media-breakpoint-down(sm) {
+    .invoice-screen .screen-full-width {
+        flex-direction: column;
+        height: auto;
+        min-height: 100%;
+    }
+
+    .invoice-screen .leftpane {
+        max-width: inherit;
+    }
+
+    .invoice-screen .rightpane {
+        width: auto;
+    }
+
+    .pos .invoice-screen .orders {
+        position: sticky;
+        z-index: 1;
+    }
+}
+
+@include media-breakpoint-up(lg) {
+    .invoice-screen .order-row {
+        display: flex;
+        cursor: pointer;
+    }
+
+    .invoice-screen .order-row:nth-child(odd) {
+        background: $gray-200;
+    }
+
+    .invoice-screen .order-row:nth-child(even) {
+        background: white;
+    }
+}
+
+@include media-breakpoint-down(lg) {
+    .invoice-screen .order-row {
+        margin: 5px;
+        border: 1px solid #C9CCD2; /* $border-color */
+        background: white; /* $o-view-background-color */
+    }
+
+    .pos .invoice-screen .orders .order-row > .col > div:first-child {
+        font-weight: bold;
+    }
+}

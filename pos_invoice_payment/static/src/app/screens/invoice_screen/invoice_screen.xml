@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="pos_invoice_payment.InvoiceScreen">
+        <div class="invoice-screen screen h-100 bg-100">
+            <div class="screen-full-width d-flex w-100 h-100">
+                <div t-if="!ui.isSmall || pos.invoice_screen_mobile_pane === 'left'" class="rightpane pane-border d-flex flex-column flex-grow-1 w-100 h-100 h-lg-100 bg-200 overflow-y-auto">
+                    <!-- Header Controls -->
+                    <div class="controls d-grid d-sm-flex align-items-center justify-content-between gap-2 gap-sm-3 p-2 bg-300">
+                        <div class="buttons d-flex gap-2">
+                            <button class="discard btn btn-lg btn-light text-nowrap" t-on-click="back">
+                                <i class="oi oi-chevron-left"/>
+                                <span t-if="!ui.isSmall" class="ms-2">Back</span>
+                            </button>
+                        </div>
+                        <input
+                            type="text"
+                            class="form-control form-control-lg flex-grow-1"
+                            placeholder="Search customer or invoice..."
+                            t-model="state.searchTerm"
+                            t-on-input="(ev) => this.onSearch(ev.target.value)"
+                        />
+                    </div>
+
+                    <!-- Filter Buttons -->
+                    <div class="controls d-flex flex-wrap gap-2 p-2 bg-300 border-top">
+                        <button
+                            type="button"
+                            class="btn btn-lg flex-fill"
+                            t-att-class="state.filterState === 'unpaid_partial' ? 'btn-primary' : 'btn-light'"
+                            t-on-click="() => this.onFilterChange('unpaid_partial')"
+                        >
+                            <span t-if="!ui.isSmall">Unpaid/Partial</span>
+                            <span t-else="">Due</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-lg flex-fill"
+                            t-att-class="state.filterState === 'not_paid' ? 'btn-primary' : 'btn-light'"
+                            t-on-click="() => this.onFilterChange('not_paid')"
+                        >
+                            Unpaid
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-lg flex-fill"
+                            t-att-class="state.filterState === 'partial' ? 'btn-primary' : 'btn-light'"
+                            t-on-click="() => this.onFilterChange('partial')"
+                        >
+                            Partial
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-lg flex-fill"
+                            t-att-class="state.filterState === 'all' ? 'btn-primary' : 'btn-light'"
+                            t-on-click="() => this.onFilterChange('all')"
+                        >
+                            All
+                        </button>
+                    </div>
+
+                    <!-- Invoice List -->
+                    <div class="orders overflow-y-auto flex-grow-1">
+                        <t t-if="filteredInvoices.length !== 0">
+                            <!-- Desktop Table Header -->
+                            <div class="header-row d-flex text-bg-700 fw-bolder" t-att-class="{ 'd-none': ui.isSmall }">
+                                <div class="col wide p-2">Invoice</div>
+                                <div class="col p-2">Customer</div>
+                                <div class="col wide p-2">Date</div>
+                                <div class="col end p-2">Due Amount</div>
+                                <div class="col narrow p-2">Status</div>
+                            </div>
+
+                            <!-- Desktop View -->
+                            <t t-if="!ui.isSmall" t-foreach="filteredInvoices" t-as="invoice" t-key="invoice.id">
+                                <div class="order-row"
+                                     t-att-class="{ 'highlight bg-primary text-white': state.selectedInvoice?.id === invoice.id }"
+                                     t-on-click="() => this.selectInvoice(invoice)">
+                                    <div class="col wide p-2">
+                                        <div t-esc="invoice.name or ''"/>
+                                    </div>
+                                    <div class="col p-2">
+                                        <div t-esc="invoice.partner_name or ''"/>
+                                    </div>
+                                    <div class="col wide p-2">
+                                        <div t-esc="formatDate(invoice.invoice_date)"/>
+                                    </div>
+                                    <div class="col end p-2">
+                                        <div t-att-class="{'text-danger fw-bold': (invoice.amount_residual || 0) > 0}" t-esc="formatCurrency(invoice.amount_residual || 0)"/>
+                                    </div>
+                                    <div class="col narrow p-2">
+                                        <span class="badge" t-att-class="getPaymentStateBadgeClass(invoice.payment_state)"
+                                              t-esc="getPaymentStateLabel(invoice.payment_state)"/>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- Mobile View -->
+                            <t t-if="ui.isSmall" t-foreach="filteredInvoices" t-as="invoice" t-key="invoice.id">
+                                <div class="mobileOrderList order-row rounded-3"
+                                     t-att-class="{ 'highlight bg-primary text-white': state.selectedInvoice?.id === invoice.id }"
+                                     t-on-click="() => this.selectInvoice(invoice)">
+                                    <div class="col p-2 d-flex justify-content-between align-items-center">
+                                        <div t-esc="invoice.name or ''"/>
+                                        <div t-att-class="{'text-danger fw-bold': (invoice.amount_residual || 0) > 0}" t-esc="formatCurrency(invoice.amount_residual || 0)"/>
+                                    </div>
+                                    <div class="col p-2 d-flex justify-content-between align-items-center">
+                                        <div t-esc="invoice.partner_name or 'No Customer'"/>
+                                        <span class="badge" t-att-class="getPaymentStateBadgeClass(invoice.payment_state)"
+                                              t-esc="getPaymentStateLabel(invoice.payment_state)"/>
+                                    </div>
+                                    <div class="col p-2 text-muted small">
+                                        <div t-esc="formatDate(invoice.invoice_date)"/>
+                                    </div>
+                                </div>
+                            </t>
+                        </t>
+                        <CenteredIcon
+                            t-else=""
+                            icon="'fa-file-text-o fa-4x'"
+                            text="'No invoices found'"
+                            class="'h-100'"/>
+                    </div>
+                    <div class="switchpane d-flex w-100 gap-2 p-2 mt-2" t-if="ui.isSmall">
+                        <button class="btn-switchpane btn btn-lg lh-lg w-100 py-3 secondary review-button"
+                            t-att-class="{'btn-primary': selectedInvoice, 'btn-light': !selectedInvoice}"
+                            t-att-disabled="!selectedInvoice"
+                            t-on-click="switchPane">
+                            <span class="d-block">Review</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Invoice Details -->
+                <div t-if="(!ui.isSmall || pos.invoice_screen_mobile_pane === 'right')" class="leftpane d-flex flex-column flex-grow-1 gap-2 w-100 h-100 h-lg-100 bg-200 p-2">
+
+                    <t t-if="selectedInvoice">
+                        <div class="flex-grow-1 overflow-y-auto p-3 bg-100 rounded-3">
+                            <!-- Invoice Header -->
+                            <div class="mb-4 pb-3 border-bottom">
+                                <h4 class="mb-3 fw-bold" t-esc="selectedInvoice.name or ''"/>
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-user text-primary me-2" style="width: 20px;"/>
+                                        <span t-esc="selectedInvoice.partner_name or 'No Customer'"/>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-calendar text-primary me-2" style="width: 20px;"/>
+                                        <span t-esc="formatDate(selectedInvoice.invoice_date)"/>
+                                    </div>
+                                    <div t-if="selectedInvoice.date_due" class="d-flex align-items-center">
+                                        <i class="fa fa-clock-o text-warning me-2" style="width: 20px;"/>
+                                        <span>Due: <t t-esc="formatDate(selectedInvoice.date_due)"/></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Invoice Lines -->
+                            <div class="mb-4 pb-3 border-bottom">
+                                <h6 class="text-muted mb-3 text-uppercase small fw-bold">Invoice Items</h6>
+                                <div class="d-flex flex-column gap-3">
+                                    <t t-foreach="selectedInvoice.line_ids || []" t-as="line" t-key="line_index">
+                                        <div class="d-flex justify-content-between gap-3">
+                                            <div class="flex-grow-1">
+                                                <div class="fw-semibold" t-esc="line.product_name || 'Product'"/>
+                                                <div class="text-muted small mt-1">
+                                                    Qty: <t t-esc="line.quantity || 0"/> × <t t-esc="formatCurrency(line.price_unit || 0)"/>
+                                                </div>
+                                            </div>
+                                            <div class="text-end fw-semibold flex-shrink-0" t-esc="formatCurrency(line.price_subtotal || 0)"/>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+
+                            <!-- Payment Summary -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between py-2">
+                                    <span>Total Amount:</span>
+                                    <strong t-esc="formatCurrency(selectedInvoice.amount_total || 0)"/>
+                                </div>
+                                <div class="d-flex justify-content-between py-2 border-top">
+                                    <span>Amount Paid:</span>
+                                    <strong class="text-success" t-esc="formatCurrency(selectedInvoice.amount_paid || 0)"/>
+                                </div>
+                                <div class="d-flex justify-content-between py-2 border-top">
+                                    <span>Amount Due:</span>
+                                    <strong t-att-class="{'text-danger': (selectedInvoice.amount_residual || 0) > 0}" t-esc="formatCurrency(selectedInvoice.amount_residual || 0)"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="pads border-top d-flex gap-2">
+                            <button
+                                class="button validation btn btn-lg btn-primary w-100 py-3"
+                                t-on-click="onPayInvoice"
+                                t-att-disabled="(selectedInvoice.amount_residual || 0) &lt;= 0"
+                            >
+                                <i class="fa fa-credit-card me-1"/>
+                                <span class="d-block">Register Payment</span>
+                            </button>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <CenteredIcon icon="'fa-file-text-o fa-4x'" text.translate="'Select an invoice'" class="'bg-100 h-100'"/>
+                    </t>
+                </div>
+            </div>
+        </div>
+    </t>
+
+</templates>
