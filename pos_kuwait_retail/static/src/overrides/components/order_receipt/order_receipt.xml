@@ -32,7 +32,8 @@
                 <!-- ORDER INFO -->
                 <div class="receipt-section border-top border-bottom border-dark">
                     <div t-if="props.data.name"><t t-esc="props.data.name"/></div>
-                    <div t-if="props.data.invoice_reference">Invoice Ref: <t t-esc="props.data.invoice_reference"/></div>
+                    <div t-if="props.data.invoice_reference">Invoice: <t t-esc="props.data.invoice_reference"/></div>
+                    <div t-if="props.data.invoice_origin">Source Doc: <t t-esc="props.data.invoice_origin"/></div>
                     <div t-if="props.data.sales_person">Sales person: <t t-esc="props.data.sales_person"/></div>
                     <div t-if="props.data.date">Date: <t t-esc="props.data.date"/></div>
                 </div>
