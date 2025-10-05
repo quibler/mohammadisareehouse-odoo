@@ -4,11 +4,23 @@ import { _t } from "@web/core/l10n/translation";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 
 patch(PaymentScreen.prototype, {
+
+    get paymentMethods() {
+        const methods = super.paymentMethods;
+
+        // If this is an invoice payment order, filter out payment methods without journals
+        if (this.currentOrder?.isInvoicePaymentOrder) {
+            return methods.filter(method => method.journal_id);
+        }
+
+        return methods;
+    },
+
     async validateOrder(isForceValidate) {
         const currentOrder = this.currentOrder;
 
         // Check if this is an invoice payment
-        if (currentOrder.invoicePaymentData) {
+        if (currentOrder?.invoicePaymentData) {
             return await this.validateInvoicePayment();
         }
 
@@ -70,17 +82,10 @@ patch(PaymentScreen.prototype, {
                 ]
             );
 
-            // Store payment result for receipt printing
+            // Store payment result info on the order for reference
             currentOrder.invoicePaymentResult = paymentResult;
 
-            // Clear invoice payment data
-            delete currentOrder.invoicePaymentData;
-            delete currentOrder.invoicePaymentResult;
-
-            // Clear payment lines
-            this.paymentLines.forEach(line => line.delete());
-
-            // Show success notification with payment details
+            // Show success notification
             const message = _t(
                 "Payment registered: %s %s paid for invoice %s. Remaining: %s %s",
                 paymentResult.currency_symbol,
@@ -91,10 +96,12 @@ patch(PaymentScreen.prototype, {
             );
             this.notification.add(message, { type: "success" });
 
-            // Return to invoice screen
-            this.pos.showScreen("InvoiceScreen");
+            // Set screen data for receipt screen
+            currentOrder.set_screen_data({ name: "ReceiptScreen" });
+
+            // Navigate to standard ReceiptScreen
+            this.pos.showScreen("ReceiptScreen");
         } catch (error) {
-            console.error("Error registering invoice payment:", error);
             this.dialog.add(AlertDialog, {
                 title: _t("Payment Error"),
                 body: _t("Failed to register payment: %s", error.message || error),

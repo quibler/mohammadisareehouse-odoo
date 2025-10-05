@@ -18,23 +18,23 @@ export class SalesPersonButton extends Component {
 
     get currentOrder() {
         const order = this.pos.get_order();
-        console.log('currentOrder getter called, order:', order);
+//        console.log('currentOrder getter called, order:', order);
         return order;
     }
 
     get isLocked() {
-        console.log('isLocked getter called');
+//        console.log('isLocked getter called');
         const order = this.currentOrder;
         if (!order) {
-            console.log('No order found');
+//            console.log('No order found');
             return false;
         }
 
-        console.log('Order details:', {
-            amount_total: order.amount_total,
-            sales_person_id: order.sales_person_id,
-            getSalesPerson: order.getSalesPerson ? order.getSalesPerson() : 'No getSalesPerson method'
-        });
+//        console.log('Order details:', {
+//            amount_total: order.amount_total,
+//            sales_person_id: order.sales_person_id,
+//            getSalesPerson: order.getSalesPerson ? order.getSalesPerson() : 'No getSalesPerson method'
+//        });
 
         // Check if this is a refund order (negative amount_total indicates refund)
         const isRefund = order.amount_total < 0;
@@ -42,7 +42,7 @@ export class SalesPersonButton extends Component {
         // Check if the order has a sales person assigned
         const hasSalesPerson = order.sales_person_id;
 
-        console.log('Lock check result:', { isRefund, hasSalesPerson });
+//        console.log('Lock check result:', { isRefund, hasSalesPerson });
 
         return isRefund && hasSalesPerson;
     }
@@ -82,7 +82,7 @@ export class SalesPersonButton extends Component {
             allEmployees = [];
         }
 
-        console.log('All employees found:', allEmployees);
+//        console.log('All employees found:', allEmployees);
 
         // Get the allowed employee IDs
         let allowedEmployeeIds = [];
@@ -93,7 +93,7 @@ export class SalesPersonButton extends Component {
             });
         }
 
-        console.log('Allowed employee IDs:', allowedEmployeeIds);
+//        console.log('Allowed employee IDs:', allowedEmployeeIds);
 
         // Filter employees that are in the allowed list
         let employeesToShow = allEmployees;
@@ -103,7 +103,7 @@ export class SalesPersonButton extends Component {
             );
         }
 
-        console.log('Employees to show:', employeesToShow);
+//        console.log('Employees to show:', employeesToShow);
 
         const res = employeesToShow.map((employee) => {
             return {
@@ -127,19 +127,19 @@ export class SalesPersonButton extends Component {
     }
 
     async onClick() {
-        console.log('SalesPersonButton clicked!');
+//        console.log('SalesPersonButton clicked!');
         const order = this.currentOrder;
 
         if (!order) {
-            console.log('No order in onClick');
+//            console.log('No order in onClick');
             return;
         }
 
-        console.log('Button clicked, isLocked:', this.isLocked);
+//        console.log('Button clicked, isLocked:', this.isLocked);
 
         // Check if this is a refund order with inherited sales person - should be locked
         if (this.isLocked) {
-            console.log('Showing lock dialog');
+//            console.log('Showing lock dialog');
             await ask(this.dialog, {
                 title: _t("Sales Person Locked"),
                 body: _t("The sales person for this refund order is inherited from the original order and cannot be changed."),
@@ -147,7 +147,7 @@ export class SalesPersonButton extends Component {
             return;
         }
 
-        console.log('Proceeding with sales person selection');
+//        console.log('Proceeding with sales person selection');
 
         const employeesList = this._prepareEmployeeList(order.getSalesPerson()?.id);
 

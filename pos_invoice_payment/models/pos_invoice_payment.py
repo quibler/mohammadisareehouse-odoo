@@ -51,6 +51,7 @@ class PosInvoicePayment(models.TransientModel):
             'partner_name': inv.partner_id.name,
             'invoice_date': inv.invoice_date.isoformat() if inv.invoice_date else False,
             'date_due': inv.invoice_date_due.isoformat() if inv.invoice_date_due else False,
+            'invoice_origin': inv.invoice_origin or False,
             'amount_total': inv.amount_total,
             'amount_residual': inv.amount_residual,
             'amount_paid': inv.amount_total - inv.amount_residual,
@@ -102,6 +103,14 @@ class PosInvoicePayment(models.TransientModel):
 
         if not pos_session.exists() or pos_session.state != 'opened':
             raise ValidationError(_('POS session must be opened'))
+
+        # Validate payment method has a journal (exclude 'pay_later' methods)
+        if not pos_method.journal_id:
+            raise ValidationError(_(
+                'Payment method "%(method)s" cannot be used for invoice payments. '
+                'Please use a Cash or Bank payment method.',
+                method=pos_method.name
+            ))
 
         # Create payment using Odoo's standard account.payment model
         payment_vals = {

@@ -56,7 +56,6 @@ export class InvoiceScreen extends Component {
                 }
             }
         } catch (error) {
-            console.error("Error loading invoices:", error);
             this.dialog.add(AlertDialog, {
                 title: _t("Error"),
                 body: _t("Failed to load invoices: ") + error.message,
@@ -136,19 +135,34 @@ export class InvoiceScreen extends Component {
             return;
         }
 
-        // Get or create current order
-        let currentOrder = this.pos.get_order();
-
-        // If no order exists, create one
-        if (!currentOrder) {
-            this.pos.add_new_order();
-            currentOrder = this.pos.get_order();
+        // Find the "Invoice Payment" product
+        const invoicePaymentProduct = this._findInvoicePaymentProduct();
+        if (!invoicePaymentProduct) {
+            this.dialog.add(AlertDialog, {
+                title: _t("Configuration Error"),
+                body: _t("Invoice Payment product not found. Please create a service product named 'Invoice Payment' and make it available in POS."),
+            });
+            return;
         }
 
-        // Store invoice payment data in the order
-        currentOrder.invoicePaymentData = {
+        // Save reference to the current order before creating invoice payment order
+        const originalOrder = this.pos.get_order();
+
+        // Create a dedicated temporary order specifically for invoice payment
+        // This isolates invoice payments from regular POS orders
+        const invoicePaymentOrder = this.pos.add_new_order();
+
+        // Mark this order as an invoice payment order (flag for identification)
+        invoicePaymentOrder.isInvoicePaymentOrder = true;
+
+        // Store the original order reference so we can restore it later
+        invoicePaymentOrder.originalOrder = originalOrder;
+
+        // Store invoice payment data in this dedicated order
+        invoicePaymentOrder.invoicePaymentData = {
             invoice_id: invoice.id,
             invoice_name: invoice.name,
+            invoice_origin: invoice.invoice_origin,
             partner_id: invoice.partner_id,
             partner_name: invoice.partner_name,
             amount_due: invoice.amount_residual,
@@ -157,8 +171,75 @@ export class InvoiceScreen extends Component {
             currency_symbol: invoice.currency_symbol,
         };
 
-        // Navigate to payment screen with order UUID
-        this.pos.showScreen("PaymentScreen", { orderUuid: currentOrder.uuid });
+        // Set customer if available
+        if (invoice.partner_id) {
+            const partner = this.pos.models['res.partner'].get(invoice.partner_id);
+            if (partner) {
+                invoicePaymentOrder.set_partner(partner);
+            }
+        }
+
+        // Set this order as the active order (following refund pattern)
+        this.pos.set_order(invoicePaymentOrder);
+
+        // Add product line representing the invoice amount
+        try {
+            await this.pos.addLineToCurrentOrder(
+                {
+                    product_id: invoicePaymentProduct,
+                    price_unit: invoice.amount_residual,
+                    qty: 1,
+                },
+                {},
+                false // Don't configure
+            );
+
+            // Update the line's product name to be more descriptive
+            const line = invoicePaymentOrder.get_last_orderline();
+            if (line) {
+                line.set_full_product_name(`Payment for ${invoice.name}`);
+            }
+        } catch (error) {
+            this.dialog.add(AlertDialog, {
+                title: _t("Error"),
+                body: _t("Failed to create invoice payment order: ") + error.message,
+            });
+            // Remove the temporary order and restore original
+            this.pos.removeOrder(invoicePaymentOrder);
+            if (originalOrder) {
+                this.pos.set_order(originalOrder);
+            }
+            return;
+        }
+
+        // Navigate to payment screen with the dedicated order UUID
+        this.pos.showScreen("PaymentScreen", { orderUuid: invoicePaymentOrder.uuid });
+    }
+
+    _findInvoicePaymentProduct() {
+        // Try to find "Invoice Payment" product by name
+        const allProducts = this.pos.models["product.product"].getAll();
+
+        // Method 1: Exact match "Invoice Payment"
+        let product = allProducts.find(p =>
+            p.name && p.name.toLowerCase() === 'invoice payment'
+        );
+        if (product) return product;
+
+        // Method 2: Contains "invoice payment"
+        product = allProducts.find(p =>
+            p.name && p.name.toLowerCase().includes('invoice payment')
+        );
+        if (product) return product;
+
+        // Method 3: Any service product with "payment" in the name
+        product = allProducts.find(p =>
+            p.detailed_type === 'service' &&
+            p.name && p.name.toLowerCase().includes('payment')
+        );
+        if (product) return product;
+
+        return null;
     }
 
     back() {

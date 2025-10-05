@@ -24,10 +24,10 @@ patch(PosOrder.prototype, {
                     lineData.isDiscountProduct = lineData.productName.toLowerCase().includes('discount');
 
                     // Simple debug for that specific product
-                    if (lineData.productName.includes('102') && lineData.productName.includes('LD')) {
-                        console.log('Product name from lineData:', lineData.productName);
-                        console.log('Product name from product record:', product.name);
-                    }
+//                    if (lineData.productName.includes('102') && lineData.productName.includes('LD')) {
+//                        console.log('Product name from lineData:', lineData.productName);
+//                        console.log('Product name from product record:', product.name);
+//                    }
                 }
             }
 
