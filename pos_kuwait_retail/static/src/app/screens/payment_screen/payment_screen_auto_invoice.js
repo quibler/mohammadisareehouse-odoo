@@ -25,13 +25,16 @@ patch(PaymentScreen.prototype, {
             const isRefundOrder = this.isRefundOrder(order);
             const shouldInvoiceRefund = isRefundOrder && this.shouldInvoiceRefund(order);
 
-            // Auto-check invoice if customer account payment exists OR if refund of invoiced order
-            if ((hasCustomerAccountPayment || shouldInvoiceRefund) && !order.is_to_invoice()) {
+            // Check if order has a customer (required for invoicing)
+            const hasCustomer = order.get_partner() && order.get_partner().id;
+
+            // Auto-check invoice if customer account payment exists OR if refund of invoiced order (with customer)
+            if ((hasCustomerAccountPayment || (shouldInvoiceRefund && hasCustomer)) && !order.is_to_invoice()) {
                 order.set_to_invoice(true);
             }
 
             // Auto-uncheck invoice if no customer account payment, not a refund requiring invoice, and user hasn't manually set it
-            if (!hasCustomerAccountPayment && !shouldInvoiceRefund && order.is_to_invoice() && !order._manually_set_invoice) {
+            if (!hasCustomerAccountPayment && !(shouldInvoiceRefund && hasCustomer) && order.is_to_invoice() && !order._manually_set_invoice) {
                 order.set_to_invoice(false);
             }
         }, 500); // Check every 500ms
@@ -102,9 +105,10 @@ patch(PaymentScreen.prototype, {
             payment.payment_method_id && payment.payment_method_id.type === 'pay_later'
         );
         const shouldInvoiceRefund = this.isRefundOrder(order) && this.shouldInvoiceRefund(order);
+        const hasCustomer = order.get_partner() && order.get_partner().id;
 
-        // If customer account payment exists or this is a refund of invoiced order, keep invoice checked
-        if ((hasCustomerAccountPayment || shouldInvoiceRefund) && order.is_to_invoice()) {
+        // If customer account payment exists or this is a refund of invoiced order (with customer), keep invoice checked
+        if ((hasCustomerAccountPayment || (shouldInvoiceRefund && hasCustomer)) && order.is_to_invoice()) {
             return; // Don't toggle
         }
 
