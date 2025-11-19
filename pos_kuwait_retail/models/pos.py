@@ -67,6 +67,14 @@ class PosOrder(models.Model):
         help="Employee who handled this order"
     )
 
+    invoice_number = fields.Char(
+        string='Invoice Number',
+        related='account_move.name',
+        store=True,
+        readonly=True,
+        help="Invoice number from linked account move"
+    )
+
     def _get_fields_for_order_line(self):
         """Include sales person in order line data"""
         fields = super()._get_fields_for_order_line()
