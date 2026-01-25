@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="pos_invoice_payment.ClosePosPopup" t-inherit="point_of_sale.ClosePosPopup" t-inherit-mode="extension">
+        <!-- Add invoice payments info in the header after orders details -->
+        <xpath expr="//div[hasclass('total-orders')]" position="after">
+            <div t-if="props.invoice_payments_details and props.invoice_payments_details.quantity > 0"
+                 class="total-invoice-payments fw-bolder align-middle my-1 ms-3">
+                <t t-esc="props.invoice_payments_details.quantity"/> invoice payment(s):
+                <span class="amount" t-esc="env.utils.formatCurrency(props.invoice_payments_details.amount)"/>
+            </div>
+        </xpath>
+    </t>
+
+</templates>

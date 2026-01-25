@@ -3,6 +3,12 @@ from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 
 
+class AccountPayment(models.Model):
+    _inherit = 'account.payment'
+
+    pos_session_id = fields.Many2one('pos.session', string='POS Session', index=True)
+
+
 class PosInvoicePayment(models.TransientModel):
     _name = 'pos.invoice.payment'
     _description = 'POS Invoice Payment Handler'
@@ -122,6 +128,7 @@ class PosInvoicePayment(models.TransientModel):
             'date': fields.Date.context_today(self),
             'payment_reference': 'POS Payment for %s (Session: %s)' % (invoice.name, pos_session.name),
             'currency_id': invoice.currency_id.id,
+            'pos_session_id': pos_session_id,
         }
 
         payment = self.env['account.payment'].create(payment_vals)

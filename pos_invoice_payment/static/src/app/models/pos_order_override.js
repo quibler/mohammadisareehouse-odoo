@@ -8,7 +8,6 @@ patch(PosOrder.prototype, {
      */
     is_paid() {
         if (this.isInvoicePaymentOrder) {
-            // For invoice payments, allow validation if any payment is made
             return this.get_total_paid() > 0;
         }
         return super.is_paid();
@@ -20,7 +19,6 @@ patch(PosOrder.prototype, {
      */
     _isValidEmptyOrder() {
         if (this.isInvoicePaymentOrder) {
-            // Invoice payment orders are always valid if they have payment
             return this.payment_ids.length > 0;
         }
         return super._isValidEmptyOrder();
