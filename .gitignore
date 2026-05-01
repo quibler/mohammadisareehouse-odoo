@@ -27,6 +27,5 @@ wheels/
 .idea
 /*/.claude/
 
-# Docker files (local development only)
-docker-compose.yml
-odoo.conf
+# Secrets — never commit
+.env
