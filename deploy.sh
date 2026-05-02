@@ -6,6 +6,11 @@ cd /opt/odoo
 echo "Pulling latest code..."
 git pull origin main
 
+echo "Syncing nginx config..."
+sudo cp nginx.conf /etc/nginx/conf.d/odoo.conf
+sudo nginx -t
+sudo systemctl reload nginx
+
 echo "Restarting Odoo..."
 docker compose restart web
 
