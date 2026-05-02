@@ -18,15 +18,10 @@ curl -SL https://github.com/docker/compose/releases/download/v2.27.0/docker-comp
     -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
-# ── 3. EBS data volume ────────────────────────────────────────────────────────
-# Format only if not already formatted (safe to re-run)
-if ! blkid /dev/xvdf; then
-    mkfs -t xfs /dev/xvdf
-fi
+# ── 3. Data directories ───────────────────────────────────────────────────────
 mkdir -p /opt/odoo-data/postgres /opt/odoo-data/filestore
-mount /dev/xvdf /opt/odoo-data
-# Persist across reboots
-echo "/dev/xvdf /opt/odoo-data xfs defaults,nofail 0 2" >> /etc/fstab
+# Odoo container runs as uid 101
+chown -R 101:101 /opt/odoo-data/filestore
 
 # ── 4. Deploy key for GitHub ──────────────────────────────────────────────────
 # BEFORE RUNNING THIS SCRIPT:
@@ -72,9 +67,8 @@ echo "════════════════════════�
 echo " Bootstrap complete. Manual steps remaining:"
 echo ""
 echo " 1. Edit /opt/odoo/.env — set real DB passwords"
-echo " 2. Edit /etc/nginx/conf.d/odoo.conf — replace mohammadisareehouse.com"
-echo " 3. cd /opt/odoo && docker compose up -d"
-echo " 4. Point your domain A record to this instance's Elastic IP"
-echo " 5. Once DNS propagates:"
+echo " 2. cd /opt/odoo && docker compose up -d"
+echo " 3. Point your domain A record to this instance's public IP"
+echo " 4. Once DNS propagates:"
 echo "    certbot --nginx -d mohammadisareehouse.com"
 echo "════════════════════════════════════════════════════════"
