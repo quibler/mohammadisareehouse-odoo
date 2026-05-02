@@ -2,7 +2,6 @@ services:
   web:
     image: odoo:18.0
     restart: always
-    user: "101:101"
     depends_on:
       - db
     ports:
