@@ -133,6 +133,10 @@
                             <t t-out="props.data.label_total or 'Total:'"/>
                         </strong>
                         <strong>
+                            <t t-set="totalQty" t-value="props.data.orderlines.filter((l) =&gt; !l.isDiscountProduct).reduce((sum, l) =&gt; sum + Math.trunc(l.qty), 0)"/>
+                            <t t-esc="totalQty"/> (<t t-esc="convertToArabicNumeralsOnly(totalQty.toString())"/>)
+                        </strong>
+                        <strong>
                             <t t-set="taxTotals" t-value="props.data.taxTotals"/>
                             <t t-if="taxTotals" t-esc="formatCurrency(taxTotals.order_sign * taxTotals.order_total)"/>
                             <t t-else="" t-esc="formatCurrency(props.data.total_with_tax)"/>
