@@ -1,63 +1,144 @@
-# Backup + Hardening — Final Plan
+# Backup, Security Hardening & Incident Response
 
-## 1. Cross-region logical backups to S3 (the whole data-loss safety net)
+Status as of **2026-08-29**. Everything below marked ✅ is applied and verified in production.
 
-Files: `backup-to-s3.sh`, `s3-lifecycle.json`
+## Background: the 2026-08-27 compromise
 
+A cryptominer was found running inside the Postgres container as uid 70, disguised as
+`crond`/`agetty` in a hidden directory `/var/lib/postgresql/.dbus/`, pinned at ~100% CPU
+for two days and beaconing to `45.198.224.93:8081` and `139.99.69.109:10032`.
+
+**Entry vector (confirmed from nginx logs):** Odoo's database-management API was reachable
+from the internet. `/xmlrpc/2/db` exposes `restore()`, `drop()`, `create()`, `dump()` and
+`change_admin_password()`, gated **only** by the Odoo master password (which was the weak
+`@sdF1234`). A crafted dump passed to `restore()` can carry `COPY ... FROM PROGRAM`, which
+executes shell commands as the Postgres superuser. The malicious process tree was parented
+directly to the Postgres server process, consistent with this chain.
+
+Attacker infrastructure seen in logs:
+- `77.239.124.107` — User-Agent `poc-suite/1.0`, hitting `/xmlrpc/2/db` every ~51 minutes.
+- `45.198.224.93` — the miner's own C2 address, running recon against `/web/database/list`,
+  `/xmlrpc/2/common`, `/xmlrpc/2/object`, `/web/session/authenticate`.
+- `208.84.103.154` — `Go-http-client/1.1` against `/xmlrpc/2/db`.
+
+**Note:** XML-RPC returns HTTP 200 even on authentication *failure*, so status codes alone do
+not prove the attacker authenticated. What is certain is the endpoints were reachable and
+under sustained automated attack.
+
+**Clean:** no attacker-created Odoo crons, server actions, users or API keys; no host-level
+cron/systemd persistence; no modified system binaries; no `ld.so.preload`; single SSH key;
+IMDSv2 already enforced.
+
+## ✅ 1. Cross-region backups — `backup-to-s3.sh`, `s3-lifecycle.json`
+
+Nightly dump of **every non-template database** plus the filestore, uploaded straight to
+`s3://mdsaree-odoo-backups-dr` in **ap-southeast-1** (the instance is in ap-south-1), so a
+single-region failure cannot take both. 30-day lifecycle expiry, public access blocked.
+
+> **A previous version of this script was broken:** it dumped a hardcoded database named
+> `odoo`, which is an empty 24 MB scaffold. Production is **`prod`** (238 MB, ~16.5k POS
+> orders). The script now discovers databases dynamically and verifies each dump with
+> `pg_restore --list` before upload, aborting rather than shipping a corrupt backup.
+
+Scheduled by the **`odoo-backup.timer`** systemd timer at 02:00 UTC (05:00 Kuwait).
+Amazon Linux 2023 has no cron installed, so a systemd timer is used rather than crontab.
+
+## ✅ 2. Blocking the entry vector — `nginx.conf`
+
+`/web/database/*`, `/xmlrpc*` and `/jsonrpc` now return **404**, logged to
+`/var/log/nginx/odoo.blocked.log`. `/web/login` is rate-limited to 20 req/min per IP
+(burst 30) — real usage is ~30 hits/day, so this is far above normal.
+
+**Verified safe before blocking:** across all retained nginx logs, 100% of traffic to those
+paths came from the three attacker IPs above. Legitimate POS/web clients use
+`/web/dataset/call_kw`, `/websocket`, `/web/login`, `/web/image` and `/odoo` exclusively.
+
+Applied with `systemctl reload nginx` — graceful, no container restart, no POS interruption.
+
+> `deploy.sh` copies `nginx.conf` from the repo to `/etc/nginx/conf.d/odoo.conf`, so this
+> file **must stay committed** or the next deploy silently reverts the block.
+
+## ✅ 3. DB container network isolation — `db-egress-block.sh`
+
+An iptables `DOCKER-USER` rule drops new connections from the Postgres container to public
+addresses. Traffic within Docker (`172.16.0.0/12`) is untouched, so `web` ↔ `db` is
+unaffected. Re-applied at boot by **`odoo-db-egress.service`**, which re-resolves the
+container IP (it changes on recreate).
+
+Had this been in place, the miner could not have reached its pool.
+
+## ✅ 4. Secrets in AWS Secrets Manager — `sync-env-from-secrets.sh`
+
+Secret **`odoo/prod/credentials`** (ap-south-1) holds the Postgres password. The instance
+reads it through its IAM role — no AWS keys on the box. The script renders `/opt/odoo/.env`
+at mode 600; `deploy.sh` calls it automatically.
+
+IAM role `odoo-ec2-backup-role` grants exactly three things: `s3:PutObject` to the backup
+bucket, `secretsmanager:GetSecretValue` on this one secret, and `AmazonSSMManagedInstanceCore`.
+
+> Compose reads `.env` only when **creating** a container. `docker compose restart` does not
+> pick up a rotated password — that needs `docker compose up -d`, which recreates containers
+> and causes brief downtime.
+
+## ✅ 5. Detection — CloudWatch
+
+Alarm **`odoo-ec2-high-cpu`**: average CPU > 80% for 15 minutes → SNS topic `odoo-alerts`.
+The miner ran at ~100% for two days with nobody alerted.
+
+**Outstanding:** no email is subscribed to `odoo-alerts` yet, so the alarm currently notifies
+nobody. Subscribe with:
 ```bash
-# One-time: bucket in a DIFFERENT region than the EC2 instance + lifecycle + block public access
-aws s3api create-bucket --bucket mdsaree-odoo-backups-dr --region <DR_REGION> \
-  --create-bucket-configuration LocationConstraint=<DR_REGION> --profile mdsaaree
-aws s3api put-public-access-block --bucket mdsaree-odoo-backups-dr \
-  --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true \
-  --profile mdsaaree
-aws s3api put-bucket-lifecycle-configuration --bucket mdsaree-odoo-backups-dr \
-  --lifecycle-configuration file://s3-lifecycle.json --profile mdsaaree
-
-# On EC2: copy backup-to-s3.sh to /opt/odoo-data/, adjust COMPOSE_DIR, then:
-crontab -e
-# 0 2 * * * /opt/odoo-data/backup-to-s3.sh >> /var/log/odoo-backup.log 2>&1
+aws sns subscribe --topic-arn arn:aws:sns:ap-south-1:606328517978:odoo-alerts \
+  --protocol email --notification-endpoint YOU@EXAMPLE.COM --region ap-south-1 --profile mdsaaree
 ```
-IAM: the EC2 instance role needs `s3:PutObject` scoped to `mdsaree-odoo-backups-dr/*`.
 
-No EBS snapshots, no replication — the script uploads straight to a bucket in another region, satisfying cross-region protection with a single upload. Recovery path: relaunch EC2 (from a plain AMI or fresh instance) + `pg_restore` the dump + untar the filestore.
+## ✅ 6. SSM enabled (SSH lockdown still pending)
 
-## 2. SSM instead of open SSH + lock down the security group
+The instance is registered and **Online** in Systems Manager; remote command execution is
+verified working. Registration initially failed with `AccessDenied` on
+`ssm:UpdateInstanceInformation` purely due to IAM propagation delay — it succeeded on retry.
 
+**Port 22 is deliberately still open.** The `session-manager-plugin` is not installed on the
+operator's laptop, so there is no interactive shell alternative yet. Do not revoke SSH until:
 ```bash
-# One-time: attach SSM permissions to the instance's IAM role
-aws iam attach-role-policy --role-name <INSTANCE_ROLE_NAME> \
-  --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore --profile mdsaaree
-
-# Verify agent + registration
-# systemctl status amazon-ssm-agent   (on the instance)
-aws ssm describe-instance-information --profile mdsaaree
-
-# Only after confirming: aws ssm start-session --target <INSTANCE_ID> --profile mdsaaree works,
-# remove the inbound SSH rule:
-aws ec2 revoke-security-group-ingress --group-id <SG_ID> \
+brew install --cask session-manager-plugin
+aws ssm start-session --target i-02890e8ceb197581e --region ap-south-1 --profile mdsaaree   # must work
+# only then:
+aws ec2 revoke-security-group-ingress --group-id sg-0a77ee12d529cc564 \
   --protocol tcp --port 22 --cidr 0.0.0.0/0 --profile mdsaaree
 ```
-Security group ends up allowing only 80/443 from `0.0.0.0/0`; no port 22.
 
-## 3. CloudWatch alarms (disk/CPU) — free tier, optional but recommended
-Basic alarm on disk >80% and sustained high CPU, notifying via SNS email.
+## Still open
 
-## Cost added per month
-
-| Item | Estimate | Notes |
+| Item | Why it matters | Blocker |
 |---|---|---|
-| S3 cross-region backups (~1–5GB/night, 30-day retention, S3 Standard) | **$0.50–1.50** | Small dataset; no versioning, no tiering overhead |
-| SSM Session Manager | **$0** | Free for EC2 |
-| Security group changes | **$0** | Config only |
-| CloudWatch alarms | **$0** | Within free tier for one instance |
-| **Total** | **~$1–2/month** | |
+| Odoo master password still `@sdF1234` | Weak; gates the DB-management API | Editing `odoo.conf` needs an Odoo restart — POS is live |
+| `list_db`/`dbfilter` only on the server, not in git | A fresh clone loses them — security regression | Same restart constraint; bundle with the above |
+| `odoo` role is Postgres bootstrap superuser | Enables `COPY ... FROM PROGRAM` | Cannot be demoted; needs a new non-superuser role + ownership migration, tested separately |
+| SNS email subscription | Alarm notifies nobody | Needs an email address |
+| SSH lockdown | Port 22 open to `0.0.0.0/0` | Needs `session-manager-plugin` locally first |
+| Restore drill | An untested backup is not a backup | Should restore `prod` into a scratch DB and verify row counts |
 
-Dropped from the earlier draft (redundant given the S3 cross-region backup already covers recovery): DLM EBS snapshots, S3 Cross-Region Replication, bucket versioning, Glacier tiering. A once-off/manual AMI snapshot after major changes is a free, sufficient fallback for "rebuild the box."
+The superuser issue is genuinely mitigated but **not eliminated** by items 2 and 3: the
+network path in is closed and the path out is blocked, but a future authenticated SQL-level
+compromise could still execute shell commands inside the DB container.
 
-## Order of operations
-1. Create the DR-region S3 bucket + lifecycle rule.
-2. Scope IAM role, deploy `backup-to-s3.sh` + cron on EC2, verify a manual run succeeds and the object lands in S3.
-3. Attach SSM policy to instance role, verify `aws ssm start-session` works.
-4. Only then revoke the SSH ingress rule from the security group.
-5. (Optional) CloudWatch alarms.
+## Cost
+
+| Item | Est. / month |
+|---|---|
+| S3 cross-region backups (~285 MB/night, 30-day retention) | $0.50–1.50 |
+| Secrets Manager (1 secret) | $0.40 |
+| SSM, security groups, CloudWatch alarm, SNS | $0 |
+| **Total** | **~$1–2** |
+
+Deliberately not used: DLM snapshots, S3 replication, bucket versioning, Glacier tiering,
+multi-AZ RDS, GuardDuty, WAF — none justified when downtime is acceptable and the goal is
+data-loss prevention.
+
+## Forensics
+
+The payload is preserved locally as `dbus-forensics.tar.gz` (`ash`, `crond`, `config.json`,
+`.rsyslogd.log`). It was **not** uploaded anywhere. Recreating the containers during password
+rotation destroyed the old DB container's logs, so the exact SQL the attacker ran could not be
+reconstructed.
