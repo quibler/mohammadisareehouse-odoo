@@ -1,27 +1,23 @@
 #!/usr/bin/env bash
-# Render /opt/odoo/.env from AWS Secrets Manager.
+# Render /opt/odoo/.env from AWS SSM Parameter Store.
 #
-# Secrets live in Secrets Manager (secret: odoo/prod/credentials) rather than
-# being typed into files by hand. The EC2 instance reads them via its attached
-# IAM role (odoo-ec2-backup-role), so no AWS keys are stored on the box.
+# Credentials live in Parameter Store under /odoo/prod/* as SecureString
+# (Standard tier, so no per-secret monthly charge). The EC2 instance reads them
+# through its attached IAM role (odoo-ec2-backup-role) — no AWS keys on the box.
 #
-# Run this BEFORE `docker compose up` -- Compose reads .env only when it
-# creates a container, so a running stack keeps its existing values until the
-# next recreate.
+# Run this BEFORE `docker compose up`. Compose reads .env only when it CREATES
+# a container, so a running stack keeps its existing values until the next
+# recreate; `docker compose restart` will NOT pick up a rotated password.
 set -euo pipefail
 
-SECRET_ID="odoo/prod/credentials"
 REGION="ap-south-1"
 ENV_FILE="/opt/odoo/.env"
 
-SECRET_JSON="$(aws secretsmanager get-secret-value \
-  --secret-id "$SECRET_ID" --region "$REGION" \
-  --query SecretString --output text)"
+PG_PASS="$(aws ssm get-parameter --name /odoo/prod/db_password \
+  --with-decryption --region "$REGION" --query Parameter.Value --output text)"
 
-PG_PASS="$(printf '%s' "$SECRET_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["POSTGRES_PASSWORD"])')"
-
-if [ -z "$PG_PASS" ]; then
-  echo "ERROR: empty POSTGRES_PASSWORD from Secrets Manager — refusing to write .env" >&2
+if [ -z "$PG_PASS" ] || [ "$PG_PASS" = "None" ]; then
+  echo "ERROR: empty db_password from Parameter Store — refusing to write .env" >&2
   exit 1
 fi
 
@@ -29,8 +25,9 @@ umask 077
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 cat > "$TMP" <<EOF
-# Generated from AWS Secrets Manager ($SECRET_ID) — do not edit by hand.
-# Change the value in Secrets Manager, then re-run sync-env-from-secrets.sh.
+# Generated from AWS SSM Parameter Store (/odoo/prod/*) — do not edit by hand.
+# Change the value in Parameter Store, then re-run sync-env-from-secrets.sh
+# and recreate containers with: docker compose up -d
 POSTGRES_DB=odoo
 POSTGRES_USER=odoo
 POSTGRES_PASSWORD=${PG_PASS}
@@ -41,4 +38,4 @@ PASSWORD=${PG_PASS}
 EOF
 
 install -m 600 "$TMP" "$ENV_FILE"
-echo "wrote ${ENV_FILE} from Secrets Manager (mode 600)"
+echo "wrote ${ENV_FILE} from SSM Parameter Store (mode 600)"

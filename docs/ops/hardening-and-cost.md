@@ -1,6 +1,6 @@
 # Backup, Security Hardening & Incident Response
 
-Status as of **2026-08-29**. Everything below marked ✅ is applied and verified in production.
+Status as of **2026-08-30**. Everything below marked ✅ is applied and verified in production.
 
 ## Background: the 2026-08-27 compromise
 
@@ -67,14 +67,38 @@ container IP (it changes on recreate).
 
 Had this been in place, the miner could not have reached its pool.
 
-## ✅ 4. Secrets in AWS Secrets Manager — `sync-env-from-secrets.sh`
+## ✅ 4. Credentials in AWS SSM Parameter Store — `sync-env-from-secrets.sh`
 
-Secret **`odoo/prod/credentials`** (ap-south-1) holds the Postgres password. The instance
-reads it through its IAM role — no AWS keys on the box. The script renders `/opt/odoo/.env`
-at mode 600; `deploy.sh` calls it automatically.
+All credentials live in **SSM Parameter Store** as `SecureString`, Standard tier (free):
+
+| Parameter | Contents |
+|---|---|
+| `/odoo/prod/db_password` | Postgres password for the `odoo` role |
+| `/odoo/prod/admin_user_password` | Odoo web login for user `admin` |
+| `/odoo/prod/master_password` | `admin_passwd` from odoo.conf — **still weak, rotation pending** |
+
+The instance reads them through its IAM role — no AWS keys on the box. The script renders
+`/opt/odoo/.env` at mode 600; `deploy.sh` calls it automatically. A local copy also lives in
+the repo's gitignored `.env`.
 
 IAM role `odoo-ec2-backup-role` grants exactly three things: `s3:PutObject` to the backup
-bucket, `secretsmanager:GetSecretValue` on this one secret, and `AmazonSSMManagedInstanceCore`.
+bucket, read on `/odoo/prod/*` parameters (plus `kms:Decrypt` scoped via `kms:ViaService`
+to SSM), and `AmazonSSMManagedInstanceCore`.
+
+> An earlier iteration used Secrets Manager. It was consolidated into Parameter Store to keep
+> a single source of truth and drop the $0.40/month charge; the old secret
+> `odoo/prod/credentials` is scheduled for deletion on 2026-09-06 (recoverable until then).
+
+## ✅ 4b. Odoo `admin` login rotated (2026-08-30)
+
+The `admin` web user was still on the default **`admin`/`admin`** — confirmed live, then
+rotated. Verified afterwards that the new password authenticates (uid 2) and the old one is
+rejected. Done with a direct `pbkdf2_sha512` (600k rounds) hash update rather than starting an
+Odoo shell, to avoid memory pressure on the 1.9 GB instance while POS was serving.
+
+**No restart, and no POS disruption:** the only sessions active at the time belonged to
+`shop99`, `shop102` and `online`; `admin` was not logged in. POS account passwords were
+deliberately left untouched — changing them invalidates live sessions.
 
 > Compose reads `.env` only when **creating** a container. `docker compose restart` does not
 > pick up a rotated password — that needs `docker compose up -d`, which recreates containers
@@ -112,7 +136,9 @@ aws ec2 revoke-security-group-ingress --group-id sg-0a77ee12d529cc564 \
 
 | Item | Why it matters | Blocker |
 |---|---|---|
-| Odoo master password still `@sdF1234` | Weak; gates the DB-management API | Editing `odoo.conf` needs an Odoo restart — POS is live |
+| **Odoo master password still `@sdF1234`** | Weak; gates the DB-management API | Editing `odoo.conf` needs an Odoo restart — POS is live |
+| Widen `dbfilter` to `^(prod\|test_.*)$` | Needed to serve test databases for upgrade rehearsals | Same restart window |
+| Drop unused `odoo` and `testing` databases | Verified unused (0 connections, last write Jul); shrinks backups | None — safe whenever; both are in tonight's S3 backup |
 | `list_db`/`dbfilter` only on the server, not in git | A fresh clone loses them — security regression | Same restart constraint; bundle with the above |
 | `odoo` role is Postgres bootstrap superuser | Enables `COPY ... FROM PROGRAM` | Cannot be demoted; needs a new non-superuser role + ownership migration, tested separately |
 | SNS email subscription | Alarm notifies nobody | Needs an email address |
@@ -128,9 +154,8 @@ compromise could still execute shell commands inside the DB container.
 | Item | Est. / month |
 |---|---|
 | S3 cross-region backups (~285 MB/night, 30-day retention) | $0.50–1.50 |
-| Secrets Manager (1 secret) | $0.40 |
-| SSM, security groups, CloudWatch alarm, SNS | $0 |
-| **Total** | **~$1–2** |
+| SSM Parameter Store (Standard tier), SSM, security groups, CloudWatch alarm, SNS | $0 |
+| **Total** | **~$0.50–1.50** |
 
 Deliberately not used: DLM snapshots, S3 replication, bucket versioning, Glacier tiering,
 multi-AZ RDS, GuardDuty, WAF — none justified when downtime is acceptable and the goal is
