@@ -43,6 +43,57 @@ single-region failure cannot take both. 30-day lifecycle expiry, public access b
 Scheduled by the **`odoo-backup.timer`** systemd timer at 02:00 UTC (05:00 Kuwait).
 Amazon Linux 2023 has no cron installed, so a systemd timer is used rather than crontab.
 
+## ✅ 1b. Restoring a backup — `restore-from-s3.sh`
+
+One script anybody can run in an emergency. It downloads a chosen backup, verifies it
+**before** dropping anything, restores the database, and puts the filestore where Odoo
+expects it. It works both on the EC2 host and on a laptop running the stack in Docker
+(it locates the filestore via `--volumes-from`, so a bind mount and a named volume both work).
+
+```bash
+./docs/ops/restore-from-s3.sh --list --profile mdsaaree           # what is available
+./docs/ops/restore-from-s3.sh --latest --target-db restore_test --profile mdsaaree
+./docs/ops/restore-from-s3.sh --stamp 2026-08-29_1912 --target-db restore_test --profile mdsaaree
+```
+
+On the EC2 host drop `--profile` — the instance IAM role is used automatically. The target
+database is dropped and recreated, so the script makes you type its name to confirm
+(`--yes` skips that). Containers are auto-detected; override with `--db-container` /
+`--web-container`. It prints row counts at the end so you can sanity-check the result.
+
+### Verified restore drill — 2026-08-30
+
+A backup produced by the systemd timer was restored to a laptop and checked against live
+production. **Every table matched exactly:**
+
+| | restored | production |
+|---|---|---|
+| tables | 624 | 624 |
+| pos_order | 16559 | 16559 |
+| pos_order_line | 27377 | 27377 |
+| account_move | 10379 | 10379 |
+| product_product | 4745 | 4745 |
+| stock_move | 36232 | 36232 |
+| res_partner | 261 | 261 |
+| res_users | 9 | 9 |
+| installed modules | 97 | 97 |
+
+Beyond row counts, the restored instance was logged into through the normal browser form and
+an attachment was fetched through Odoo at `/web/content/14`: it returned **25,613 bytes of
+valid PNG**, matching `ir_attachment.file_size` exactly — proving the filestore restored
+correctly, not just the database.
+
+Two things worth knowing, both found during the drill:
+
+- `POSTGRES_PASSWORD` (like `POSTGRES_DB`) only applies when Postgres **first initialises** a
+  data directory. Restoring onto a pre-existing local volume keeps that volume's old password,
+  and Odoo fails with `password authentication failed`. Fix with
+  `ALTER ROLE odoo WITH PASSWORD '...'` inside the local DB container.
+- `/web/session/authenticate` (the JSON-RPC login) raises
+  `'NoneType' object has no attribute 'user'` from `muk_web_appsbar`. This is a quirk of that
+  addon on the programmatic endpoint, **not** a restore problem — the normal browser login
+  works fine. Don't use that endpoint to health-check a restore.
+
 ## ✅ 2. Blocking the entry vector — `nginx.conf`
 
 `/web/database/*`, `/xmlrpc*` and `/jsonrpc` now return **404**, logged to
