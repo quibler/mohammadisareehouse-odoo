@@ -1,0 +1,17 @@
+services:
+  web:
+    volumes:
+      - .:/mnt/extra-addons
+      - ./odoo.conf:/etc/odoo/odoo.conf
+      - odoo-filestore-local:/var/lib/odoo
+    environment:
+      - WORKERS=0
+    command: odoo --workers=0
+
+  db:
+    volumes:
+      - odoo-postgres-local:/var/lib/postgresql/data
+
+volumes:
+  odoo-filestore-local:
+  odoo-postgres-local:

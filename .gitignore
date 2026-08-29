@@ -29,3 +29,5 @@ wheels/
 
 # Secrets — never commit
 .env
+*.pem
+*.key
