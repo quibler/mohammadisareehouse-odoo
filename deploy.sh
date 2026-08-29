@@ -15,6 +15,15 @@ fi
 
 echo "Changes detected ($BEFORE -> $AFTER)"
 
+# Refresh .env from AWS Secrets Manager (secret: odoo/prod/credentials).
+# NOTE: `docker compose restart` below does NOT re-read .env — Compose only
+# reads it when creating a container. To roll out a rotated password you must
+# run `docker compose up -d` (recreates containers, brief downtime).
+if [ -x /opt/odoo-data/sync-env-from-secrets.sh ]; then
+    echo "Syncing .env from Secrets Manager..."
+    sudo /opt/odoo-data/sync-env-from-secrets.sh
+fi
+
 NGINX_DEST=/etc/nginx/conf.d/odoo.conf
 if ! sudo diff -q nginx.conf "$NGINX_DEST" > /dev/null 2>&1; then
     echo "Syncing nginx config..."
