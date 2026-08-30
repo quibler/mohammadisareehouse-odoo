@@ -56,5 +56,21 @@ PY
 echo "Uploading..."
 aws s3 cp "$ARCHIVE" "$S3_BUCKET/odoo/${DB}_${STAMP}.zip" --sse AES256 --only-show-errors
 
-# Old backups are removed by the bucket's 30-day lifecycle rule.
+# Keep the newest KEEP_COUNT backups no matter their age. This is deliberately
+# NOT age-based: if this script silently stopped running, an age-only rule
+# (the bucket's lifecycle policy) would eventually delete every backup,
+# including the last good one, leaving nothing to restore. Pruning only
+# happens here, after a verified upload succeeds — a failed run changes
+# nothing. The bucket's own 60-day lifecycle rule is a distant backstop for
+# if this pruning logic itself breaks, not the primary retention mechanism.
+KEEP_COUNT=14
+mapfile -t BACKUPS < <(aws s3 ls "$S3_BUCKET/odoo/" | awk '{print $4}' | grep "^${DB}_" | sort)
+STALE_COUNT=$(( ${#BACKUPS[@]} - KEEP_COUNT ))
+if [ "$STALE_COUNT" -gt 0 ]; then
+  for key in "${BACKUPS[@]:0:$STALE_COUNT}"; do
+    aws s3 rm "$S3_BUCKET/odoo/$key" --only-show-errors
+  done
+  echo "Pruned $STALE_COUNT old backup(s), kept the newest $KEEP_COUNT"
+fi
+
 echo "Backup complete: ${DB}_${STAMP}.zip ($(du -h "$ARCHIVE" | cut -f1))"

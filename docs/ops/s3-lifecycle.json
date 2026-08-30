@@ -4,7 +4,7 @@
       "ID": "expire-old-backups",
       "Status": "Enabled",
       "Filter": { "Prefix": "" },
-      "Expiration": { "Days": 30 }
+      "Expiration": { "Days": 60 }
     }
   ]
 }
