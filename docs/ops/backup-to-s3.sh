@@ -20,17 +20,17 @@ trap 'rm -rf "$TMP"' EXIT
 ARCHIVE="$TMP/${DB}_${STAMP}.zip"
 
 # `odoo db` runs via `docker exec`, which bypasses the image entrypoint, so the
-# DB connection has to be passed explicitly. Read it from the container's own
-# environment rather than a file, so this works unchanged anywhere the stack runs.
-DB_HOST="$(docker exec "$WEB_CONTAINER" printenv HOST)"
-DB_USER="$(docker exec "$WEB_CONTAINER" printenv USER)"
-DB_PASS="$(docker exec "$WEB_CONTAINER" printenv PASSWORD)"
-[ -n "$DB_PASS" ] || { echo "ERROR: no DB password in $WEB_CONTAINER environment" >&2; exit 1; }
-
+# DB connection has to be passed explicitly. The single quotes matter: $HOST,
+# $USER and $PASSWORD are expanded by the shell INSIDE the container, using the
+# environment Compose already gave it. If they were expanded here instead, the
+# password would appear in the host's process list on every nightly run.
 echo "Dumping ${DB}..."
-docker exec "$WEB_CONTAINER" odoo db -c /etc/odoo/odoo.conf \
-  --db_host "$DB_HOST" --db_port 5432 -r "$DB_USER" -w "$DB_PASS" \
-  dump "$DB" - > "$ARCHIVE"
+docker exec "$WEB_CONTAINER" sh -c '
+  [ -n "$PASSWORD" ] || { echo "ERROR: no DB password in container environment" >&2; exit 1; }
+  exec odoo db -c /etc/odoo/odoo.conf \
+    --db_host "$HOST" --db_port 5432 -r "$USER" -w "$PASSWORD" \
+    dump '"$DB"' -
+' > "$ARCHIVE"
 
 # Never upload an archive we have not opened. Checks the zip is intact and
 # contains all three parts a real Odoo backup must have.

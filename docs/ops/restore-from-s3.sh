@@ -91,10 +91,11 @@ fi
 docker inspect "$WEB_CONTAINER" >/dev/null 2>&1 || die "container not found: $WEB_CONTAINER"
 ok "odoo container: $WEB_CONTAINER"
 
-DB_HOST="$(docker exec "$WEB_CONTAINER" printenv HOST)"
-DB_USER="$(docker exec "$WEB_CONTAINER" printenv USER)"
-DB_PASS="$(docker exec "$WEB_CONTAINER" printenv PASSWORD)"
-[ -n "$DB_PASS" ] || die "no DB password in $WEB_CONTAINER environment"
+# Credentials stay inside the container. Every command below expands $HOST,
+# $USER and $PASSWORD in a shell running IN the container (note the single
+# quotes), so the password never reaches the host's process list.
+docker exec "$WEB_CONTAINER" sh -c '[ -n "$PASSWORD" ]' \
+  || die "no DB password in $WEB_CONTAINER environment"
 
 echo
 printf '%sAbout to restore%s\n' "$BLD" "$RST"
@@ -143,15 +144,18 @@ docker cp "$ARCHIVE" "$WEB_CONTAINER:/tmp/${SOURCE_DB}_${STAMP}.zip" >/dev/null
 ok "restoring with odoo db load..."
 LOAD_ARGS=(-f)
 [ "$NEUTRALIZE" = 1 ] && LOAD_ARGS+=(-n)
-docker exec "$WEB_CONTAINER" odoo db -c /etc/odoo/odoo.conf \
-  --db_host "$DB_HOST" --db_port 5432 -r "$DB_USER" -w "$DB_PASS" \
-  load "${LOAD_ARGS[@]}" "$TARGET_DB" "/tmp/${SOURCE_DB}_${STAMP}.zip" \
+docker exec "$WEB_CONTAINER" sh -c '
+  exec odoo db -c /etc/odoo/odoo.conf \
+    --db_host "$HOST" --db_port 5432 -r "$USER" -w "$PASSWORD" \
+    load "$@"
+' _ "${LOAD_ARGS[@]}" "$TARGET_DB" "/tmp/${SOURCE_DB}_${STAMP}.zip" \
   || die "odoo db load failed — $TARGET_DB may be incomplete"
 
 # ------------------------------------------------------------------ verify
 psql_q() {
-  docker exec "$WEB_CONTAINER" env PGPASSWORD="$DB_PASS" \
-    psql -h "$DB_HOST" -U "$DB_USER" -d "$TARGET_DB" -tAc "$1" 2>/dev/null || echo '?'
+  docker exec "$WEB_CONTAINER" sh -c '
+    PGPASSWORD="$PASSWORD" psql -h "$HOST" -U "$USER" -d "$1" -tAc "$2"
+  ' _ "$TARGET_DB" "$1" 2>/dev/null || echo '?'
 }
 
 echo
