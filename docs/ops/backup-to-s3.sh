@@ -1,59 +1,60 @@
 #!/usr/bin/env bash
-# Nightly logical backup: Postgres dumps + filestore -> S3 bucket in a DIFFERENT
-# region than the EC2 instance (bare-minimum cross-region protection).
 #
-# Backs up EVERY non-template database (prod, testing, odoo, ...) so nothing is
-# missed, plus the shared filestore. Run on the EC2 host, NOT inside a container.
-#   0 2 * * * /opt/odoo-data/backup-to-s3.sh >> /var/log/odoo-backup.log 2>&1
+# Nightly Odoo backup to the cross-region S3 bucket.
+#
+# Uses Odoo's own `odoo db dump`, which produces the standard Odoo zip
+# (dump.sql + filestore/ + manifest.json) — the same format the Odoo web UI
+# produces and consumes. That keeps Odoo responsible for its own invariants
+# instead of us reassembling a database and filestore by hand.
+#
+# Run on the EC2 host. Scheduled by odoo-backup.timer at 02:00 UTC.
 set -euo pipefail
 
-COMPOSE_DIR="/opt/odoo"                       # dir with docker-compose.yml
-FILESTORE_DIR="/opt/odoo-data/filestore"
-S3_BUCKET="s3://mdsaree-odoo-backups-dr"      # bucket lives in a different region than this instance
-# No --profile: the instance authenticates via its attached IAM role (odoo-ec2-backup-role).
-DATE="$(date +%F_%H%M)"
-TMP_DIR="$(mktemp -d)"
-DB_USER="odoo"
-DB_CONTAINER="odoo-db-1"
+DB="prod"                                  # the only database that holds business data
+S3_BUCKET="s3://mdsaree-odoo-backups-dr"   # different region to the instance
+WEB_CONTAINER="odoo-web-1"
+STAMP="$(date +%F_%H%M)"
 
-trap 'rm -rf "$TMP_DIR"' EXIT
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+ARCHIVE="$TMP/${DB}_${STAMP}.zip"
 
-cd "$COMPOSE_DIR"
+# `odoo db` runs via `docker exec`, which bypasses the image entrypoint, so the
+# DB connection has to be passed explicitly. Read it from the container's own
+# environment rather than a file, so this works unchanged anywhere the stack runs.
+DB_HOST="$(docker exec "$WEB_CONTAINER" printenv HOST)"
+DB_USER="$(docker exec "$WEB_CONTAINER" printenv USER)"
+DB_PASS="$(docker exec "$WEB_CONTAINER" printenv PASSWORD)"
+[ -n "$DB_PASS" ] || { echo "ERROR: no DB password in $WEB_CONTAINER environment" >&2; exit 1; }
 
-# Discover databases rather than hardcoding one — production is 'prod', not 'odoo'.
-DATABASES=$(docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d postgres -tAc \
-  "SELECT datname FROM pg_database WHERE datistemplate = false AND datname <> 'postgres';")
+echo "Dumping ${DB}..."
+docker exec "$WEB_CONTAINER" odoo db -c /etc/odoo/odoo.conf \
+  --db_host "$DB_HOST" --db_port 5432 -r "$DB_USER" -w "$DB_PASS" \
+  dump "$DB" - > "$ARCHIVE"
 
-if [ -z "$DATABASES" ]; then
-  echo "ERROR: no databases discovered — aborting so a bad backup is not uploaded." >&2
-  exit 1
-fi
+# Never upload an archive we have not opened. Checks the zip is intact and
+# contains all three parts a real Odoo backup must have.
+python3 - "$ARCHIVE" <<'PY'
+import sys, zipfile, json
+path = sys.argv[1]
+try:
+    z = zipfile.ZipFile(path)
+except zipfile.BadZipFile:
+    sys.exit("ERROR: archive is not a valid zip — aborting")
+if z.testzip() is not None:
+    sys.exit("ERROR: archive has a corrupt member — aborting")
+names = z.namelist()
+if "dump.sql" not in names:
+    sys.exit("ERROR: archive has no dump.sql — aborting")
+if not any(n.startswith("filestore/") for n in names):
+    sys.exit("ERROR: archive has no filestore — aborting")
+m = json.loads(z.read("manifest.json"))
+print(f"  verified: db={m['db_name']} version={m['version']} "
+      f"modules={len(m.get('modules', {}))} entries={len(names)}")
+PY
 
-# 1. Dump each database (compressed custom format, restorable with pg_restore).
-#    nice/ionice keeps this gentle on the live POS workload.
-for db in $DATABASES; do
-  echo "Dumping ${db}..."
-  # No -t: a TTY would corrupt the binary dump stream.
-  docker exec "$DB_CONTAINER" pg_dump -U "$DB_USER" -Fc "$db" > "$TMP_DIR/${db}_${DATE}.dump"
+echo "Uploading..."
+aws s3 cp "$ARCHIVE" "$S3_BUCKET/odoo/${DB}_${STAMP}.zip" --sse AES256 --only-show-errors
 
-  # Fail loudly if the dump is unreadable — never upload a corrupt backup silently.
-  if ! pg_restore --list "$TMP_DIR/${db}_${DATE}.dump" >/dev/null 2>&1; then
-    if ! docker exec -i "$DB_CONTAINER" pg_restore --list < "$TMP_DIR/${db}_${DATE}.dump" >/dev/null 2>&1; then
-      echo "ERROR: dump for ${db} failed verification — aborting." >&2
-      exit 1
-    fi
-  fi
-done
-
-# 2. Filestore (attachments, images) — covers every database's filestore subdir.
-nice -n 10 ionice -c2 -n7 tar -czf "$TMP_DIR/filestore_${DATE}.tar.gz" -C "$FILESTORE_DIR" .
-
-# 3. Upload to the cross-region bucket (server-side encrypted).
-for db in $DATABASES; do
-  aws s3 cp "$TMP_DIR/${db}_${DATE}.dump" "$S3_BUCKET/postgres/${db}/${db}_${DATE}.dump" --sse AES256 --only-show-errors
-done
-aws s3 cp "$TMP_DIR/filestore_${DATE}.tar.gz" "$S3_BUCKET/filestore/filestore_${DATE}.tar.gz" --sse AES256 --only-show-errors
-
-# Old backups are auto-deleted by the bucket's 30-day lifecycle rule (s3-lifecycle.json).
-
-echo "Backup complete: ${DATE} (databases: $(echo $DATABASES | tr '\n' ' '))"
+# Old backups are removed by the bucket's 30-day lifecycle rule.
+echo "Backup complete: ${DB}_${STAMP}.zip ($(du -h "$ARCHIVE" | cut -f1))"

@@ -29,70 +29,67 @@ under sustained automated attack.
 cron/systemd persistence; no modified system binaries; no `ld.so.preload`; single SSH key;
 IMDSv2 already enforced.
 
-## ✅ 1. Cross-region backups — `backup-to-s3.sh`, `s3-lifecycle.json`
+## ✅ 1. Cross-region backups — `backup-to-s3.sh`
 
-Nightly dump of **every non-template database** plus the filestore, uploaded straight to
-`s3://mdsaree-odoo-backups-dr` in **ap-southeast-1** (the instance is in ap-south-1), so a
-single-region failure cannot take both. 30-day lifecycle expiry, public access blocked.
+Nightly `odoo db dump` of **prod** uploaded to `s3://mdsaree-odoo-backups-dr` in
+**ap-southeast-1** (the instance is in ap-south-1), so one region cannot take both.
+30-day lifecycle expiry, public access blocked. Scheduled by **`odoo-backup.timer`**
+at 02:00 UTC (05:00 Kuwait); Amazon Linux 2023 ships no cron, hence a systemd timer.
 
-> **A previous version of this script was broken:** it dumped a hardcoded database named
-> `odoo`, which is an empty 24 MB scaffold. Production is **`prod`** (238 MB, ~16.5k POS
-> orders). The script now discovers databases dynamically and verifies each dump with
-> `pg_restore --list` before upload, aborting rather than shipping a corrupt backup.
+The archive is Odoo's own zip — `dump.sql` + `filestore/` + `manifest.json` — the same
+format the Odoo web UI produces and consumes. It is opened and checked (valid zip, no
+corrupt member, all three parts present) **before** upload, so a bad dump is never shipped.
 
-Scheduled by the **`odoo-backup.timer`** systemd timer at 02:00 UTC (05:00 Kuwait).
-Amazon Linux 2023 has no cron installed, so a systemd timer is used rather than crontab.
+Measured on production: **24s, 170 MB, ~220 MB peak memory.** An earlier hand-rolled
+`pg_dump` + filestore-tar version took 39s, produced 267 MB across two artifacts, and
+restored with broken CSS — see below.
 
-## ✅ 1b. Restoring a backup — `restore-from-s3.sh`
-
-One script anybody can run in an emergency. It downloads a chosen backup, verifies it
-**before** dropping anything, restores the database, and puts the filestore where Odoo
-expects it. It works both on the EC2 host and on a laptop running the stack in Docker
-(it locates the filestore via `--volumes-from`, so a bind mount and a named volume both work).
+## ✅ 1b. Restore — `restore-from-s3.sh`
 
 ```bash
-./docs/ops/restore-from-s3.sh --list --profile mdsaaree           # what is available
-./docs/ops/restore-from-s3.sh --latest --target-db restore_test --profile mdsaaree
-./docs/ops/restore-from-s3.sh --stamp 2026-08-29_1912 --target-db restore_test --profile mdsaaree
+./docs/ops/restore-from-s3.sh --list
+./docs/ops/restore-from-s3.sh --latest --target-db test_upgrade              # neutralized copy
+./docs/ops/restore-from-s3.sh --latest --target-db prod --production         # real recovery
 ```
 
-On the EC2 host drop `--profile` — the instance IAM role is used automatically. The target
-database is dropped and recreated, so the script makes you type its name to confirm
-(`--yes` skips that). Containers are auto-detected; override with `--db-container` /
-`--web-container`. It prints row counts at the end so you can sanity-check the result.
+Uses `odoo db load`, so Odoo rebuilds the database and filestore itself. Credentials are
+read from the running container's environment, so the same command works on the EC2 host
+and on a laptop. On the host, drop `--profile`; the instance IAM role is used.
 
-### Verified restore drill — 2026-08-30
+**Neutralize is the default.** A restored copy has crons disabled and outgoing mail pointed
+at a dead SMTP host. `--production` is required to restore a live system, because the common
+case is someone restoring a copy somewhere it must not send mail. The archive is verified
+before the target database is dropped, and the target name must be typed to confirm.
 
-A backup produced by the systemd timer was restored to a laptop and checked against live
-production. **Every table matched exactly:**
+### Why the hand-rolled version was replaced
 
-| | restored | production |
-|---|---|---|
-| tables | 624 | 624 |
-| pos_order | 16559 | 16559 |
-| pos_order_line | 27377 | 27377 |
-| account_move | 10379 | 10379 |
-| product_product | 4745 | 4745 |
-| stock_move | 36232 | 36232 |
-| res_partner | 261 | 261 |
-| res_users | 9 | 9 |
-| installed modules | 97 | 97 |
+A `pg_dump` + filestore-tar restore renders with **broken CSS**: the compiled asset bundles
+live in `ir_attachment`, and a raw `pg_restore` leaves them stale. It also had two bugs that
+row-count checks could not catch:
 
-Beyond row counts, the restored instance was logged into through the normal browser form and
-an attachment was fetched through Odoo at `/web/content/14`: it returned **25,613 bytes of
-valid PNG**, matching `ir_attachment.file_size` exactly — proving the filestore restored
-correctly, not just the database.
+- It chowned the filestore to `101:101`, but **Odoo runs as uid 100, gid 101**. Reads worked
+  because directories are world-readable — so verification passed — but writes failed.
+- A partial failure could restore the database and abort before neutralizing, leaving a
+  live-looking copy with active crons and a working SMTP server.
 
-Two things worth knowing, both found during the drill:
+Both disappear when Odoo does the work. Verified after the rewrite: 3 asset bundles served
+at full size (1.05 MB CSS, 5.67 MB JS), **0 broken**, and confirmed independently through a
+manual web-UI restore.
 
-- `POSTGRES_PASSWORD` (like `POSTGRES_DB`) only applies when Postgres **first initialises** a
-  data directory. Restoring onto a pre-existing local volume keeps that volume's old password,
-  and Odoo fails with `password authentication failed`. Fix with
-  `ALTER ROLE odoo WITH PASSWORD '...'` inside the local DB container.
-- `/web/session/authenticate` (the JSON-RPC login) raises
-  `'NoneType' object has no attribute 'user'` from `muk_web_appsbar`. This is a quirk of that
-  addon on the programmatic endpoint, **not** a restore problem — the normal browser login
-  works fine. Don't use that endpoint to health-check a restore.
+### copy vs neutralize — they are not the same
+
+From `odoo/cli/db.py:147`, `restore_db(..., copy=True, neutralize_database=args.neutralize)`:
+
+- **copy** only forces a new `dbuuid` (`ir.config_parameter.init(force=True)`). Nothing else.
+  It is *not* a safety feature, and `odoo db load` always does it.
+- **neutralize** is the protection: disables crons, swaps outgoing mail to a dead host.
+
+Ticking "This database is a copy" in the web UI therefore yields a **fully live** database.
+On 2026-08-30 the local `prod` and `dev` copies were found with 23/26 active crons and live
+Zoho SMTP credentials, on an instance with `max_cron_threads = 1` and no `dbfilter` — able to
+fire scheduled actions and email real customers from a laptop. Both were neutralized.
+
+**Rule: neutralize every test or local copy; skip it only for genuine recovery of the live system.**
 
 ## ✅ 2. Blocking the entry vector — `nginx.conf`
 
