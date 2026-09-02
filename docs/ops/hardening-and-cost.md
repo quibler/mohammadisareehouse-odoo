@@ -115,27 +115,30 @@ container IP (it changes on recreate).
 
 Had this been in place, the miner could not have reached its pool.
 
-## ✅ 4. Credentials in AWS SSM Parameter Store — `sync-env-from-secrets.sh`
+## ✅ 4. Credentials in AWS Secrets Manager — `sync-env-from-secrets.sh`
 
-All credentials live in **SSM Parameter Store** as `SecureString`, Standard tier (free):
+All credentials live in one secret, **`odoo/prod/credentials`** (ap-south-1):
 
-| Parameter | Contents |
+| Key | Contents |
 |---|---|
-| `/odoo/prod/db_password` | Postgres password for the `odoo` role |
-| `/odoo/prod/admin_user_password` | Odoo web login for user `admin` |
-| `/odoo/prod/master_password` | `admin_passwd` from odoo.conf — **still weak, rotation pending** |
+| `POSTGRES_PASSWORD` / `PASSWORD` | Postgres password for the `odoo` role (same value, both keys — compose reads both names) |
+| `ODOO_ADMIN_USER_PASSWORD` | Odoo web login for user `admin` |
+| `ODOO_MASTER_PASSWORD` | `admin_passwd` from odoo.conf — **still weak, rotation pending** |
 
-The instance reads them through its IAM role — no AWS keys on the box. The script renders
+The instance reads it through its IAM role — no AWS keys on the box. The script renders
 `/opt/odoo/.env` at mode 600; `deploy.sh` calls it automatically. A local copy also lives in
 the repo's gitignored `.env`.
 
-IAM role `odoo-ec2-backup-role` grants exactly three things: `s3:PutObject` to the backup
-bucket, read on `/odoo/prod/*` parameters (plus `kms:Decrypt` scoped via `kms:ViaService`
-to SSM), and `AmazonSSMManagedInstanceCore`.
+IAM role `odoo-ec2-backup-role` grants: `s3:PutObject`/`ListBucket`/`DeleteObject` on the
+backup bucket, `secretsmanager:GetSecretValue` on this one secret, `sns:Publish` to
+`odoo-alerts`, and `AmazonSSMManagedInstanceCore`.
 
-> An earlier iteration used Secrets Manager. It was consolidated into Parameter Store to keep
-> a single source of truth and drop the $0.40/month charge; the old secret
-> `odoo/prod/credentials` is scheduled for deletion on 2026-09-06 (recoverable until then).
+> **History:** started in Secrets Manager, consolidated into SSM Parameter Store on 2026-08-30
+> to cut the $0.40/month and keep one source of truth, then moved back to Secrets Manager on
+> 2026-09-02 at the user's request. The SSM parameters (`/odoo/prod/*`) were deleted after the
+> Secrets Manager path was verified working against live production — cost is back to ~$1.20/mo
+> for the one secret (3 values × $0.40, since Secrets Manager prices per secret name, not per
+> key inside it).
 
 ## ✅ 4b. Odoo `admin` login rotated (2026-08-30)
 
