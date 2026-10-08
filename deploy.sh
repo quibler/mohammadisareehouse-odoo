@@ -27,8 +27,14 @@ fi
 NGINX_DEST=/etc/nginx/conf.d/odoo.conf
 if ! sudo diff -q nginx.conf "$NGINX_DEST" > /dev/null 2>&1; then
     echo "Syncing nginx config..."
+    sudo cp "$NGINX_DEST" "$NGINX_DEST.bak"
     sudo cp nginx.conf "$NGINX_DEST"
-    sudo nginx -t
+    # Roll back on a bad config so a later reload/reboot can't pick it up.
+    if ! sudo nginx -t; then
+        echo "nginx config test failed -- restoring previous config."
+        sudo cp "$NGINX_DEST.bak" "$NGINX_DEST"
+        exit 1
+    fi
     sudo systemctl reload nginx
 else
     echo "nginx config unchanged, skipping reload."

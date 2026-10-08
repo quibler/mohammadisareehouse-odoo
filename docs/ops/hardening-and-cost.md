@@ -187,10 +187,10 @@ aws ec2 revoke-security-group-ingress --group-id sg-0a77ee12d529cc564 \
 
 | Item | Why it matters | Blocker |
 |---|---|---|
-| **Odoo master password still `@sdF1234`** | Weak; gates the DB-management API | Editing `odoo.conf` needs an Odoo restart — POS is live |
-| Widen `dbfilter` to `^(prod\|test_.*)$` | Needed to serve test databases for upgrade rehearsals | Same restart window |
+| **Odoo master password: plaintext unknown** | Server holds a pbkdf2 hash set by hand on 2026-08-10 (not `@sdF1234` — verified 2026-10-08); nobody has the plaintext, so the tunnel-only DB manager is unusable until it is reset | Set a new hash during the test-DB restart window; store the plaintext in SSM (approval) |
+| Test-DB access (`test.erp` host, header-based `dbfilter`, tunnel-only DB manager) | In git, not deployed. A plain `^(prod\|test_.*)$` would 404 fresh POS logins via the DB selector | DNS record + cert expansion (approval), then restart window — `test-databases.md` |
 | Drop unused `odoo` and `testing` databases | Verified unused (0 connections, last write Jul); shrinks backups | None — safe whenever; both are in tonight's S3 backup |
-| `list_db`/`dbfilter` only on the server, not in git | A fresh clone loses them — security regression | Same restart constraint; bundle with the above |
+| `list_db`/`dbfilter` only on the server, not in git | A fresh clone loses them — security regression | Now in git; lands with the test-DB rollout above |
 | `odoo` role is Postgres bootstrap superuser | Enables `COPY ... FROM PROGRAM` | Cannot be demoted; needs a new non-superuser role + ownership migration, tested separately |
 | SNS email subscription | Alarm notifies nobody | Needs an email address |
 | SSH lockdown | Port 22 open to `0.0.0.0/0` | Needs `session-manager-plugin` locally first |

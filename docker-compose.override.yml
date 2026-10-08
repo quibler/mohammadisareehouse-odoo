@@ -6,7 +6,8 @@ services:
       - odoo-filestore-local:/var/lib/odoo
     environment:
       - WORKERS=0
-    command: odoo --workers=0
+    # odoo.conf's dbfilter only serves prod/test_*; locally serve every database.
+    command: odoo --workers=0 --db-filter=.*
 
   db:
     volumes:

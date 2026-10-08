@@ -175,5 +175,5 @@ else
   warn "This database is LIVE — crons run and mail will be sent."
 fi
 echo
-echo "If odoo.conf pins dbfilter to another database, widen it before this one will serve:"
-echo "  dbfilter = ^(prod|test_.*)\$"
+echo "Testers reach test_* databases at https://test.erp.mohammadisareehouse.com;"
+echo "any other name is served nowhere (see docs/ops/test-databases.md)."
