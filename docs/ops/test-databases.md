@@ -55,28 +55,31 @@ Bookmark `https://test.erp.mohammadisareehouse.com/web/login?db=test_<name>` to 
      -d erp.mohammadisareehouse.com -d www.erp.mohammadisareehouse.com -d test.erp.mohammadisareehouse.com
    ```
    `certonly` keeps certbot from editing nginx config; the cert path is unchanged.
-3. **Restart window (shop closed).** The server's `odoo.conf` carries local edits
-   (`dbfilter = ^prod$`, `list_db = False`, the hashed `admin_passwd`) that block `git pull`:
+3. **Before the window (no downtime):** some `.git/objects` are root-owned (from `git` run
+   as root on 07-18 and 08-29), which makes `git pull` as `ec2-user` fail:
+   ```bash
+   sudo chown -R ec2-user:ec2-user /opt/odoo/.git
+   ```
    Nobody holds the current master password's plaintext (see `hardening-and-cost.md`), so a
-   new one is set in the same window. Generate it on your laptop and save it in your password
-   manager first, then on the server:
+   new one is set in the window. Generate it and save it in your password manager first.
+
+   **Restart window (shop closed)** — one Odoo restart. The server's `odoo.conf` carries local
+   edits (`dbfilter = ^prod$`, `list_db = False`, the old hash) that block the pull, so pull by
+   hand, append the new hash, *then* deploy — Odoo never runs without `admin_passwd`
+   (which would fall back to `admin`):
    ```bash
    cd /opt/odoo
-   git status                                     # expect only odoo.conf modified
-   git checkout odoo.conf
-   ./deploy.sh                                    # pull, nginx -t + reload (auto-rollback on failure), restart web
-   # hash the new password and append it -- read -s keeps it off screen, out of shell
-   # history and out of the process list; stdin (no -t) keeps the prompt out of the file
+   git status --short                             # expect: M odoo.conf (+ untracked *.bak files)
+   git checkout odoo.conf && git pull origin main
+   # read -s keeps the password off screen, out of history and out of the process list;
+   # stdin (no -t) keeps the prompt out of the file. Runs in the live container, harmlessly.
    read -rsp 'New master password: ' P; echo
    printf '%s' "$P" | docker exec -i $(docker ps -qf name=web) python3 -c "import sys; from passlib.context import CryptContext; print('admin_passwd = ' + CryptContext(['pbkdf2_sha512']).hash(sys.stdin.read()))" >> odoo.conf
    unset P
    tail -1 odoo.conf                              # must start with: admin_passwd = $pbkdf2-sha512$
-   docker compose restart web
+   ./deploy.sh --force                            # nginx -t + reload (auto-rollback), restart web
    ```
    Then store the plaintext as SSM SecureString `/odoo/prod/admin_passwd` *(cloud change — approval)*.
-   Either half going live first is safe: new nginx + old Odoo ignores the header
-   (`dbfilter = ^prod$` still applies); new Odoo + old nginx matches only `prod` until a
-   `test_*` database exists.
 4. **Verify:**
    ```bash
    curl -sI https://erp.mohammadisareehouse.com/web/database/selector        # 404
