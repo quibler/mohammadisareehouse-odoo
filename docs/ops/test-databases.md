@@ -55,10 +55,13 @@ Bookmark `https://test.erp.mohammadisareehouse.com/web/login?db=test_<name>` to 
      -d erp.mohammadisareehouse.com -d www.erp.mohammadisareehouse.com -d test.erp.mohammadisareehouse.com
    ```
    `certonly` keeps certbot from editing nginx config; the cert path is unchanged.
-3. **Before the window (no downtime):** some `.git/objects` are root-owned (from `git` run
-   as root on 07-18 and 08-29), which makes `git pull` as `ec2-user` fail:
+3. **Before the window (no downtime):** tracked files touched by past `sudo git pull`s
+   (07-18, 08-29) are root-owned, which makes `git pull` as `ec2-user` fail midway and leave a
+   half-updated worktree. (`.git` itself was fixed on 2026-10-08; leave `.env` root-owned.)
    ```bash
-   sudo chown -R ec2-user:ec2-user /opt/odoo/.git
+   cd /opt/odoo
+   sudo chown -R ec2-user:ec2-user .git docs .gitignore pos_kuwait_retail
+   find . -path ./.git -prune -o ! -user ec2-user -print   # expect only .env and *.bak-* files
    ```
    Nobody holds the current master password's plaintext (see `hardening-and-cost.md`), so a
    new one is set in the window. Generate it and save it in your password manager first.
@@ -69,6 +72,9 @@ Bookmark `https://test.erp.mohammadisareehouse.com/web/login?db=test_<name>` to 
    (which would fall back to `admin`):
    ```bash
    cd /opt/odoo
+   # POS must be idle -- "shop closed" is not enough (on 2026-10-08 a till opened at ~10:00 Kuwait).
+   # Expect 0; anything from /pos/ui or get_product_info_pos means a till is live.
+   sudo awk -v t=$(date -u -d '-10 min' +%d/%b/%Y:%H:%M) '$4 > "["t' /var/log/nginx/odoo.access.log | grep -vc websocket
    git status --short                             # expect: M odoo.conf (+ untracked *.bak files)
    git checkout odoo.conf && git pull origin main
    # read -s keeps the password off screen, out of history and out of the process list;
