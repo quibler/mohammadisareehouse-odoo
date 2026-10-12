@@ -54,7 +54,7 @@
         """,
     'author': 'Ashwini Kumar',
     'category': 'Point Of Sale',
-    'version': '18.0.5.1.2',  # Version bump to fix XPath receipt template errors
+    'version': '18.0.5.1.3',  # Remove brand QR code from POS receipt
     'depends': [
         'point_of_sale',
         'pos_hr',
