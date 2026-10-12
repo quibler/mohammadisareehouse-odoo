@@ -15,12 +15,12 @@ fi
 
 echo "Changes detected ($BEFORE -> $AFTER)"
 
-# Refresh .env from AWS Secrets Manager (secret: odoo/prod/credentials).
+# Refresh .env from SSM Parameter Store (/odoo/prod/*).
 # NOTE: `docker compose restart` below does NOT re-read .env — Compose only
 # reads it when creating a container. To roll out a rotated password you must
 # run `docker compose up -d` (recreates containers, brief downtime).
 if [ -x /opt/odoo-data/sync-env-from-secrets.sh ]; then
-    echo "Syncing .env from Secrets Manager..."
+    echo "Syncing .env from SSM Parameter Store..."
     sudo /opt/odoo-data/sync-env-from-secrets.sh
 fi
 
@@ -41,14 +41,17 @@ else
 fi
 
 echo "Restarting Odoo..."
-docker compose restart web
+# Run this script as ec2-user, not via sudo: a root `git pull` leaves root-owned
+# files in the repo that break the next pull. Compose needs sudo only to read
+# the root-only .env.
+sudo docker compose restart web
 
 if [[ "$1" == "--update" ]]; then
     echo "Waiting for Odoo to start..."
     sleep 10
     echo "Running module update..."
-    docker compose exec web odoo -c /etc/odoo/odoo.conf -u all --stop-after-init
-    docker compose restart web
+    sudo docker compose exec web odoo -c /etc/odoo/odoo.conf -u all --stop-after-init
+    sudo docker compose restart web
 fi
 
 echo "Done."

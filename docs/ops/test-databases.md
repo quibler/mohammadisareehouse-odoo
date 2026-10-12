@@ -47,6 +47,15 @@ Bookmark `https://test.erp.mohammadisareehouse.com/web/login?db=test_<name>` to 
 
 ## Rollout (one-time) — ordered so prod is never disrupted
 
+**Done 2026-10-12 04:43 UTC** (one Odoo restart, ~6 s, POS idle). Master password was generated
+on the server: plaintext in root-only `/root/odoo-master-password.txt` until moved to a
+password manager / SSM. Lessons from the run:
+- `git pull` replaces `odoo.conf` with a new inode; the running container keeps reading the
+  *old* file until restarted. Verify a new `admin_passwd` against `/opt/odoo/odoo.conf` on the
+  host, not `/etc/odoo/odoo.conf` in the container.
+- `deploy.sh` was not executable in git and its `docker compose` needed `sudo` (root-only
+  `.env`); both fixed after the run. Run it as `ec2-user`, never via `sudo`.
+
 1. **DNS** *(cloud change — needs approval)*: Route 53 `A test.erp.mohammadisareehouse.com → 13.206.45.197`.
    Wait until `dig +short test.erp.mohammadisareehouse.com` returns it.
 2. **Certificate** *(no downtime; must precede step 3 or `nginx -t` fails)*:
